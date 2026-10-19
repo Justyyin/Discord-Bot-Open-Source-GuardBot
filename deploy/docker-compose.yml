@@ -1,0 +1,9 @@
+services:
+  guardbot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    volumes:
+      - ../data:/app/data

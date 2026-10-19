@@ -1,0 +1,19 @@
+[Unit]
+Description=GuardBot Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=guardbot
+WorkingDirectory=/opt/guardbot
+ExecStart=/opt/guardbot/.venv/bin/python main.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/guardbot/data
+
+[Install]
+WantedBy=multi-user.target
