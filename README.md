@@ -123,11 +123,97 @@ To rename a command, add it to command_names and restart the bot:
 }
 ```
 
-## Roadmap
+## # Upcoming Update
 
-- Local web dashboard that runs on your own machine, so settings can be changed without any hosted service.
-- Translated bot messages.
-- Export and import of settings.
+This page provides an overview of the bot's current capabilities, features actively under development, and improvements planned for future releases.
+
+The goal is to improve security, performance, and usability while expanding the bot's functionality.
+
+## Current Features
+
+The following features are already implemented and available in the current version.
+
+### Security and Moderation
+
+- Anti-nuke detection for channel and role deletions, bans, kicks, and mass creation of channels or roles.
+- Server lockdown functionality.
+- Jail system for restricting members.
+- Role and channel backups, including role permissions.
+
+### Polls and Leveling
+
+- Poll system with one vote per user.
+- XP and leveling system.
+
+### Data Management
+
+- JSON-based data storage.
+- Discord command synchronization on bot startup.
+
+---
+
+## Under Development
+
+The following features are actively being worked on. Their implementation details and availability may change before release.
+
+*No features have been officially confirmed as being under active development yet.*
+
+---
+
+## Planned Features
+
+The following improvements are being considered or planned for future releases. They are not currently available and have not necessarily entered development.
+
+### Storage and Performance
+
+- **SQLite support:** Evaluate migrating from JSON files to SQLite for improved data management on larger servers.
+- **Improved command synchronization:** Synchronize Discord commands only when changes are detected instead of on every startup.
+- **Large server optimization:** Improve lockdown and jail execution times while respecting Discord's rate limits.
+
+### Anti-Nuke and Security
+
+- **Permission change detection:** Detect unauthorized permission changes and privilege escalation, including attempts to grant administrator permissions.
+- **Webhook monitoring:** Detect unauthorized webhook creation.
+- **Bot addition monitoring:** Detect unauthorized additions of external bots.
+- **Server configuration monitoring:** Detect server name changes and other relevant configuration changes.
+- **Member verification:** Add button-based verification and CAPTCHA support to help protect against raids and automated account joins.
+
+### Logging and Moderation
+
+- **Extended event logging:** Add logging for invites, emoji changes, thread events, webhook activity, and user profile picture or username changes.
+- **Temporary jail:** Add configurable jail durations with automatic release when the timer expires.
+
+### Polls and Leveling
+
+- **Expanded poll options:** Introduce more flexible voting rules and additional poll functionality.
+- **Rank cards:** Generate visual rank cards showing a user's level and XP progress.
+- **Role-based XP boosts:** Allow administrators to configure XP multipliers for specific roles.
+
+### Backup and Recovery
+
+- **Expanded backup support:** Include role hierarchy, member-specific permissions, emojis, and webhooks in backups.
+- **Scheduled backups:** Add automatic backups at configurable intervals.
+
+### Web Dashboard
+
+- **Centralized management:** Develop a web-based dashboard for managing supported bot features and server settings through a graphical interface.
+
+---
+
+## Development Status
+
+| Status            | Meaning                                                                      |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Current           | Implemented and available in the current release.                            |
+| Under Development | Actively being implemented or tested.                                        |
+| Planned           | Intended for a future release but not confirmed to be in active development. |
+| Completed         | Implemented, tested, and available in a release.                             |
+
+Features will be moved between sections as their development status changes. Planned features may be adjusted based on technical requirements, testing, priorities, and community feedback.
+
+Release dates will be announced when they are confirmed.
+
+Add a clear release statusRemove the redundant Completed status
 
 ## Privacy and security
 
