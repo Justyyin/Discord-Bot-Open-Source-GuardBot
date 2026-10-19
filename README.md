@@ -1,12 +1,10 @@
-# Premium-Discord-Bot-Free
-Open Source Discord Bot, with Dashboard
 # GuardBot
 
 [Deutsch](docs/de/README.md) | **English** | [Français](docs/fr/README.md) | [Español](docs/es/README.md) | [Português](docs/pt/README.md) | [Русский](docs/ru/README.md) | [Українська](docs/uk/README.md) | [Svenska](docs/sv/README.md) | [Dansk](docs/da/README.md) | [中文](docs/zh/README.md) | [日本語](docs/ja/README.md) | [한국어](docs/ko/README.md)
 
 Self-hosted Discord bot for moderation, security and community. Open source, free, and your data stays on your own machine.
 
-toc 
+<!-- toc -->
 
 - [About](#about)
 - [Features](#features)
@@ -25,7 +23,7 @@ toc
 - [Support](#support)
 - [License](#license)
 
-tocstop 
+<!-- tocstop -->
 
 ## About
 
@@ -149,4 +147,4 @@ Released under the MIT License. See [LICENSE](LICENSE).
 
 Copyright (c) Justyn - made in Germany
 
-GuardBot (c) Justyn 
+<!-- GuardBot (c) Justyn -->
