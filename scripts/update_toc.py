@@ -1,4 +1,5 @@
-# Copyright (c) Justyn
+"""Rebuild the tables of contents of the documentation and sync the root README."""
+
 import re
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ LANGS = [
 
 
 def slug(text, seen):
+    """Create the anchor that GitHub generates for a heading."""
     s = re.sub(r"[^\w\- ]", "", text.strip().lower()).replace(" ", "-")
     n = seen.get(s, 0)
     seen[s] = n + 1
@@ -20,6 +22,7 @@ def slug(text, seen):
 
 
 def build_toc(text):
+    """Build the table of contents from the level 2 and 3 headings of a document."""
     seen, out, fence = {}, [], False
     for line in text.splitlines():
         if line.startswith("```"):
@@ -32,6 +35,7 @@ def build_toc(text):
 
 
 def update(path):
+    """Rewrite the table of contents between the markers of one file."""
     text = path.read_text(encoding="utf-8")
     if START not in text or END not in text:
         return False
@@ -43,16 +47,19 @@ def update(path):
 
 
 def language_bar(prefix):
+    """Build the row of links to the other languages."""
     return " | ".join(f"[{name}]({prefix}{code}/README.md)" for code, name in LANGS)
 
 
 def sync_root():
+    """Copy the English README to the repository root and fix its relative links."""
     src = (ROOT / "docs" / "en" / "README.md").read_text(encoding="utf-8")
     src = src.replace("](../../", "](").replace("](../", "](docs/").replace("](GUIDE.md)", "](docs/en/GUIDE.md)")
     (ROOT / "README.md").write_text(src, encoding="utf-8")
 
 
 def main():
+    """Update all tables of contents and the root README."""
     count = 0
     for p in list((ROOT / "docs").rglob("*.md")):
         if update(p):

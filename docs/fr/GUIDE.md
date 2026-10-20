@@ -40,7 +40,7 @@ Installez Python 3.11 ou plus récent et Git, puis exécutez ces commandes dans 
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux et macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ Ces commandes concernent Ubuntu ou Debian et installent le bot comme service qui
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ Utilisez ces commandes sur votre serveur et remplacez les noms de salons par les
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role : placez le rôle du bot au-dessus du rôle qu'il doit gérer.
 - Rien n'est journalisé : définissez un salon avec /log set et vérifiez que le bot peut y envoyer des messages, intégrer des liens et joindre des fichiers.
 - Unknown timezone : exécutez pip install tzdata et redémarrez le bot.
+- Quelque chose échoue sans raison visible : les erreurs et avertissements sont écrits dans la console. Sur un VPS, lisez-les avec journalctl -u guardbot -f.
 
 ## Assistance
 
 Bugs, idées et suggestions : Discord @justyyin ou une issue GitHub.
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

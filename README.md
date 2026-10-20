@@ -13,6 +13,7 @@ Self-hosted Discord bot for moderation, security and community. Open source, fre
   - [Logging](#logging)
   - [Community](#community)
   - [Administration](#administration)
+- [Project status](#project-status)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Repository layout](#repository-layout)
@@ -39,6 +40,8 @@ Hosted bots store your server data, member IDs and sometimes e-mail addresses wi
 - Anti-raid with join-rate detection and a server lockdown for all channels.
 - Anti-nuke: limits for mass deletions and bans, an automatic response, and a direct message to the server owner.
 - Gulag channel: members who post scam links or images are moved to a single channel with account security instructions. Moderators can also use /jail and /unjail.
+- Verification gate with a button or captcha, and automatic removal of members who do not verify in time.
+- Anti-nuke also watches permission grants, new webhooks, added bots and server renames.
 
 ### Moderation
 
@@ -58,12 +61,18 @@ Hosted bots store your server data, member IDs and sometimes e-mail addresses wi
 - Reaction roles with any emoji and notification topics that members can switch on or off.
 - XP and levels from 1 to 100 for chat and voice, level roles and birthdays.
 - Starboard and temporary voice channels.
+- Timed jail, polls with multiple choices, rank cards as images and XP boosts per role.
 
 ### Administration
 
 - Every module and every single command can be turned on or off per server.
 - Custom prefix, command aliases and renamable commands.
 - Backup and restore for roles and channel structure.
+- Scheduled automatic backups of roles, channels, emojis and webhooks, with a restore command that only adds what is missing.
+
+## Project status
+
+GuardBot is young and has not been used on large servers yet. The automated tests (`python -m unittest`) cover storage, personal data detection, level calculation, command registration, permission checks and the documentation links. Everything that needs a live Discord server, such as lockdown, backup restore, verification, anti-nuke and the gulag, is not covered by them. Try these features on a test server before you rely on them. The translations of the documentation have not been reviewed by native speakers, corrections are welcome.
 
 ## Requirements
 
@@ -74,7 +83,7 @@ Hosted bots store your server data, member IDs and sometimes e-mail addresses wi
 ## Quick start
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -123,13 +134,20 @@ To rename a command, add it to command_names and restart the bot:
 }
 ```
 
+## Roadmap
+
+- Local web dashboard that runs on your own machine, so settings can be changed without any hosted service.
+- Translated bot messages.
+- Export and import of settings.
+
 ## Privacy and security
 
 - No telemetry and no external services. The bot only talks to Discord.
 - All data is stored in the data folder on your machine: settings, XP, birthdays (day and month only) and moderation cases.
 - The bot ignores direct messages from members.
 - The token is read from the .env file. Never share it and never commit it.
-- Members can delete their own birthday with /birthday remove.
+- Members can export and delete their own data with /mydata. Administrators can set how long data of members who left is kept.
+- [PRIVACY.md](docs/PRIVACY.md)
 
 ## Support
 
@@ -140,5 +158,3 @@ Bugs, ideas and suggestions: write to me on Discord, @justyyin, or open an issue
 Released under the MIT License. See [LICENSE](LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

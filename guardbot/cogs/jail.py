@@ -1,12 +1,16 @@
-# Copyright (c) Justyn
-import asyncio
+"""The gulag: restricted channel for hacked accounts, with optional release time."""
+
+import logging
+import time
 from typing import Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from ..utils import emb
+from ..utils import bulk, emb, fmt_duration, parse_duration
+
+log = logging.getLogger(__name__)
 
 STEPS = (
     ("1\ufe0f\u20e3 Reset Your Password", "Change your Discord password immediately."),
@@ -26,7 +30,8 @@ STEPS = (
 )
 
 
-def notice_embed(staff_role, custom=None):
+def notice_embed(staff_role, custom=None, until=None):
+    """Build the account security notice that is posted in the gulag channel."""
     staff = f"<@&{staff_role}>" if staff_role else "@Moderator"
     e = discord.Embed(title="\U0001F510 Account Security Required", color=discord.Color.red())
     if custom:
@@ -38,11 +43,14 @@ def notice_embed(staff_role, custom=None):
     )
     for name, text in STEPS:
         e.add_field(name=name, value=text.replace("{staff}", staff), inline=False)
+    if until:
+        e.add_field(name="Time", value=f"Automatic release <t:{until}:R>", inline=False)
     e.set_footer(text=emb().footer.text)
     return e
 
 
 class Jail(commands.Cog):
+    """Sends members to the gulag channel and releases them again."""
     grp = app_commands.Group(
         name="jailsetup",
         description="Gulag (jail) channel setup",
@@ -51,15 +59,49 @@ class Jail(commands.Cog):
     )
 
     def __init__(self, bot):
+        """Keep the bot reference and prepare the state of this cog."""
         self.bot = bot
 
+    async def cog_load(self):
+        """Start the background loop of this cog."""
+        self.release_loop.start()
+
+    async def cog_unload(self):
+        """Stop the background loop of this cog."""
+        self.release_loop.cancel()
+
+    @tasks.loop(seconds=60)
+    async def release_loop(self):
+        """Release members whose jail time is over."""
+        now = int(time.time())
+        try:
+            for guild in self.bot.guilds:
+                timed = self.bot.cfg(guild.id)["jail"]["timed"]
+                for uid, until in list(timed.items()):
+                    if until > now:
+                        continue
+                    member = guild.get_member(int(uid))
+                    if member:
+                        await self.release(member, guild.me, "Jail time is over")
+                    elif not self.bot.store.users(guild.id).get(uid, {}).get("jailed"):
+                        timed.pop(uid, None)
+        except Exception:
+            log.exception("jail release loop failed")
+
+    @release_loop.before_loop
+    async def _wait(self):
+        """Wait until the bot is connected before the loop starts."""
+        await self.bot.wait_until_ready()
+
     def parts(self, guild):
+        """Return the jail settings with the jail role and channel objects."""
         j = self.bot.cfg(guild.id)["jail"]
         role = guild.get_role(j["role"]) if j["role"] else None
         channel = guild.get_channel(j["channel"]) if j["channel"] else None
         return j, role, channel
 
-    async def send_to_jail(self, member, moderator, reason=None, auto=False):
+    async def send_to_jail(self, member, moderator, reason=None, auto=False, seconds=None):
+        """Replace the roles of a member with the gulag role and post the notice. Returns (success, message)."""
         guild = member.guild
         j, role, channel = self.parts(guild)
         if not role or not channel:
@@ -76,20 +118,23 @@ class Jail(commands.Cog):
         except discord.HTTPException as exc:
             return False, f"Discord refused: {exc}"
         rec["jailed"], rec["jail_roles"] = True, saved
-        self.bot.store.mark("users")
+        until = int(time.time()) + seconds if seconds else None
+        if until:
+            j["timed"][str(member.id)] = until
         if member.voice:
             try:
                 await member.move_to(None)
-            except discord.HTTPException:
-                pass
-        await self.bot.get_cog("Moderation").add_case(guild, "jail", member, moderator, reason, {"auto": auto})
+            except discord.HTTPException as exc:
+                log.warning("member.move_to failed: %s", exc)
+        await self.bot.get_cog("Moderation").add_case(guild, "jail", member, moderator, reason, {"auto": auto, "seconds": seconds})
         try:
-            await channel.send(member.mention, embed=notice_embed(j["staff_role"], j["notice"]), allowed_mentions=discord.AllowedMentions(users=[member]))
-        except discord.HTTPException:
-            pass
-        return True, f"{member.mention} was sent to the gulag."
+            await channel.send(member.mention, embed=notice_embed(j["staff_role"], j["notice"], until), allowed_mentions=discord.AllowedMentions(users=[member]))
+        except discord.HTTPException as exc:
+            log.warning("channel.send failed: %s", exc)
+        return True, f"{member.mention} was sent to the gulag" + (f" for {fmt_duration(seconds)}." if seconds else ".")
 
     async def release(self, member, moderator, reason=None):
+        """Give a jailed member their old roles back. Returns (success, message)."""
         guild = member.guild
         j, role, channel = self.parts(guild)
         rec = self.bot.store.user(guild.id, member.id)
@@ -104,18 +149,21 @@ class Jail(commands.Cog):
             return False, f"Discord refused: {exc}"
         rec["jailed"] = False
         rec.pop("jail_roles", None)
-        self.bot.store.mark("users")
+        j["timed"].pop(str(member.id), None)
         await self.bot.get_cog("Moderation").add_case(guild, "unjail", member, moderator, reason)
         return True, f"{member.mention} was released."
 
     async def apply_overwrites(self, guild, only=None):
+        """Hide every channel from the gulag role except the gulag channel. Returns (succeeded, failed)."""
         j, role, gulag = self.parts(guild)
         if not role or not gulag:
-            return 0
+            return 0, 0
         staff = guild.get_role(j["staff_role"]) if j["staff_role"] else None
-        n = 0
-        for ch in ([only] if only else guild.channels):
-            try:
+
+        def make(ch):
+            """Create the job that sets the permissions of one channel."""
+            async def job():
+                """Set the gulag permissions on one channel."""
                 if ch.id == gulag.id:
                     await ch.set_permissions(guild.default_role, overwrite=discord.PermissionOverwrite(view_channel=False))
                     await ch.set_permissions(role, overwrite=discord.PermissionOverwrite(
@@ -125,29 +173,33 @@ class Jail(commands.Cog):
                         await ch.set_permissions(staff, overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True))
                 else:
                     await ch.set_permissions(role, overwrite=discord.PermissionOverwrite(view_channel=False))
-                n += 1
-            except discord.HTTPException:
-                pass
-            await asyncio.sleep(0.3)
-        return n
+            return job
+
+        return await bulk([make(ch) for ch in ([only] if only else guild.channels)], limit=6)
 
     @commands.hybrid_command(name="jail", description="Send a member to the gulag channel")
-    @app_commands.describe(member="Member to jail", reason="Reason (optional)")
-    async def jail_cmd(self, ctx, member: discord.Member, *, reason: Optional[str] = None):
+    @app_commands.describe(member="Member to jail", duration="Optional, for example 30m, 2h, 1d", reason="Reason (optional)")
+    async def jail_cmd(self, ctx, member: discord.Member, duration: Optional[str] = None, *, reason: Optional[str] = None):
+        """Send a member to the gulag channel."""
         err = self.bot.get_cog("Moderation").target_error(ctx.guild, ctx.author, member)
         if err:
             return await ctx.send(err, ephemeral=True)
-        ok, text = await self.send_to_jail(member, ctx.author, reason)
+        secs = parse_duration(duration) if duration else None
+        if duration and secs is None:
+            reason = f"{duration} {reason or ''}".strip()
+        ok, text = await self.send_to_jail(member, ctx.author, reason, seconds=secs)
         await ctx.send(text, ephemeral=not ok)
 
     @commands.hybrid_command(name="unjail", description="Release a member from the gulag")
     @app_commands.describe(member="Member to release", reason="Reason (optional)")
     async def unjail_cmd(self, ctx, member: discord.Member, *, reason: Optional[str] = None):
+        """Release a member from the gulag."""
         ok, text = await self.release(member, ctx.author, reason)
         await ctx.send(text, ephemeral=not ok)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        """Runs when a member joins."""
         if member.bot or not self.bot.module_on(member.guild.id, "jail"):
             return
         rec = self.bot.store.users(member.guild.id).get(str(member.id))
@@ -156,17 +208,19 @@ class Jail(commands.Cog):
             if role:
                 try:
                     await member.add_roles(role, reason="Rejoined while in the gulag")
-                except discord.HTTPException:
-                    pass
+                except discord.HTTPException as exc:
+                    log.warning("member.add_roles failed: %s", exc)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, ch):
+        """Runs when a channel is created."""
         if self.bot.module_on(ch.guild.id, "jail") and self.parts(ch.guild)[1]:
             await self.apply_overwrites(ch.guild, only=ch)
 
     @grp.command(name="setup", description="Create or select the gulag role, channel and staff role")
     @app_commands.describe(role="Gulag role", channel="Gulag channel", staff_role="Role that can see the gulag and release members")
     async def js_setup(self, it: discord.Interaction, role: Optional[discord.Role] = None, channel: Optional[discord.TextChannel] = None, staff_role: Optional[discord.Role] = None):
+        """Create or select the gulag role, channel and staff role."""
         await it.response.defer(ephemeral=True)
         guild, j = it.guild, self.bot.cfg(it.guild_id)["jail"]
         if role:
@@ -184,29 +238,32 @@ class Jail(commands.Cog):
                 j["channel"] = ch.id
         except discord.HTTPException as exc:
             return await it.followup.send(f"Setup failed: {exc}")
-        self.bot.store.mark("config")
         if not guild.get_role(j["role"]).is_assignable():
             return await it.followup.send("I cannot assign the gulag role. Move my bot role above it and run the command again.")
-        n = await self.apply_overwrites(guild)
-        await it.followup.send(f"Gulag ready: role <@&{j['role']}>, channel <#{j['channel']}>. Permissions applied to {n} channels.")
+        n, failed = await self.apply_overwrites(guild)
+        note = f" {failed} channels failed, check my Manage Channels permission." if failed else ""
+        await it.followup.send(f"Gulag ready: role <@&{j['role']}>, channel <#{j['channel']}>. Permissions applied to {n} channels.{note}")
 
     @grp.command(name="apply", description="Apply the gulag permissions to all channels again")
     async def js_apply(self, it: discord.Interaction):
+        """Apply the gulag permissions to all channels again."""
         await it.response.defer(ephemeral=True)
-        n = await self.apply_overwrites(it.guild)
-        await it.followup.send(f"Applied to {n} channels.")
+        n, failed = await self.apply_overwrites(it.guild)
+        await it.followup.send(f"Applied to {n} channels." + (f" {failed} failed, check my permissions." if failed else ""))
 
     @grp.command(name="notice", description="Set a custom notice text (empty = default security steps)")
     async def js_notice(self, it: discord.Interaction, text: Optional[str] = None):
+        """Set a custom notice text (empty = default security steps)."""
         self.bot.cfg(it.guild_id)["jail"]["notice"] = text.replace("\\n", "\n") if text else None
-        self.bot.store.mark("config")
         await it.response.send_message("Notice updated.", ephemeral=True)
 
     @grp.command(name="preview", description="Preview the notice")
     async def js_preview(self, it: discord.Interaction):
+        """Preview the notice."""
         j = self.bot.cfg(it.guild_id)["jail"]
         await it.response.send_message(embed=notice_embed(j["staff_role"], j["notice"]), ephemeral=True)
 
 
 async def setup(bot):
+    """Register the cog with the bot."""
     await bot.add_cog(Jail(bot))

@@ -40,7 +40,7 @@ https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot+applicat
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux и macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ python main.py
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ docker compose -f deploy/docker-compose.yml logs -f
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role: поместите роль бота выше роли, которой он должен управлять.
 - Ничего не журналируется: задайте канал командой /log set и убедитесь, что бот может в нём отправлять сообщения, встраивать ссылки и прикреплять файлы.
 - Unknown timezone: выполните pip install tzdata и перезапустите бота.
+- Что-то не работает без видимой причины: ошибки и предупреждения выводятся в консоль. На VPS читайте их командой journalctl -u guardbot -f.
 
 ## Поддержка
 
 Ошибки, идеи и предложения: Discord @justyyin или issue на GitHub.
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

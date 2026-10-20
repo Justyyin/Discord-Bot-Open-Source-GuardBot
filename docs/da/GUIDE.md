@@ -40,7 +40,7 @@ Installér Python 3.11 eller nyere og Git, og kør derefter disse kommandoer i e
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux og macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ Disse kommandoer gælder for Ubuntu eller Debian og opsætter botten som en tjen
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ Brug disse kommandoer på din server og erstat kanalnavnene med dine egne.
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role: flyt botens rolle over den rolle, den skal administrere.
 - Intet bliver logget: angiv en kanal med /log set og tjek, at botten kan sende beskeder, indlejre links og vedhæfte filer der.
 - Unknown timezone: kør pip install tzdata og genstart botten.
+- Noget fejler uden synlig årsag: fejl og advarsler skrives til konsollen. På en VPS læser du dem med journalctl -u guardbot -f.
 
 ## Support
 
 Fejl, idéer og forslag: Discord @justyyin eller et GitHub-issue.
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

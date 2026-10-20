@@ -1,8 +1,13 @@
-# Copyright (c) Justyn
+"""Helpers shared by the cogs: text, message analysis, embeds, durations, audit log lookup and bulk calls."""
+
+import asyncio
+import logging
 import re
 from urllib.parse import urlparse
 
 import discord
+
+log = logging.getLogger(__name__)
 
 AUTHOR = "Justyn"
 CREDIT = "GuardBot \u00a9 " + AUTHOR
@@ -14,6 +19,7 @@ UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 
 
 def trim(s, n=1000):
+    """Shorten a text to a length and return a dash for empty text."""
     s = s or ""
     if not s.strip():
         return "-"
@@ -21,6 +27,7 @@ def trim(s, n=1000):
 
 
 def hosts(text):
+    """Return the host names of all links in a text."""
     out = []
     for u in URL_RE.findall(text or ""):
         try:
@@ -33,30 +40,37 @@ def hosts(text):
 
 
 def is_image(a):
+    """True if an attachment is an image."""
     return (a.content_type or "").startswith("image/")
 
 
 def is_gif(a):
+    """True if an attachment is a GIF."""
     return (a.content_type or "") == "image/gif" or a.filename.lower().endswith(".gif")
 
 
 def is_video(a):
+    """True if an attachment is a video."""
     return (a.content_type or "").startswith("video/") or a.filename.lower().endswith(VIDEO_EXT)
 
 
 def has_gif_link(text):
+    """True if a text links to a known GIF site."""
     return any(h == g or h.endswith("." + g) for h in hosts(text) for g in GIF_HOSTS)
 
 
 def has_image(msg):
+    """True if a message contains an image attachment or image embed."""
     return any(is_image(a) for a in msg.attachments) or any(e.type == "image" for e in msg.embeds)
 
 
 def has_video(msg):
+    """True if a message contains a video attachment or video embed."""
     return any(is_video(a) for a in msg.attachments) or any(e.type == "video" for e in msg.embeds)
 
 
 def kinds(msg):
+    """Name the content types of a message: text, URL, image, GIF, video, file or sticker."""
     out = []
     if URL_RE.sub("", msg.content).strip():
         out.append("Text")
@@ -77,6 +91,7 @@ def kinds(msg):
 
 
 def att_lines(msg):
+    """List the attachments of a message as markdown links within the embed limit."""
     out, size = [], 0
     for a in msg.attachments:
         line = f"[{a.filename}]({a.url})"
@@ -88,6 +103,7 @@ def att_lines(msg):
 
 
 async def grab_files(msg):
+    """Download up to four attachments again so they can be posted in the log."""
     files, total = [], 0
     for a in msg.attachments[:4]:
         if total + a.size > LOG_FILE_LIMIT:
@@ -95,12 +111,13 @@ async def grab_files(msg):
         try:
             files.append(await a.to_file())
             total += a.size
-        except Exception:
-            pass
+        except (discord.HTTPException, discord.ClientException) as exc:
+            log.warning("could not re-download attachment %s for the log: %s", a.filename, exc)
     return files
 
 
 def emb(title=None, desc=None, color=None, user=None, footer=None):
+    """Create an embed with timestamp, optional author and the credit in the footer."""
     e = discord.Embed(title=title, description=desc, color=color or discord.Color.blurple(), timestamp=discord.utils.utcnow())
     if user:
         e.set_author(name=f"{user} ({user.id})", icon_url=user.display_avatar.url)
@@ -109,6 +126,7 @@ def emb(title=None, desc=None, color=None, user=None, footer=None):
 
 
 def describe(e, msg):
+    """Fill an embed with the content, channel, type and attachments of a message."""
     e.description = trim(msg.content, 3500)
     e.add_field(name="Channel", value=msg.channel.mention)
     e.add_field(name="Type", value=", ".join(kinds(msg)))
@@ -123,6 +141,7 @@ def describe(e, msg):
 
 
 def parse_duration(text):
+    """Convert 30m, 2h or 1d to seconds, or None if the text is not a duration."""
     m = re.fullmatch(r"(\d+)\s*([smhdw])?", (text or "").strip().lower())
     if not m:
         return None
@@ -130,6 +149,7 @@ def parse_duration(text):
 
 
 def fmt_duration(sec):
+    """Convert seconds to a short text like 2h."""
     sec = int(sec)
     for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
         if sec >= size:
@@ -138,6 +158,7 @@ def fmt_duration(sec):
 
 
 async def audit_executor(guild, action, target_id=None, within=20):
+    """Find the recent audit log entry for an action, or None."""
     if not guild.me or not guild.me.guild_permissions.view_audit_log:
         return None
     try:
@@ -146,6 +167,26 @@ async def audit_executor(guild, action, target_id=None, within=20):
                 break
             if target_id is None or (entry.target is not None and getattr(entry.target, "id", None) == target_id):
                 return entry
-    except discord.HTTPException:
-        pass
+    except discord.HTTPException as exc:
+        log.warning("guild.audit_logs failed: %s", exc)
     return None
+
+
+async def bulk(factories, limit=5):
+    """Run many Discord calls with limited concurrency and return (succeeded, failed)."""
+    sem = asyncio.Semaphore(limit)
+    ok = failed = 0
+
+    async def run(make):
+        """Run one job inside the concurrency limit and count the result."""
+        nonlocal ok, failed
+        async with sem:
+            try:
+                await make()
+                ok += 1
+            except discord.HTTPException as exc:
+                failed += 1
+                log.warning("bulk operation failed: %s", exc)
+
+    await asyncio.gather(*(run(f) for f in factories))
+    return ok, failed

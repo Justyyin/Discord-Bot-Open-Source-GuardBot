@@ -13,6 +13,7 @@ Bot de Discord autoalojado para moderación, seguridad y comunidad. Código abie
   - [Registros](#registros)
   - [Comunidad](#comunidad)
   - [Administración](#administración)
+- [Estado del proyecto](#estado-del-proyecto)
 - [Requisitos](#requisitos)
 - [Inicio rápido](#inicio-rápido)
 - [Estructura del repositorio](#estructura-del-repositorio)
@@ -39,6 +40,8 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 - Anti-raid con detección de oleadas de entradas y bloqueo de todo el servidor.
 - Anti-nuke: límites para eliminaciones y baneos masivos, respuesta automática y mensaje directo al dueño del servidor.
 - Canal gulag: quienes publican enlaces o imágenes de estafa pasan a un único canal con instrucciones para proteger su cuenta. Los moderadores también pueden usar /jail y /unjail.
+- Verificación con botón o captcha, con expulsión automática de quienes no se verifican a tiempo.
+- El anti-nuke vigila también la concesión de permisos, los nuevos webhooks, los bots añadidos y los cambios de nombre del servidor.
 
 ### Moderación
 
@@ -58,12 +61,18 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 - Roles por reacción con cualquier emoji y temas de notificación que los miembros activan o desactivan.
 - XP y niveles del 1 al 100 para chat y voz, roles por nivel y cumpleaños.
 - Starboard y canales de voz temporales.
+- Jail con duración, encuestas de opción múltiple, tarjetas de rango como imagen y bonificaciones de XP por rol.
 
 ### Administración
 
 - Cada módulo y cada comando se puede activar o desactivar por servidor.
 - Prefijo propio, alias de comandos y comandos renombrables.
 - Copia de seguridad y restauración de roles y estructura de canales.
+- Copias de seguridad automáticas programadas de roles, canales, emojis y webhooks, con un comando de restauración que solo añade lo que falta.
+
+## Estado del proyecto
+
+GuardBot es joven y todavía no se ha usado en servidores grandes. Las pruebas automáticas (`python -m unittest`) cubren el almacenamiento, la detección de datos personales, el cálculo de niveles, el registro de comandos, las comprobaciones de permisos y los enlaces de la documentación. Todo lo que necesita un servidor de Discord real, como el bloqueo, la restauración de copias, la verificación, el anti-nuke y el gulag, no está cubierto. Prueba estas funciones primero en un servidor de pruebas antes de depender de ellas. Las traducciones de la documentación no han sido revisadas por hablantes nativos, se agradecen las correcciones.
 
 ## Requisitos
 
@@ -74,7 +83,7 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 ## Inicio rápido
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ Para renombrar un comando, añádelo en command_names y reinicia el bot:
 - Todos los datos están en la carpeta data de tu equipo: ajustes, XP, cumpleaños (solo día y mes) y casos de moderación.
 - El bot ignora los mensajes directos de los miembros.
 - El token se lee del archivo .env. No lo compartas nunca ni lo subas.
-- Los miembros pueden borrar su cumpleaños con /birthday remove.
+- Los miembros pueden exportar y borrar sus propios datos con /mydata. Los administradores definen cuánto tiempo se conservan los datos de quienes se fueron.
+- [PRIVACY.md](../PRIVACY.md)
 
 ## Soporte
 
@@ -146,5 +158,3 @@ Errores, ideas y sugerencias: escríbeme en Discord, @justyyin, o abre un issue 
 Publicado bajo la licencia MIT. Consulta [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

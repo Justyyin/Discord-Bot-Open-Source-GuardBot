@@ -1,4 +1,5 @@
-# Copyright (c) Justyn
+"""Entry point: loads the token and settings and starts the bot."""
+
 import json
 import os
 import sys
@@ -10,6 +11,7 @@ from guardbot.core import Bot, banner
 
 
 def main():
+    """Read the token and settings, then start the bot."""
     load_dotenv()
     token = os.getenv("DISCORD_TOKEN")
     if not token:

@@ -13,6 +13,7 @@
   - [ログ](#ログ)
   - [コミュニティ](#コミュニティ)
   - [管理](#管理)
+- [プロジェクトの状況](#プロジェクトの状況)
 - [動作要件](#動作要件)
 - [クイックスタート](#クイックスタート)
 - [リポジトリの構成](#リポジトリの構成)
@@ -39,6 +40,8 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - 短時間の大量参加を検知するレイド対策と、全チャンネルのサーバーロックダウン。
 - Anti-Nuke：大量削除や大量 BAN の上限、自動対応、サーバーオーナーへのダイレクトメッセージ。
 - グラグチャンネル：詐欺リンクや画像を投稿したメンバーは、アカウント保護の手順が書かれた専用チャンネルだけに移されます。モデレーターは /jail と /unjail も使えます。
+- ボタンまたはキャプチャによる認証と、期限内に認証しないメンバーの自動削除。
+- Anti-Nuke は、権限の付与、新しい Webhook、追加されたボット、サーバー名の変更も監視します。
 
 ### モデレーション
 
@@ -58,12 +61,18 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - 好きな絵文字で使えるリアクションロールと、メンバーが自分で切り替えられる通知トピック。
 - チャットとボイスの XP とレベル 1〜100、レベルロール、誕生日。
 - スターボードと一時ボイスチャンネル。
+- 期限付きジェイル、複数選択の投票、画像のランクカード、ロールごとの XP ブースト。
 
 ### 管理
 
 - すべてのモジュールと各コマンドをサーバーごとにオン・オフできます。
 - 独自のプレフィックス、コマンドのエイリアス、コマンド名の変更。
 - ロールとチャンネル構成のバックアップと復元。
+- ロール、チャンネル、絵文字、Webhook のスケジュール自動バックアップと、足りないものだけを追加する復元コマンド。
+
+## プロジェクトの状況
+
+GuardBot はまだ新しく、大規模なサーバーでは使われていません。自動テスト（`python -m unittest`）は、ストレージ、個人情報の検出、レベル計算、コマンド登録、権限チェック、ドキュメントのリンクを対象としています。ロックダウン、バックアップの復元、認証、Anti-Nuke、グラグなど、実際の Discord サーバーが必要な機能はテストの対象外です。頼りにする前に、まずテスト用サーバーで試してください。ドキュメントの翻訳はネイティブスピーカーによる確認を受けていません。修正の提案を歓迎します。
 
 ## 動作要件
 
@@ -74,7 +83,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 ## クイックスタート
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ guardbot/
 - すべてのデータは、お使いのコンピューターの data フォルダーに保存されます。設定、XP、誕生日（日と月のみ）、モデレーション記録です。
 - ボットはメンバーからのダイレクトメッセージを無視します。
 - トークンは .env ファイルから読み込まれます。共有したり公開したりしないでください。
-- メンバーは /birthday remove で自分の誕生日を削除できます。
+- メンバーは /mydata で自分のデータをエクスポートおよび削除できます。管理者は、退出したメンバーのデータを保持する期間を設定できます。
+- [PRIVACY.md](../PRIVACY.md)
 
 ## サポート
 
@@ -146,5 +158,3 @@ guardbot/
 MIT ライセンスで公開されています。参照： [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

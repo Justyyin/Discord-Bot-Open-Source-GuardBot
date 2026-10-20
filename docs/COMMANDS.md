@@ -12,6 +12,7 @@ Every command name can be changed in `settings.json` under `command_names`, and 
 - [Security](#security)
 - [Logging](#logging)
 - [Community](#community)
+- [Privacy](#privacy)
 - [Administration](#administration)
 
 <!-- tocstop -->
@@ -39,7 +40,7 @@ Who may use these commands can be changed with `/perms allow`, `/perms deny`, `/
 
 | Command | Description |
 | --- | --- |
-| `/jail member reason` | Send a member to the gulag channel, reason is optional |
+| `/jail member duration reason` | Send a member to the gulag channel, duration (`30m`, `2h`, `1d`) and reason are optional |
 | `/unjail member reason` | Release a member and give the old roles back |
 | `/jailsetup setup` | Create or select role, channel and staff role |
 | `/jailsetup apply` | Apply the channel permissions again |
@@ -64,11 +65,12 @@ Actions: `log`, `delete`, `warn`, `timeout`, `jail`.
 
 | Command | Description |
 | --- | --- |
-| `/lockdown reason` and `/unlock` | Lock or unlock all channels |
-| `/lockdownconfig bypassrole`, `exempt` | Roles that can still write, channels that stay open |
+| `/lockdown mode reason` and `/unlock` | Lock or unlock the server. Mode `channels` edits every channel, mode `role` edits only the @everyone role and is instant |
+| `/lockdownconfig mode`, `lockrole`, `bypassrole`, `exempt` | Default mode, extra roles locked in role mode, roles that can still write, channels that stay open |
+| `/verify setup`, `panel`, `apply`, `member`, `off` | Verification gate with button, captcha or math question, optional kick after a timeout |
 | `/raid setup` | Join-rate detection, minimum account age, automatic lockdown |
-| `/antinuke setup`, `limit`, `whitelist`, `staffrole`, `servername`, `restore`, `status` | Protection against mass deletions and nuke talk |
-| `/backup create`, `list`, `download`, `delete`, `restore` | Roles and channel structure |
+| `/antinuke setup`, `limit`, `newbots`, `whitelist`, `staffrole`, `servername`, `restore`, `status` | Mass deletions, bans, kicks, permission grants, new webhooks, added bots, server renames and nuke talk |
+| `/backup create`, `schedule`, `list`, `download`, `delete`, `restore` | Roles with order, channels with member overwrites, emojis, webhooks and member roles. Backups can run automatically |
 
 ## Logging
 
@@ -87,15 +89,24 @@ Actions: `log`, `delete`, `warn`, `timeout`, `jail`.
 | `/reactionrole add`, `remove`, `list`, `panel` | Reaction roles with any emoji |
 | `/notifytopic add`, `remove`, `panel` and `/notify subscribe`, `unsubscribe`, `list` | Notification topics |
 | `/ticket setup`, `panel`, `addtype`, `removetype`, `add`, `remove`, `close` | Tickets |
-| `/poll create`, `end`, `list` | Polls |
+| `/poll create`, `end`, `list` | Polls, optionally with multiple choices |
 | `/giveaway start`, `end`, `reroll`, `list` | Giveaways |
 | `/starboard setup`, `ignore` | Starboard |
 | `/tempvoice setup` | Temporary voice channels |
 | `/suggest text`, `/suggestion status`, `/suggestionsetup set` | Suggestions |
-| `/xp config`, `show`, `give`, `take`, `setlevel`, `reset`, `ignore` | XP system |
+| `/xp config`, `show`, `boost`, `give`, `take`, `setlevel`, `reset`, `ignore` | XP system, rank card on or off, XP boost per role |
 | `/levelrole add`, `remove`, `list`, `sync` | Roles for levels |
-| `/rank`, `/leaderboard` | Level and top list |
+| `/rank`, `/leaderboard` | Level as an image card and top list |
 | `/birthday set`, `remove`, `show`, `upcoming` and `/birthdaysetup set` | Birthdays |
+
+## Privacy
+
+| Command | Description |
+| --- | --- |
+| `/mydata export` and `/mydata delete` | Members export or delete their own stored data |
+| `/privacy retention`, `delete`, `export` | Retention time for members who left, deletion and export by user ID |
+
+Details are in [PRIVACY.md](PRIVACY.md).
 
 ## Administration
 

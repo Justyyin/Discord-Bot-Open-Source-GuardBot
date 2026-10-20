@@ -1,1 +1,2 @@
-# Copyright (c) Justyn
+"""Feature modules, one cog per file."""
+

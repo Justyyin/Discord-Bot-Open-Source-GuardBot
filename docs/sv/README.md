@@ -13,6 +13,7 @@ Självhostad Discord-bot för moderering, säkerhet och community. Öppen källk
   - [Loggning](#loggning)
   - [Community](#community)
   - [Administration](#administration)
+- [Projektstatus](#projektstatus)
 - [Krav](#krav)
 - [Snabbstart](#snabbstart)
 - [Repositoriets struktur](#repositoriets-struktur)
@@ -39,6 +40,8 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 - Anti-raid med upptäckt av inströmning och låsning av hela servern.
 - Anti-nuke: gränser för massborttagningar och bannlysningar, automatisk reaktion och ett direktmeddelande till serverägaren.
 - Gulag-kanal: den som postar bedrägerilänkar eller bilder flyttas till en enda kanal med instruktioner för att säkra kontot. Moderatorer kan också använda /jail och /unjail.
+- Verifiering med knapp eller captcha, med automatisk borttagning av medlemmar som inte verifierar sig i tid.
+- Anti-nuke bevakar också beviljade behörigheter, nya webhooks, tillagda botar och namnbyten på servern.
 
 ### Moderering
 
@@ -58,12 +61,18 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 - Reaktionsroller med valfri emoji och aviseringsämnen som medlemmar slår på eller av själva.
 - XP och nivåer från 1 till 100 för chatt och röst, nivåroller och födelsedagar.
 - Starboard och tillfälliga röstkanaler.
+- Jail med tidsgräns, omröstningar med flerval, rankkort som bild och XP-boostar per roll.
 
 ### Administration
 
 - Varje modul och varje enskilt kommando kan slås på eller av per server.
 - Eget prefix, kommandoalias och kommandon som kan döpas om.
 - Säkerhetskopiering och återställning av roller och kanalstruktur.
+- Schemalagda automatiska säkerhetskopior av roller, kanaler, emojis och webhooks, med ett återställningskommando som bara lägger till det som saknas.
+
+## Projektstatus
+
+GuardBot är ungt och har ännu inte använts på stora servrar. De automatiska testerna (`python -m unittest`) täcker lagring, upptäckt av personuppgifter, nivåberäkning, kommandoregistrering, behörighetskontroller och länkarna i dokumentationen. Allt som kräver en riktig Discord-server, som låsning, återställning av säkerhetskopior, verifiering, anti-nuke och gulag, täcks inte av dem. Prova de här funktionerna på en testserver innan du förlitar dig på dem. Översättningarna av dokumentationen har inte granskats av modersmålstalare, rättelser är välkomna.
 
 ## Krav
 
@@ -74,7 +83,7 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 ## Snabbstart
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ Om du vill döpa om ett kommando lägger du till det i command_names och startar
 - All data ligger i mappen data på din dator: inställningar, XP, födelsedagar (endast dag och månad) och modereringsärenden.
 - Boten ignorerar direktmeddelanden från medlemmar.
 - Token läses från filen .env. Dela den aldrig och ladda inte upp den.
-- Medlemmar kan själva ta bort sin födelsedag med /birthday remove.
+- Medlemmar kan exportera och radera sina egna data med /mydata. Administratörer bestämmer hur länge data från medlemmar som lämnat sparas.
+- [PRIVACY.md](../PRIVACY.md)
 
 ## Support
 
@@ -146,5 +158,3 @@ Buggar, idéer och förslag: skriv till mig på Discord, @justyyin, eller skapa 
 Utgiven under MIT-licensen. Se [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

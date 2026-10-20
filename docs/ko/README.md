@@ -13,6 +13,7 @@
   - [로그](#로그)
   - [커뮤니티](#커뮤니티)
   - [운영](#운영)
+- [프로젝트 상태](#프로젝트-상태)
 - [요구 사항](#요구-사항)
 - [빠른 시작](#빠른-시작)
 - [저장소 구조](#저장소-구조)
@@ -39,6 +40,8 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 - 짧은 시간에 몰리는 입장을 감지하는 Anti-Raid와 모든 채널을 잠그는 서버 락다운.
 - Anti-Nuke: 대량 삭제와 대량 차단의 한도, 자동 대응, 서버 소유자에게 보내는 다이렉트 메시지.
 - 굴라그 채널: 사기 링크나 이미지를 올린 멤버는 계정 보안 안내가 있는 단 하나의 채널로 이동합니다. 관리자는 /jail과 /unjail도 사용할 수 있습니다.
+- 버튼 또는 캡차 인증과, 제때 인증하지 않은 멤버의 자동 제거.
+- Anti-Nuke는 권한 부여, 새 웹훅, 추가된 봇, 서버 이름 변경도 감시합니다.
 
 ### 관리
 
@@ -58,12 +61,18 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 - 원하는 이모지를 쓰는 반응 역할과 멤버가 직접 켜고 끄는 알림 주제.
 - 채팅과 음성의 XP 및 1~100 레벨, 레벨 역할, 생일.
 - 스타보드와 임시 음성 채널.
+- 기간이 있는 감금, 복수 선택 투표, 이미지 형태의 랭크 카드, 역할별 XP 부스트.
 
 ### 운영
 
 - 모든 모듈과 개별 명령어를 서버별로 켜고 끌 수 있습니다.
 - 사용자 지정 접두사, 명령어 별칭, 이름을 바꿀 수 있는 명령어.
 - 역할과 채널 구조의 백업 및 복원.
+- 역할, 채널, 이모지, 웹훅의 예약 자동 백업과 부족한 것만 추가하는 복원 명령어.
+
+## 프로젝트 상태
+
+GuardBot은 아직 새로운 프로젝트이며 대규모 서버에서 사용된 적이 없습니다. 자동 테스트(`python -m unittest`)는 저장소, 개인정보 감지, 레벨 계산, 명령어 등록, 권한 확인, 문서 링크를 다룹니다. 락다운, 백업 복원, 인증, Anti-Nuke, 굴라그처럼 실제 Discord 서버가 필요한 기능은 테스트에 포함되지 않습니다. 의존하기 전에 먼저 테스트 서버에서 시험해 보세요. 문서 번역은 원어민의 검토를 받지 않았습니다. 수정 제안을 환영합니다.
 
 ## 요구 사항
 
@@ -74,7 +83,7 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 ## 빠른 시작
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ guardbot/
 - 모든 데이터는 내 컴퓨터의 data 폴더에 저장됩니다. 설정, XP, 생일(일과 월만), 관리 기록입니다.
 - 봇은 멤버가 보내는 다이렉트 메시지를 무시합니다.
 - 토큰은 .env 파일에서 읽습니다. 절대 공유하거나 업로드하지 마세요.
-- 멤버는 /birthday remove로 자신의 생일을 직접 삭제할 수 있습니다.
+- 멤버는 /mydata로 자신의 데이터를 내보내고 삭제할 수 있습니다. 관리자는 떠난 멤버의 데이터를 얼마나 보관할지 정할 수 있습니다.
+- [PRIVACY.md](../PRIVACY.md)
 
 ## 지원
 
@@ -146,5 +158,3 @@ guardbot/
 MIT 라이선스로 공개되어 있습니다. 참조: [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

@@ -13,6 +13,7 @@ Bot Discord auto-hébergé pour la modération, la sécurité et la communauté.
   - [Journalisation](#journalisation)
   - [Communauté](#communauté)
   - [Administration](#administration)
+- [État du projet](#état-du-projet)
 - [Prérequis](#prérequis)
 - [Démarrage rapide](#démarrage-rapide)
 - [Structure du dépôt](#structure-du-dépôt)
@@ -39,6 +40,8 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 - Anti-raid avec détection des vagues d'arrivées et verrouillage de tout le serveur.
 - Anti-nuke : limites pour les suppressions et bannissements en masse, réaction automatique et message privé au propriétaire du serveur.
 - Salon goulag : les membres qui publient des liens ou images d'arnaque sont déplacés dans un seul salon avec les étapes pour sécuriser leur compte. Les modérateurs peuvent aussi utiliser /jail et /unjail.
+- Vérification par bouton ou captcha, avec retrait automatique des membres qui ne se vérifient pas à temps.
+- L'anti-nuke surveille aussi l'attribution de permissions, les nouveaux webhooks, les bots ajoutés et les changements de nom du serveur.
 
 ### Modération
 
@@ -58,12 +61,18 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 - Rôles par réaction avec n'importe quel emoji et thèmes de notification que les membres activent ou désactivent.
 - XP et niveaux de 1 à 100 pour le chat et le vocal, rôles de niveau et anniversaires.
 - Starboard et salons vocaux temporaires.
+- Jail avec durée, sondages à choix multiples, cartes de rang en image et boosts d'XP par rôle.
 
 ### Administration
 
 - Chaque module et chaque commande peut être activé ou désactivé par serveur.
 - Préfixe personnalisé, alias de commandes et commandes renommables.
 - Sauvegarde et restauration des rôles et de la structure des salons.
+- Sauvegardes automatiques planifiées des rôles, salons, emojis et webhooks, avec une commande de restauration qui n'ajoute que ce qui manque.
+
+## État du projet
+
+GuardBot est jeune et n'a pas encore été utilisé sur de grands serveurs. Les tests automatiques (`python -m unittest`) couvrent le stockage, la détection des données personnelles, le calcul des niveaux, l'enregistrement des commandes, les contrôles de permissions et les liens de la documentation. Tout ce qui nécessite un vrai serveur Discord, comme le verrouillage, la restauration de sauvegarde, la vérification, l'anti-nuke et le goulag, n'est pas couvert. Essayez ces fonctions d'abord sur un serveur de test avant de vous y fier. Les traductions de la documentation n'ont pas été relues par des locuteurs natifs, les corrections sont les bienvenues.
 
 ## Prérequis
 
@@ -74,7 +83,7 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 ## Démarrage rapide
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ Pour renommer une commande, ajoutez-la dans command_names et redémarrez le bot 
 - Toutes les données sont dans le dossier data de votre machine : réglages, XP, anniversaires (jour et mois uniquement) et cas de modération.
 - Le bot ignore les messages privés des membres.
 - Le jeton est lu depuis le fichier .env. Ne le partagez jamais et ne le publiez pas.
-- Les membres peuvent supprimer eux-mêmes leur anniversaire avec /birthday remove.
+- Les membres peuvent exporter et supprimer leurs propres données avec /mydata. Les administrateurs définissent combien de temps les données des membres partis sont conservées.
+- [PRIVACY.md](../PRIVACY.md)
 
 ## Assistance
 
@@ -146,5 +158,3 @@ Bugs, idées et suggestions : écrivez-moi sur Discord, @justyyin, ou ouvrez une
 Publié sous licence MIT. Voir [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

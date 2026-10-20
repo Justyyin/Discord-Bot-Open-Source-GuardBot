@@ -40,7 +40,7 @@ Instala Python 3.11 o superior y Git, y ejecuta estos comandos en una terminal.
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux y macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ Estos comandos son para Ubuntu o Debian y configuran el bot como un servicio que
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ Usa estos comandos en tu servidor y sustituye los nombres de canal por los tuyos
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role: mueve el rol del bot por encima del rol que debe gestionar.
 - No se registra nada: define un canal con /log set y comprueba que el bot puede enviar mensajes, insertar enlaces y adjuntar archivos allí.
 - Unknown timezone: ejecuta pip install tzdata y reinicia el bot.
+- Algo falla sin motivo visible: los errores y avisos se escriben en la consola. En un VPS léelos con journalctl -u guardbot -f.
 
 ## Soporte
 
 Errores, ideas y sugerencias: Discord @justyyin o un issue de GitHub.
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

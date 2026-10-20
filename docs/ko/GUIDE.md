@@ -40,7 +40,7 @@ Python 3.11 이상과 Git을 설치한 뒤 터미널에서 다음 명령을 실�
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux 및 macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ python main.py
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ docker compose -f deploy/docker-compose.yml logs -f
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role: 봇의 역할을 관리해야 할 역할보다 위로 옮기세요.
 - 아무것도 기록되지 않음: /log set으로 채널을 지정하고, 봇이 그 채널에서 메시지 전송, 링크 삽입, 파일 첨부를 할 수 있는지 확인하세요.
 - Unknown timezone: pip install tzdata를 실행하고 봇을 다시 시작하세요.
+- 이유 없이 실패하는 경우: 오류와 경고는 콘솔에 출력됩니다. VPS에서는 journalctl -u guardbot -f 로 확인하세요.
 
 ## 지원
 
 버그, 아이디어, 제안: Discord @justyyin 또는 GitHub issue.
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

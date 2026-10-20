@@ -1,10 +1,11 @@
-# Copyright (c) Justyn
+"""Audit logging of messages, members, roles, channels, voice and server changes."""
+
 import asyncio
+from typing import Literal, Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import Literal, Optional
 
 from ..defaults import LOG_CATEGORIES
 from ..utils import audit_executor, describe, emb, grab_files, trim
@@ -13,6 +14,7 @@ A = discord.AuditLogAction
 
 
 def perm_diff(before, after):
+    """Describe which permissions were added or removed between two permission sets."""
     add = [n for n, v in after if v and not getattr(before, n)]
     rem = [n for n, v in before if v and not getattr(after, n)]
     out = []
@@ -24,6 +26,7 @@ def perm_diff(before, after):
 
 
 class Logs(commands.Cog):
+    """Writes server events to the log channels."""
     grp = app_commands.Group(
         name="log",
         description="Log channels",
@@ -32,12 +35,15 @@ class Logs(commands.Cog):
     )
 
     def __init__(self, bot):
+        """Keep the bot reference and prepare the state of this cog."""
         self.bot = bot
 
     def ok(self, guild):
+        """True if logging is turned on for this server."""
         return guild is not None and self.bot.module_on(guild.id, "logging")
 
     def push(self, guild, cat, title, color, user=None, fields=(), desc=None):
+        """Build a log embed and queue it for the channel of the category."""
         e = emb(title, desc, color, user)
         for name, value in fields:
             if value is not None:
@@ -47,6 +53,7 @@ class Logs(commands.Cog):
     @grp.command(name="set", description="Set the channel for a log category")
     @app_commands.describe(category="Log category", channel="Channel (leave empty to remove)")
     async def log_set(self, it: discord.Interaction, category: Literal[LOG_CATEGORIES], channel: Optional[discord.TextChannel] = None):
+        """Set the channel for a log category."""
         lc = self.bot.cfg(it.guild_id)["log"]
         if channel:
             p = channel.permissions_for(it.guild.me)
@@ -54,23 +61,24 @@ class Logs(commands.Cog):
             if missing:
                 return await it.response.send_message(f"I am missing in {channel.mention}: {', '.join(missing)}", ephemeral=True)
         lc[category] = channel.id if channel else None
-        self.bot.store.mark("config")
         await it.response.send_message(f"{category}: {channel.mention if channel else 'removed'}", ephemeral=True)
 
     @grp.command(name="sent", description="Turn logging of every sent message on or off")
     async def log_sent(self, it: discord.Interaction, enabled: bool):
+        """Turn logging of every sent message on or off."""
         self.bot.cfg(it.guild_id)["log_options"]["sent"] = enabled
-        self.bot.store.mark("config")
         await it.response.send_message(f"Logging of sent messages: {'on' if enabled else 'off'}", ephemeral=True)
 
     @grp.command(name="show", description="Show the log channels")
     async def log_show(self, it: discord.Interaction):
+        """Show the log channels."""
         lc = self.bot.cfg(it.guild_id)["log"]
         lines = [f"{k}: {('<#' + str(v) + '>') if v else 'main'}" for k, v in lc.items()]
         await it.response.send_message("\n".join(lines), ephemeral=True)
 
     @commands.Cog.listener()
     async def on_message(self, msg):
+        """Runs for every new message."""
         if msg.author.bot or not self.ok(msg.guild):
             return
         if not self.bot.cfg(msg.guild.id)["log_options"]["sent"] or self.bot.is_log_channel(msg.guild, msg.channel.id):
@@ -82,6 +90,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
+        """Runs when a message is edited."""
         if after.author.bot or not self.ok(after.guild) or before.content == after.content:
             return
         if self.bot.is_log_channel(after.guild, after.channel.id):
@@ -95,6 +104,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, p):
+        """Runs when a message is deleted, also when it was not cached."""
         if not p.guild_id:
             return
         if p.message_id in self.bot.bot_deleted:
@@ -117,24 +127,28 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, p):
+        """Runs when many messages are deleted at once."""
         guild = self.bot.get_guild(p.guild_id) if p.guild_id else None
         if self.ok(guild):
             self.push(guild, "messages", "Bulk delete", discord.Color.dark_orange(), fields=[("Channel", f"<#{p.channel_id}>"), ("Messages", len(p.message_ids))])
 
     @commands.Cog.listener()
     async def on_member_join(self, m):
+        """Runs when a member joins."""
         if self.ok(m.guild):
             age = (discord.utils.utcnow() - m.created_at).days
             self.push(m.guild, "members", "Member joined", discord.Color.green(), m, [("Account age", f"{age} days"), ("Members", m.guild.member_count)])
 
     @commands.Cog.listener()
     async def on_member_remove(self, m):
+        """Runs when a member leaves or is removed."""
         if self.ok(m.guild):
             roles = ", ".join(r.name for r in m.roles if not r.is_default())
             self.push(m.guild, "members", "Member left", discord.Color.orange(), m, [("Roles", roles or None)])
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
+        """Runs when roles, nickname or timeout of a member change."""
         if not self.ok(after.guild):
             return
         if before.roles != after.roles:
@@ -155,6 +169,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
+        """Runs when a member is banned."""
         if self.ok(guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(guild, A.ban, user.id)
@@ -165,6 +180,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
+        """Runs when a member is unbanned."""
         if self.ok(guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(guild, A.unban, user.id)
@@ -172,6 +188,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, m, before, after):
+        """Runs when a member joins, leaves or moves between voice channels."""
         if not self.ok(m.guild) or before.channel == after.channel:
             return
         if before.channel is None:
@@ -184,6 +201,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, ch):
+        """Runs when a channel is created."""
         if self.ok(ch.guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(ch.guild, A.channel_create, ch.id)
@@ -191,6 +209,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, ch):
+        """Runs when a channel is deleted."""
         if self.ok(ch.guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(ch.guild, A.channel_delete, ch.id)
@@ -198,6 +217,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before, after):
+        """Runs when a channel changes."""
         if not self.ok(after.guild):
             return
         changes = []
@@ -214,6 +234,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
+        """Runs when a role is created."""
         if self.ok(role.guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(role.guild, A.role_create, role.id)
@@ -221,6 +242,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
+        """Runs when a role is deleted."""
         if self.ok(role.guild):
             await asyncio.sleep(1.5)
             entry = await audit_executor(role.guild, A.role_delete, role.id)
@@ -228,6 +250,7 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before, after):
+        """Runs when a role changes."""
         if not self.ok(after.guild):
             return
         changes = []
@@ -243,5 +266,110 @@ class Logs(commands.Cog):
             self.push(after.guild, "server", "Role updated", discord.Color.blue(), fields=[("Role", after.mention), ("Changes", "\n".join(changes)), ("By", entry.user.mention if entry else None)])
 
 
+    @commands.Cog.listener()
+    async def on_invite_create(self, invite):
+        """Runs when an invite is created."""
+        if invite.guild and self.ok(invite.guild):
+            self.push(invite.guild, "server", "Invite created", discord.Color.green(), invite.inviter, [
+                ("Code", invite.code), ("Channel", invite.channel.mention if invite.channel else None),
+                ("Max uses", invite.max_uses or "unlimited"), ("Expires", f"<t:{int(invite.expires_at.timestamp())}:R>" if invite.expires_at else "never"),
+            ])
+
+    @commands.Cog.listener()
+    async def on_invite_delete(self, invite):
+        """Runs when an invite is deleted."""
+        if invite.guild and self.ok(invite.guild):
+            self.push(invite.guild, "server", "Invite deleted", discord.Color.orange(), fields=[("Code", invite.code)])
+
+    @commands.Cog.listener()
+    async def on_guild_emojis_update(self, guild, before, after):
+        """Runs when emojis are added, removed or renamed."""
+        if not self.ok(guild):
+            return
+        b, a = {e.id: e for e in before}, {e.id: e for e in after}
+        added = [str(a[i]) for i in a if i not in b]
+        removed = [b[i].name for i in b if i not in a]
+        renamed = [f"{b[i].name} -> {a[i].name}" for i in a if i in b and a[i].name != b[i].name]
+        if added or removed or renamed:
+            self.push(guild, "server", "Emojis changed", discord.Color.blue(), fields=[("Added", " ".join(added) or None), ("Removed", ", ".join(removed) or None), ("Renamed", ", ".join(renamed) or None)])
+
+    @commands.Cog.listener()
+    async def on_guild_stickers_update(self, guild, before, after):
+        """Runs when stickers are added or removed."""
+        if not self.ok(guild):
+            return
+        b, a = {e.id: e for e in before}, {e.id: e for e in after}
+        added = [a[i].name for i in a if i not in b]
+        removed = [b[i].name for i in b if i not in a]
+        if added or removed:
+            self.push(guild, "server", "Stickers changed", discord.Color.blue(), fields=[("Added", ", ".join(added) or None), ("Removed", ", ".join(removed) or None)])
+
+    @commands.Cog.listener()
+    async def on_thread_create(self, thread):
+        """Runs when a thread is created."""
+        if self.ok(thread.guild):
+            self.push(thread.guild, "server", "Thread created", discord.Color.green(), thread.owner, [("Thread", thread.mention), ("Parent", thread.parent.mention if thread.parent else None)])
+
+    @commands.Cog.listener()
+    async def on_thread_delete(self, thread):
+        """Runs when a thread is deleted."""
+        if self.ok(thread.guild):
+            self.push(thread.guild, "server", "Thread deleted", discord.Color.red(), fields=[("Thread", thread.name), ("Parent", thread.parent.mention if thread.parent else None)])
+
+    @commands.Cog.listener()
+    async def on_thread_update(self, before, after):
+        """Runs when a thread changes."""
+        if not self.ok(after.guild):
+            return
+        changes = [f"{a}: {getattr(before, a)} -> {getattr(after, a)}" for a in ("name", "archived", "locked", "slowmode_delay") if getattr(before, a) != getattr(after, a)]
+        if changes:
+            self.push(after.guild, "server", "Thread updated", discord.Color.blue(), fields=[("Thread", after.mention), ("Changes", "\n".join(changes))])
+
+    @commands.Cog.listener()
+    async def on_webhooks_update(self, channel):
+        """Runs when the webhooks of a channel change."""
+        if self.ok(channel.guild):
+            await asyncio.sleep(1.5)
+            entry = None
+            for action in (A.webhook_create, A.webhook_update, A.webhook_delete):
+                entry = await audit_executor(channel.guild, action)
+                if entry:
+                    break
+            self.push(channel.guild, "server", "Webhooks changed", discord.Color.blue(), fields=[
+                ("Channel", channel.mention), ("Action", entry.action.name if entry else None), ("By", entry.user.mention if entry else None)])
+
+    @commands.Cog.listener()
+    async def on_user_update(self, before, after):
+        """Runs when a user changes name or profile picture."""
+        changes = []
+        if before.name != after.name:
+            changes.append(f"username: {before.name} -> {after.name}")
+        if before.global_name != after.global_name:
+            changes.append(f"display name: {before.global_name} -> {after.global_name}")
+        if (before.avatar.key if before.avatar else None) != (after.avatar.key if after.avatar else None):
+            changes.append("profile picture changed")
+        if not changes:
+            return
+        for guild in self.bot.guilds:
+            if guild.get_member(after.id) and self.ok(guild):
+                e = emb("Profile changed", "\n".join(changes), discord.Color.blue(), after)
+                e.set_thumbnail(url=after.display_avatar.url)
+                self.bot.log(guild, "members", e)
+
+    @commands.Cog.listener()
+    async def on_guild_update(self, before, after):
+        """Runs when the server settings change."""
+        if not self.ok(after):
+            return
+        changes = [f"{a}: {getattr(before, a)} -> {getattr(after, a)}" for a in ("name", "verification_level", "afk_timeout", "explicit_content_filter", "vanity_url_code") if getattr(before, a, None) != getattr(after, a, None)]
+        if (before.icon.key if before.icon else None) != (after.icon.key if after.icon else None):
+            changes.append("server icon changed")
+        if changes:
+            await asyncio.sleep(1.5)
+            entry = await audit_executor(after, A.guild_update)
+            self.push(after, "server", "Server updated", discord.Color.blue(), fields=[("Changes", "\n".join(changes)), ("By", entry.user.mention if entry else None)])
+
+
 async def setup(bot):
+    """Register the cog with the bot."""
     await bot.add_cog(Logs(bot))

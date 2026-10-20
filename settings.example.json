@@ -1,5 +1,7 @@
 {
   "prefix": "!",
   "data_dir": "data",
+  "force_sync": false,
+  "purge_on_guild_leave": false,
   "command_names": {}
 }

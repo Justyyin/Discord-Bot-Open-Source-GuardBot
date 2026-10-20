@@ -13,6 +13,7 @@ Bot de Discord auto-hospedado para moderação, segurança e comunidade. Código
   - [Registros](#registros)
   - [Comunidade](#comunidade)
   - [Administração](#administração)
+- [Status do projeto](#status-do-projeto)
 - [Requisitos](#requisitos)
 - [Início rápido](#início-rápido)
 - [Estrutura do repositório](#estrutura-do-repositório)
@@ -39,6 +40,8 @@ Bots hospedados armazenam dados do servidor, IDs de membros e, às vezes, e-mail
 - Anti-raid com detecção de ondas de entradas e bloqueio de todo o servidor.
 - Anti-nuke: limites para exclusões e banimentos em massa, resposta automática e mensagem direta ao dono do servidor.
 - Canal gulag: quem publica links ou imagens de golpe é movido para um único canal com instruções para proteger a conta. Moderadores também podem usar /jail e /unjail.
+- Verificação por botão ou captcha, com remoção automática de quem não se verifica a tempo.
+- O anti-nuke também monitora concessão de permissões, novos webhooks, bots adicionados e mudanças de nome do servidor.
 
 ### Moderação
 
@@ -58,12 +61,18 @@ Bots hospedados armazenam dados do servidor, IDs de membros e, às vezes, e-mail
 - Cargos por reação com qualquer emoji e tópicos de notificação que os membros ativam ou desativam.
 - XP e níveis de 1 a 100 para chat e voz, cargos por nível e aniversários.
 - Starboard e canais de voz temporários.
+- Jail com duração, enquetes de múltipla escolha, cartões de rank em imagem e bônus de XP por cargo.
 
 ### Administração
 
 - Cada módulo e cada comando pode ser ativado ou desativado por servidor.
 - Prefixo próprio, apelidos de comandos e comandos renomeáveis.
 - Backup e restauração de cargos e da estrutura de canais.
+- Backups automáticos agendados de cargos, canais, emojis e webhooks, com um comando de restauração que só adiciona o que falta.
+
+## Status do projeto
+
+O GuardBot é jovem e ainda não foi usado em servidores grandes. Os testes automáticos (`python -m unittest`) cobrem armazenamento, detecção de dados pessoais, cálculo de níveis, registro de comandos, verificações de permissão e os links da documentação. Tudo que precisa de um servidor Discord real, como lockdown, restauração de backup, verificação, anti-nuke e o gulag, não é coberto por eles. Teste esses recursos primeiro em um servidor de testes antes de depender deles. As traduções da documentação não foram revisadas por falantes nativos, correções são bem-vindas.
 
 ## Requisitos
 
@@ -74,7 +83,7 @@ Bots hospedados armazenam dados do servidor, IDs de membros e, às vezes, e-mail
 ## Início rápido
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ Para renomear um comando, adicione-o em command_names e reinicie o bot:
 - Todos os dados ficam na pasta data da sua máquina: configurações, XP, aniversários (apenas dia e mês) e casos de moderação.
 - O bot ignora mensagens diretas de membros.
 - O token é lido do arquivo .env. Nunca o compartilhe nem o publique.
-- Os membros podem apagar o próprio aniversário com /birthday remove.
+- Os membros podem exportar e apagar os próprios dados com /mydata. Os administradores definem por quanto tempo os dados de quem saiu são mantidos.
+- [PRIVACY.md](../PRIVACY.md)
 
 ## Suporte
 
@@ -146,5 +158,3 @@ Bugs, ideias e sugestões: fale comigo no Discord, @justyyin, ou abra uma issue 
 Publicado sob a licença MIT. Veja [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

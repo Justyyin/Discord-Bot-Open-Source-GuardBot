@@ -40,7 +40,7 @@ https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot+applicat
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -53,7 +53,7 @@ python main.py
 ### Linux 和 macOS
 
 ```bash
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -72,7 +72,7 @@ python main.py
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
-sudo git clone https://github.com/YOUR-NAME/guardbot.git /opt/guardbot
+sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
 sudo python3 -m venv .venv
@@ -111,6 +111,8 @@ docker compose -f deploy/docker-compose.yml logs -f
 /automod add name:words value:example
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
+/verify setup channel:#verify mode:captcha timeout_minutes:30
+/backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
 ```
@@ -142,11 +144,10 @@ tar czf guardbot-data-$(date +%F).tar.gz data
 - I cannot assign that role：请把机器人的身份组移到它要管理的身份组之上。
 - 没有任何日志：用 /log set 设置频道，并确认机器人在该频道有发送消息、嵌入链接和附加文件的权限。
 - Unknown timezone：执行 pip install tzdata 并重启机器人。
+- 出现无明显原因的失败：错误和警告会输出到控制台。在 VPS 上可用 journalctl -u guardbot -f 查看。
 
 ## 支持
 
 错误、想法和建议：Discord @justyyin 或 GitHub issue。
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

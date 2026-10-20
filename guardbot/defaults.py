@@ -1,4 +1,5 @@
-# Copyright (c) Justyn
+"""Default settings of every module, the module list and the command to module map."""
+
 MODULES = {
     "logging": True,
     "automod": True,
@@ -20,6 +21,8 @@ MODULES = {
     "suggestions": False,
     "birthday": False,
     "backup": True,
+    "verification": False,
+    "privacy": True,
 }
 
 LOG_CATEGORIES = ("main", "messages", "members", "voice", "server", "moderation", "security")
@@ -94,6 +97,9 @@ COMMAND_MODULES = {
     "birthdaysetup": "birthday",
     "backup": "backup",
     "log": "logging",
+    "verify": "verification",
+    "mydata": "privacy",
+    "privacy": "privacy",
 }
 
 PROTECTED_COMMANDS = ("module", "command", "config", "perms", "settings", "prefix", "alias", "about", "help")
@@ -146,6 +152,7 @@ DEFAULTS = {
         "channel": None,
         "staff_role": None,
         "notice": None,
+        "timed": {},
     },
     "antinuke": {
         "action": "strip",
@@ -154,16 +161,22 @@ DEFAULTS = {
         "staff_roles": [],
         "server_names": [],
         "watch_words": ["nuke", "nuking", "nuked", "wipe the server", "raid the server", "destroy the server"],
+        "kick_new_bots": True,
         "limits": {
             "channel_delete": [3, 10],
             "role_delete": [3, 10],
             "channel_create": [8, 10],
             "ban": [5, 10],
             "kick": [5, 10],
+            "role_perm": [1, 10],
+            "role_grant": [1, 10],
+            "webhook_create": [3, 10],
+            "bot_add": [1, 60],
+            "guild_update": [1, 60],
         },
     },
     "raid": {"enabled": False, "joins": 5, "seconds": 10, "action": "alert", "min_age": 0, "lockdown": False},
-    "lockdown": {"active": False, "saved": {}, "exempt": [], "bypass_roles": []},
+    "lockdown": {"active": False, "saved": {}, "exempt": [], "bypass_roles": [], "mode": "channels", "lock_roles": [], "role_saved": {}, "active_mode": None},
     "xp": {
         "enabled": False,
         "min": 15,
@@ -178,6 +191,8 @@ DEFAULTS = {
         "message": "{user} reached level {level}!",
         "ignore_channels": [],
         "level_roles": {},
+        "boosts": {},
+        "card": True,
     },
     "birthday": {"enabled": False, "role": None, "channel": None, "message": "Happy birthday {user}!", "timezone": "UTC"},
     "reaction_roles": {},
@@ -209,4 +224,15 @@ DEFAULTS = {
     "starboard": {"channel": None, "emoji": "\u2b50", "threshold": 3, "self_star": False, "ignore_channels": [], "posts": {}},
     "tempvoice": {"hub": None, "category": None, "name": "{name}'s room", "limit": 0, "rooms": []},
     "suggestions": {"channel": None, "review_role": None, "next": 1, "items": {}},
+    "backup": {"auto": False, "interval_hours": 24, "keep": 7, "last": 0, "include_members": True, "include_emojis": True},
+    "verify": {
+        "channel": None,
+        "verified_role": None,
+        "unverified_role": None,
+        "mode": "button",
+        "timeout_minutes": 0,
+        "min_age_days": 0,
+        "pending": {},
+    },
+    "privacy": {"retention_days": 0},
 }

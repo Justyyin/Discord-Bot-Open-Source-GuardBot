@@ -13,6 +13,7 @@
   - [日志](#日志)
   - [社区](#社区)
   - [运维](#运维)
+- [项目状态](#项目状态)
 - [运行要求](#运行要求)
 - [快速开始](#快速开始)
 - [仓库结构](#仓库结构)
@@ -39,6 +40,8 @@ GuardBot 集成了许多服务器在托管机器人上付费使用的功能：�
 - 防袭击：检测短时间内的大量加入，并可锁定整个服务器。
 - 防破坏：限制批量删除和封禁，自动响应，并私信服务器所有者。
 - 古拉格频道：发布诈骗链接或图片的成员会被移入唯一的频道，并看到账号安全指引。管理员也可以使用 /jail 和 /unjail。
+- 通过按钮或验证码验证，并自动移除未及时验证的成员。
+- 防破坏还会监控权限授予、新建 Webhook、被添加的机器人以及服务器改名。
 
 ### 管理
 
@@ -58,12 +61,18 @@ GuardBot 集成了许多服务器在托管机器人上付费使用的功能：�
 - 支持任意表情的反应身份组，以及成员可自行开关的通知主题。
 - 聊天和语音的经验与 1 到 100 级、等级身份组和生日。
 - 星标板和临时语音频道。
+- 限时关押、多选投票、图片形式的等级卡以及按身份组的经验加成。
 
 ### 运维
 
 - 每个模块和每个命令都可以按服务器开启或关闭。
 - 自定义前缀、命令别名和可重命名的命令。
 - 身份组和频道结构的备份与恢复。
+- 按计划自动备份身份组、频道、表情和 Webhook，并提供只补充缺失内容的恢复命令。
+
+## 项目状态
+
+GuardBot 还很年轻，尚未在大型服务器上使用过。自动化测试（`python -m unittest`）覆盖存储、个人信息检测、等级计算、命令注册、权限检查以及文档链接。所有需要真实 Discord 服务器的功能，例如锁定、备份恢复、验证、防破坏和古拉格，都不在测试范围内。请先在测试服务器上试用这些功能，再依赖它们。文档的翻译尚未由母语者审阅，欢迎提出修改意见。
 
 ## 运行要求
 
@@ -74,7 +83,7 @@ GuardBot 集成了许多服务器在托管机器人上付费使用的功能：�
 ## 快速开始
 
 ```
-git clone https://github.com/YOUR-NAME/guardbot.git
+git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
@@ -97,10 +106,12 @@ guardbot/
     core.py               bot class, storage, permission checks
     defaults.py           default settings of every module
     utils.py              helpers
+    images.py             rank cards and captcha images
     cogs/                 one file per feature group
-  docs/                   documentation in 12 languages
+  docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
+  tests/                  automated tests (python -m unittest)
   data/                   created at runtime, holds your settings and data
 ```
 
@@ -135,7 +146,8 @@ guardbot/
 - 所有数据都保存在你电脑的 data 文件夹中：设置、经验、生日（仅日期和月份）以及管理记录。
 - 机器人会忽略成员发来的私信。
 - 令牌从 .env 文件读取。切勿分享或上传。
-- 成员可以用 /birthday remove 自行删除自己的生日。
+- 成员可以用 /mydata 导出并删除自己的数据。管理员可设置已离开成员的数据保留多久。
+- [PRIVACY.md](../PRIVACY.md)
 
 ## 支持
 
@@ -146,5 +158,3 @@ guardbot/
 基于 MIT 许可证发布。参见 [LICENSE](../../LICENSE).
 
 Copyright (c) Justyn - made in Germany
-
-<!-- GuardBot (c) Justyn -->

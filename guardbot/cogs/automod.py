@@ -1,16 +1,22 @@
-# Copyright (c) Justyn
+"""Automatic moderation rules, blocklist, flood protection and personal data detection."""
+
+import asyncio
 import hashlib
+import logging
 import re
 import time
 from collections import deque
 from datetime import timedelta
 from typing import Literal, Optional
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..utils import describe, emb, grab_files, has_image, has_video, hosts, is_image, URL_RE
+from ..utils import URL_RE, describe, emb, grab_files, has_image, has_video, hosts, is_image
+
+log = logging.getLogger(__name__)
 
 MAX_BYTES = 10 * 1024 * 1024
 OFFICIAL = (
@@ -37,6 +43,7 @@ ACTIONS = ("log", "delete", "warn", "timeout", "jail")
 
 
 def luhn(num):
+    """Check a digit string with the Luhn algorithm used by card numbers."""
     total, flip = 0, False
     for ch in reversed(num):
         d = int(ch)
@@ -48,6 +55,7 @@ def luhn(num):
 
 
 def iban_ok(s):
+    """Check an IBAN with the mod 97 test."""
     s = s.replace(" ", "").upper()
     if not 15 <= len(s) <= 34:
         return False
@@ -56,6 +64,7 @@ def iban_ok(s):
 
 
 def find_pii(text, opts):
+    """Return the kinds of personal data found in a text, limited to the enabled options."""
     found = []
     if opts["email"] and EMAIL_RE.search(text):
         found.append("email address")
@@ -78,14 +87,17 @@ def find_pii(text, opts):
 
 
 def host_match(host, domain):
+    """True if a host is the domain itself or one of its subdomains."""
     return host == domain or host.endswith("." + domain)
 
 
 def word_in(text, word):
+    """True if a word appears in a text as a whole word."""
     return re.search(r"(?<!\w)" + re.escape(word.lower()) + r"(?!\w)", text) is not None
 
 
 class AutoMod(commands.Cog):
+    """Applies the automatic moderation rules to every message."""
     grp = app_commands.Group(
         name="automod",
         description="Automatic moderation",
@@ -94,16 +106,19 @@ class AutoMod(commands.Cog):
     )
 
     def __init__(self, bot):
+        """Keep the bot reference and prepare the state of this cog."""
         self.bot = bot
         self.flood = {}
 
     def get_rules(self, a, channel):
+        """Find the channel rule for a channel, its parent or the default rule."""
         for key in (str(channel.id), str(getattr(channel, "parent_id", None)), "all"):
             if key in a["channels"]:
                 return a["channels"][key]
         return None
 
     async def check_blocklist(self, msg, a):
+        """Check a message against the blocked links, texts and image hashes and return the reason or None."""
         b = a["blocklist"]
         text = msg.content.lower()
         urls = [text] + [e.url.lower() for e in msg.embeds if e.url] + [x.url.lower() for x in msg.attachments]
@@ -122,6 +137,7 @@ class AutoMod(commands.Cog):
         return None
 
     async def scan(self, msg, a):
+        """Run every enabled rule on a message and return (rule, reason, action) for the first hit."""
         text, low = msg.content, msg.content.lower()
         found = hosts(text) + [h for e in msg.embeds if e.url for h in hosts(e.url)]
         ph = a["phishing"]
@@ -172,6 +188,7 @@ class AutoMod(commands.Cog):
         return None
 
     async def remove(self, msg, reason, notify=True):
+        """Delete a message, log it with its attachments and tell the author. Returns False if it could not be deleted."""
         self.bot.bot_deleted.add(msg.id)
         files = await grab_files(msg)
         try:
@@ -190,11 +207,12 @@ class AutoMod(commands.Cog):
                     delete_after=6,
                     allowed_mentions=discord.AllowedMentions(users=[msg.author]),
                 )
-            except discord.HTTPException:
-                pass
+            except discord.HTTPException as exc:
+                log.warning("channel.send failed: %s", exc)
         return True
 
     async def act(self, msg, rule, reason, action):
+        """Carry out the action of a rule: log only, delete, warn, timeout or jail."""
         if action == "log":
             e = emb(f"AutoMod alert: {rule}", color=discord.Color.orange(), user=msg.author)
             e.add_field(name="Reason", value=reason, inline=False)
@@ -212,11 +230,15 @@ class AutoMod(commands.Cog):
                 await member.timeout(timedelta(minutes=10), reason=why)
                 await self.bot.get_cog("Moderation").add_case(guild, "mute", member, guild.me, why, {"auto": True})
             elif action == "jail":
-                await self.bot.get_cog("Jail").send_to_jail(member, guild.me, why, auto=True)
-        except (discord.HTTPException, AttributeError):
-            pass
+                ok, text = await self.bot.get_cog("Jail").send_to_jail(member, guild.me, why, auto=True)
+                if not ok:
+                    self.bot.log(guild, "moderation", emb("AutoMod could not jail a member", f"{member.mention}: {text}", discord.Color.red()))
+        except discord.HTTPException as exc:
+            log.warning("automod action %s on %s failed: %s", action, member, exc)
+            self.bot.log(guild, "moderation", emb("AutoMod action failed", f"{action} for {member.mention}: {exc}", discord.Color.red()))
 
     async def check_flood(self, msg, f):
+        """Delete and punish a member who sent too many messages in a short time."""
         dq = self.flood.setdefault((msg.guild.id, msg.author.id), deque())
         now = time.time()
         dq.append((now, msg))
@@ -231,10 +253,11 @@ class AutoMod(commands.Cog):
         if f["timeout"] > 0:
             try:
                 await msg.author.timeout(timedelta(minutes=f["timeout"]), reason="Flood")
-            except discord.HTTPException:
-                pass
+            except discord.HTTPException as exc:
+                log.warning("author.timeout failed: %s", exc)
 
     def exempt(self, msg, a):
+        """True if the author is a moderator or sits in an exempt role or channel."""
         m = msg.author
         return (
             not isinstance(m, discord.Member)
@@ -245,6 +268,7 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg):
+        """Runs for every new message."""
         if msg.author.bot or not msg.guild or not self.bot.module_on(msg.guild.id, "automod"):
             return
         a = self.bot.cfg(msg.guild.id)["automod"]
@@ -258,6 +282,7 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
+        """Runs when a message is edited."""
         if after.author.bot or not after.guild or not self.bot.module_on(after.guild.id, "automod"):
             return
         a = self.bot.cfg(after.guild.id)["automod"]
@@ -268,63 +293,65 @@ class AutoMod(commands.Cog):
             await self.act(after, *hit)
 
     def conf(self, it):
+        """Return the automod settings of the server of an interaction."""
         return self.bot.cfg(it.guild_id)["automod"]
 
     @grp.command(name="channel", description="Set what is removed in a channel (no channel = all other channels)")
     @app_commands.describe(channel="Channel", links="Remove links", images="Remove images", videos="Remove videos")
     async def am_channel(self, it: discord.Interaction, channel: Optional[discord.TextChannel] = None, links: Optional[bool] = None, images: Optional[bool] = None, videos: Optional[bool] = None):
+        """Set what is removed in a channel (no channel = all other channels)."""
         a = self.conf(it)
         key = str(channel.id) if channel else "all"
         r = a["channels"].setdefault(key, {"links": False, "images": False, "videos": False, "blocklist": True})
         for k, v in (("links", links), ("images", images), ("videos", videos)):
             if v is not None:
                 r[k] = v
-        self.bot.store.mark("config")
         target = channel.mention if channel else "all other channels"
         await it.response.send_message(f"{target}: links {r['links']}, images {r['images']}, videos {r['videos']}", ephemeral=True)
 
     @grp.command(name="unchannel", description="Remove the channel rule")
     async def am_unchannel(self, it: discord.Interaction, channel: Optional[discord.TextChannel] = None):
+        """Remove the channel rule."""
         a = self.conf(it)
         if a["channels"].pop(str(channel.id) if channel else "all", None) is None:
             return await it.response.send_message("No rule found.", ephemeral=True)
-        self.bot.store.mark("config")
         await it.response.send_message("Rule removed.", ephemeral=True)
 
     @grp.command(name="toggle", description="Turn a rule on or off and choose its action")
     @app_commands.describe(rule="Rule", enabled="On or off", action="What happens on a hit")
     async def am_toggle(self, it: discord.Interaction, rule: Literal[RULES], enabled: bool, action: Optional[Literal[ACTIONS]] = None):
+        """Turn a rule on or off and choose its action."""
         r = self.conf(it)[rule]
         r["enabled"] = enabled
         if action:
             r["action"] = action
-        self.bot.store.mark("config")
         await it.response.send_message(f"{rule}: {'on' if enabled else 'off'}, action {r['action']}", ephemeral=True)
 
     @grp.command(name="add", description="Add an entry to a list")
     @app_commands.describe(name="List", value="Word, domain or phrase")
     async def am_add(self, it: discord.Interaction, name: Literal[tuple(LISTS)], value: str):
+        """Add an entry to a list."""
         sec, key = LISTS[name]
         lst = self.conf(it)[sec][key]
         if value.lower() in (x.lower() for x in lst):
             return await it.response.send_message("Already in the list.", ephemeral=True)
         lst.append(value)
-        self.bot.store.mark("config")
         await it.response.send_message(f"Added to {name}: {value}", ephemeral=True)
 
     @grp.command(name="remove", description="Remove an entry from a list")
     async def am_remove(self, it: discord.Interaction, name: Literal[tuple(LISTS)], value: str):
+        """Remove an entry from a list."""
         sec, key = LISTS[name]
         lst = self.conf(it)[sec][key]
         hit = next((x for x in lst if x.lower() == value.lower()), None)
         if hit is None:
             return await it.response.send_message("Not in the list.", ephemeral=True)
         lst.remove(hit)
-        self.bot.store.mark("config")
         await it.response.send_message(f"Removed from {name}: {hit}", ephemeral=True)
 
     @grp.command(name="show", description="Show a list")
     async def am_show(self, it: discord.Interaction, name: Literal[tuple(LISTS)]):
+        """Show a list."""
         sec, key = LISTS[name]
         lst = self.conf(it)[sec][key]
         text = "\n".join(f"{i}. {x}" for i, x in enumerate(lst, 1)) or "empty"
@@ -332,6 +359,7 @@ class AutoMod(commands.Cog):
 
     @grp.command(name="import", description="Import a list from a text file (one entry per line)")
     async def am_import(self, it: discord.Interaction, name: Literal[tuple(LISTS)], file: discord.Attachment):
+        """Import a list from a text file (one entry per line)."""
         if file.size > 1024 * 1024:
             return await it.response.send_message("File too large (max 1 MB).", ephemeral=True)
         sec, key = LISTS[name]
@@ -344,12 +372,12 @@ class AutoMod(commands.Cog):
                 lst.append(v)
                 have.add(v.lower())
                 new += 1
-        self.bot.store.mark("config")
         await it.response.send_message(f"Imported {new} new entries into {name}.", ephemeral=True)
 
     @grp.command(name="set", description="Change a number or option of a rule")
     @app_commands.describe(rule="Rule", option="Option name, for example max, percent, min_len, lookalike", value="New value")
     async def am_set(self, it: discord.Interaction, rule: Literal[RULES], option: str, value: str):
+        """Change a number or option of a rule."""
         r = self.conf(it)[rule]
         if option not in r or option in ("list", "allow", "enabled"):
             return await it.response.send_message(f"Unknown option. Available: {', '.join(k for k in r if k not in ('list', 'allow', 'enabled'))}", ephemeral=True)
@@ -358,35 +386,35 @@ class AutoMod(commands.Cog):
             r[option] = value.lower() in ("1", "true", "yes", "on") if isinstance(cur, bool) else type(cur)(value)
         except ValueError:
             return await it.response.send_message("Invalid value.", ephemeral=True)
-        self.bot.store.mark("config")
         await it.response.send_message(f"{rule}.{option} = {r[option]}", ephemeral=True)
 
     @grp.command(name="exemptrole", description="Toggle a role that AutoMod ignores")
     async def am_exrole(self, it: discord.Interaction, role: discord.Role):
+        """Toggle a role that AutoMod ignores."""
         lst = self.conf(it)["exempt_roles"]
         lst.remove(role.id) if role.id in lst else lst.append(role.id)
-        self.bot.store.mark("config")
         await it.response.send_message(f"{role.mention} is {'exempt' if role.id in lst else 'no longer exempt'}.", ephemeral=True)
 
     @grp.command(name="exemptchannel", description="Toggle a channel that AutoMod ignores")
     async def am_exchan(self, it: discord.Interaction, channel: discord.TextChannel):
+        """Toggle a channel that AutoMod ignores."""
         lst = self.conf(it)["exempt_channels"]
         lst.remove(channel.id) if channel.id in lst else lst.append(channel.id)
-        self.bot.store.mark("config")
         await it.response.send_message(f"{channel.mention} is {'exempt' if channel.id in lst else 'no longer exempt'}.", ephemeral=True)
 
     @grp.command(name="flood", description="Configure flood protection")
     async def am_flood(self, it: discord.Interaction, enabled: Optional[bool] = None, count: Optional[app_commands.Range[int, 2, 50]] = None, seconds: Optional[app_commands.Range[int, 1, 60]] = None, timeout: Optional[app_commands.Range[int, 0, 1440]] = None):
+        """Configure flood protection."""
         f = self.conf(it)["flood"]
         for k, v in (("enabled", enabled), ("count", count), ("seconds", seconds), ("timeout", timeout)):
             if v is not None:
                 f[k] = v
-        self.bot.store.mark("config")
         await it.response.send_message(f"Flood: {'on' if f['enabled'] else 'off'}, {f['count']} messages in {f['seconds']}s, timeout {f['timeout']} min", ephemeral=True)
 
     @grp.command(name="block", description="Add a link, text or image to the blocklist")
     @app_commands.describe(kind="What to block", value="Link, text or image URL", image="Upload an image")
     async def am_block(self, it: discord.Interaction, kind: Literal["link", "message", "image"], value: Optional[str] = None, image: Optional[discord.Attachment] = None):
+        """Add a link, text or image to the blocklist."""
         d = self.conf(it)["blocklist"]
         await it.response.defer(ephemeral=True)
         if kind != "image":
@@ -395,7 +423,6 @@ class AutoMod(commands.Cog):
             if value.lower() in (x.lower() for x in d[kind]):
                 return await it.followup.send("Already blocked.")
             d[kind].append(value)
-            self.bot.store.mark("config")
             return await it.followup.send(f"Blocked: {value}")
         if not value and not image:
             return await it.followup.send("Upload an image or provide a URL.")
@@ -411,28 +438,29 @@ class AutoMod(commands.Cog):
                     async with self.bot.session.get(value, timeout=15) as r:
                         raw = await r.content.read(MAX_BYTES + 1) if r.status == 200 else b""
                     entry["hash"] = hashlib.sha256(raw).hexdigest() if 0 < len(raw) <= MAX_BYTES else None
-                except Exception:
-                    pass
+                except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                    log.warning("could not download %s to hash it: %s", value, exc)
         if any((entry["hash"] and x["hash"] == entry["hash"]) or (entry["url"] and x["url"] == entry["url"]) for x in d["image"]):
             return await it.followup.send("Already blocked.")
         d["image"].append(entry)
-        self.bot.store.mark("config")
         await it.followup.send(f"Blocked: {entry['label']}")
 
     @grp.command(name="unblock", description="Remove an entry from the blocklist")
     async def am_unblock(self, it: discord.Interaction, kind: Literal["link", "message", "image"], number: int):
+        """Remove an entry from the blocklist."""
         items = self.conf(it)["blocklist"][kind]
         if not 1 <= number <= len(items):
             return await it.response.send_message("Invalid number.", ephemeral=True)
         items.pop(number - 1)
-        self.bot.store.mark("config")
         await it.response.send_message("Removed.", ephemeral=True)
 
     @grp.command(name="blocklist", description="Show the blocklist")
     async def am_blocklist(self, it: discord.Interaction):
+        """Show the blocklist."""
         d = self.conf(it)["blocklist"]
 
         def fmt(items, key=None):
+            """Format a list of blocklist entries as numbered lines."""
             return "\n".join(f"{n}. {x[key] if key else x}" for n, x in enumerate(items, 1))[:1000] or "-"
 
         e = discord.Embed(title="Blocklist")
@@ -443,4 +471,5 @@ class AutoMod(commands.Cog):
 
 
 async def setup(bot):
+    """Register the cog with the bot."""
     await bot.add_cog(AutoMod(bot))

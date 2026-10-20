@@ -1,6 +1,9 @@
-# Copyright (c) Justyn
+"""XP and levels for chat and voice, level roles, boosts and rank cards."""
+
 import asyncio
 import bisect
+import io
+import logging
 import random
 import time
 from typing import Literal, Optional
@@ -9,7 +12,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from ..images import HAVE_PIL, rank_card
 from ..utils import emb
+
+log = logging.getLogger(__name__)
 
 TOTALS = [0]
 for _n in range(101):
@@ -17,10 +23,12 @@ for _n in range(101):
 
 
 def level_of(xp, cap=100):
+    """Return the level for an XP total, limited by the highest allowed level."""
     return min(bisect.bisect_right(TOTALS, xp) - 1, cap, 100)
 
 
 def summary(x):
+    """Describe the XP settings as text."""
     ann = x["announce"]
     if ann == "channel" and x["announce_channel"]:
         ann = f"<#{x['announce_channel']}>"
@@ -32,26 +40,33 @@ def summary(x):
 
 
 class Leveling(commands.Cog):
+    """XP, levels, level roles, boosts and rank cards."""
     xp = app_commands.Group(name="xp", description="XP and level system", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
     lr = app_commands.Group(name="levelrole", description="Roles given at levels", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
 
     def __init__(self, bot):
+        """Keep the bot reference and prepare the state of this cog."""
         self.bot = bot
         self.cd = {}
 
     async def cog_load(self):
+        """Start the background loop of this cog."""
         self.voice_loop.start()
 
     async def cog_unload(self):
+        """Stop the background loop of this cog."""
         self.voice_loop.cancel()
 
     def conf(self, gid):
+        """Return the XP settings of a server."""
         return self.bot.cfg(gid)["xp"]
 
     def on(self, guild):
+        """True if the module and the XP system are both turned on."""
         return guild is not None and self.bot.module_on(guild.id, "leveling") and self.conf(guild.id)["enabled"]
 
     async def sync_roles(self, member, level):
+        """Give the level roles a member earned and remove the ones they should not have."""
         x = self.conf(member.guild.id)
         lr = {int(k): v for k, v in x["level_roles"].items()}
         if not lr:
@@ -66,10 +81,11 @@ class Leveling(commands.Cog):
                 await member.add_roles(*add, reason="Level reward")
             if rem:
                 await member.remove_roles(*rem, reason="Level reward")
-        except discord.HTTPException:
-            pass
+        except discord.HTTPException as exc:
+            log.warning("member.add_roles failed: %s", exc)
 
     async def level_up(self, member, level, channel):
+        """Update the level roles and announce the new level."""
         x = self.conf(member.guild.id)
         await self.sync_roles(member, level)
         target = None
@@ -81,30 +97,32 @@ class Leveling(commands.Cog):
             text = x["message"].replace("{user}", member.mention).replace("{level}", str(level)).replace("{name}", member.display_name)
             try:
                 await target.send(text, allowed_mentions=discord.AllowedMentions(users=[member]))
-            except discord.HTTPException:
-                pass
+            except discord.HTTPException as exc:
+                log.warning("target.send failed: %s", exc)
 
     async def add_xp(self, member, amount, channel=None):
+        """Add XP with the global multiplier and the best role boost, and handle level-ups."""
         x = self.conf(member.guild.id)
-        amount = int(round(amount * x["multiplier"]))
+        boost = max([x["boosts"].get(str(r.id), 1.0) for r in member.roles] or [1.0])
+        amount = int(round(amount * x["multiplier"] * boost))
         if amount <= 0:
             return
         rec = self.bot.store.user(member.guild.id, member.id)
         old = level_of(rec["xp"], x["max_level"])
         rec["xp"] += amount
-        self.bot.store.mark("users")
         new = level_of(rec["xp"], x["max_level"])
         if new > old:
             await self.level_up(member, new, channel)
 
     async def set_xp(self, member, value):
+        """Set the XP of a member to an exact value and update their level roles."""
         rec = self.bot.store.user(member.guild.id, member.id)
         rec["xp"] = max(0, int(value))
-        self.bot.store.mark("users")
         await self.sync_roles(member, level_of(rec["xp"], self.conf(member.guild.id)["max_level"]))
 
     @commands.Cog.listener()
     async def on_message(self, msg):
+        """Runs for every new message."""
         if msg.author.bot or not self.on(msg.guild):
             return
         x = self.conf(msg.guild.id)
@@ -125,6 +143,7 @@ class Leveling(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        """Runs when a member joins."""
         if member.bot or not self.on(member.guild):
             return
         rec = self.bot.store.users(member.guild.id).get(str(member.id))
@@ -133,6 +152,7 @@ class Leveling(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def voice_loop(self):
+        """Give voice XP to members who talk with at least one other person."""
         try:
             for guild in self.bot.guilds:
                 if not self.on(guild):
@@ -149,16 +169,18 @@ class Leveling(commands.Cog):
                     for m in humans:
                         if m.voice and not (m.voice.self_deaf or m.voice.deaf):
                             await self.add_xp(m, x["voice_xp"])
-        except Exception as exc:
-            print("voice xp error:", exc)
+        except Exception:
+            log.exception("voice xp loop failed")
 
     @voice_loop.before_loop
     async def _wait(self):
+        """Wait until the bot is connected before the loop starts."""
         await self.bot.wait_until_ready()
 
     @commands.hybrid_command(name="rank", description="Show level and XP")
     @app_commands.describe(user="Member (default: you)")
     async def rank_cmd(self, ctx, user: Optional[discord.Member] = None):
+        """Show level and XP."""
         x = self.conf(ctx.guild.id)
         if not x["enabled"]:
             return await ctx.send("The XP system is off.", ephemeral=True)
@@ -173,6 +195,14 @@ class Leveling(commands.Cog):
             cur, span = xp - TOTALS[lvl], TOTALS[lvl + 1] - TOTALS[lvl]
             filled = int(10 * cur / span)
             bar, prog = "[" + "#" * filled + "-" * (10 - filled) + "]", f"{cur}/{span} XP"
+        if x["card"] and HAVE_PIL:
+            try:
+                avatar = await m.display_avatar.replace(size=256, format="png").read()
+                cur, span = (0, 1) if lvl >= x["max_level"] else (xp - TOTALS[lvl], TOTALS[lvl + 1] - TOTALS[lvl])
+                data = await asyncio.to_thread(rank_card, m.display_name, avatar, lvl, pos, cur, span, xp, lvl >= x["max_level"])
+                return await ctx.send(file=discord.File(io.BytesIO(data), filename="rank.png"))
+            except Exception as exc:
+                log.warning("rank card failed, falling back to an embed: %s", exc)
         e = emb(m.display_name)
         e.set_thumbnail(url=m.display_avatar.url)
         e.add_field(name="Level", value=str(lvl))
@@ -183,6 +213,7 @@ class Leveling(commands.Cog):
 
     @commands.hybrid_command(name="leaderboard", description="Top 10 members by XP")
     async def leaderboard_cmd(self, ctx):
+        """Top 10 members by XP."""
         x = self.conf(ctx.guild.id)
         if not x["enabled"]:
             return await ctx.send("The XP system is off.", ephemeral=True)
@@ -212,10 +243,12 @@ class Leveling(commands.Cog):
         announce: Optional[Literal["same", "channel", "off"]] = None,
         announce_channel: Optional[discord.TextChannel] = None,
         message: Optional[str] = None,
+        card: Optional[bool] = None,
     ):
+        """Change XP system settings."""
         g = self.bot.cfg(it.guild_id)
         x = g["xp"]
-        for k, v in (("enabled", enabled), ("min", min_xp), ("max", max_xp), ("cooldown", cooldown), ("voice_xp", voice_xp), ("multiplier", multiplier), ("max_level", max_level), ("stack", stack_roles), ("announce", announce), ("message", message)):
+        for k, v in (("card", card), ("enabled", enabled), ("min", min_xp), ("max", max_xp), ("cooldown", cooldown), ("voice_xp", voice_xp), ("multiplier", multiplier), ("max_level", max_level), ("stack", stack_roles), ("announce", announce), ("message", message)):
             if v is not None:
                 x[k] = v
         if announce_channel:
@@ -226,19 +259,31 @@ class Leveling(commands.Cog):
             x["max"] = x["min"]
         if enabled is not None:
             g["modules"]["leveling"] = enabled
-        self.bot.store.mark("config")
         await it.response.send_message(summary(x), ephemeral=True)
 
     @xp.command(name="show", description="Show XP settings and level roles")
     async def xp_show(self, it: discord.Interaction):
+        """Show XP settings and level roles."""
         x = self.conf(it.guild_id)
         e = emb("XP settings", summary(x))
         e.add_field(name="Level roles", value="\n".join(f"Level {k}: <@&{v}>" for k, v in sorted(x["level_roles"].items(), key=lambda i: int(i[0]))) or "none", inline=False)
         e.add_field(name="Ignored channels", value=" ".join(f"<#{c}>" for c in x["ignore_channels"]) or "none", inline=False)
+        e.add_field(name="Role boosts", value="\n".join(f"<@&{k}>: x{v}" for k, v in x["boosts"].items()) or "none", inline=False)
         await it.response.send_message(embed=e, ephemeral=True)
+
+    @xp.command(name="boost", description="XP multiplier for a role (1.0 removes the boost)")
+    async def xp_boost(self, it: discord.Interaction, role: discord.Role, multiplier: app_commands.Range[float, 0.1, 10.0]):
+        """XP multiplier for a role (1.0 removes the boost)."""
+        boosts = self.conf(it.guild_id)["boosts"]
+        if multiplier == 1.0:
+            boosts.pop(str(role.id), None)
+        else:
+            boosts[str(role.id)] = multiplier
+        await it.response.send_message(f"{role.mention}: x{multiplier}", ephemeral=True)
 
     @xp.command(name="give", description="Give XP to a member")
     async def xp_give(self, it: discord.Interaction, user: discord.Member, amount: app_commands.Range[int, 1, 100000000]):
+        """Give XP to a member."""
         await it.response.defer(ephemeral=True)
         rec = self.bot.store.user(it.guild_id, user.id)
         await self.set_xp(user, rec["xp"] + amount)
@@ -246,6 +291,7 @@ class Leveling(commands.Cog):
 
     @xp.command(name="take", description="Remove XP from a member")
     async def xp_take(self, it: discord.Interaction, user: discord.Member, amount: app_commands.Range[int, 1, 100000000]):
+        """Remove XP from a member."""
         await it.response.defer(ephemeral=True)
         rec = self.bot.store.user(it.guild_id, user.id)
         await self.set_xp(user, rec["xp"] - amount)
@@ -253,46 +299,50 @@ class Leveling(commands.Cog):
 
     @xp.command(name="setlevel", description="Set a member to an exact level")
     async def xp_setlevel(self, it: discord.Interaction, user: discord.Member, level: app_commands.Range[int, 0, 100]):
+        """Set a member to an exact level."""
         await it.response.defer(ephemeral=True)
         await self.set_xp(user, TOTALS[level])
         await it.followup.send(f"{user.display_name} is now level {level}.")
 
     @xp.command(name="reset", description="Reset a member's XP")
     async def xp_reset(self, it: discord.Interaction, user: discord.Member):
+        """Reset a member's XP."""
         await it.response.defer(ephemeral=True)
         await self.set_xp(user, 0)
         await it.followup.send(f"XP of {user.display_name} reset.")
 
     @xp.command(name="ignore", description="Toggle a channel that gives no XP")
     async def xp_ignore(self, it: discord.Interaction, channel: discord.abc.GuildChannel):
+        """Toggle a channel that gives no XP."""
         lst = self.conf(it.guild_id)["ignore_channels"]
         lst.remove(channel.id) if channel.id in lst else lst.append(channel.id)
-        self.bot.store.mark("config")
         await it.response.send_message(f"{channel.mention} {'gives no XP' if channel.id in lst else 'gives XP again'}.", ephemeral=True)
 
     @lr.command(name="add", description="Give a role when members reach a level")
     async def lr_add(self, it: discord.Interaction, level: app_commands.Range[int, 1, 100], role: discord.Role):
+        """Give a role when members reach a level."""
         if not role.is_assignable():
             return await it.response.send_message("I cannot assign that role. Move my role above it.", ephemeral=True)
         self.conf(it.guild_id)["level_roles"][str(level)] = role.id
-        self.bot.store.mark("config")
         await it.response.send_message(f"Level {level} gives {role.mention}.", ephemeral=True)
 
     @lr.command(name="remove", description="Remove the role of a level")
     async def lr_remove(self, it: discord.Interaction, level: app_commands.Range[int, 1, 100]):
+        """Remove the role of a level."""
         if self.conf(it.guild_id)["level_roles"].pop(str(level), None) is None:
             return await it.response.send_message("No role set for that level.", ephemeral=True)
-        self.bot.store.mark("config")
         await it.response.send_message("Removed.", ephemeral=True)
 
     @lr.command(name="list", description="List level roles")
     async def lr_list(self, it: discord.Interaction):
+        """List level roles."""
         lr = self.conf(it.guild_id)["level_roles"]
         text = "\n".join(f"Level {k}: <@&{v}>" for k, v in sorted(lr.items(), key=lambda i: int(i[0]))) or "No level roles set."
         await it.response.send_message(text, ephemeral=True)
 
     @lr.command(name="sync", description="Apply level roles to all members")
     async def lr_sync(self, it: discord.Interaction):
+        """Apply level roles to all members."""
         await it.response.defer(ephemeral=True)
         x, n = self.conf(it.guild_id), 0
         for uid, rec in list(self.bot.store.users(it.guild_id).items()):
@@ -305,4 +355,5 @@ class Leveling(commands.Cog):
 
 
 async def setup(bot):
+    """Register the cog with the bot."""
     await bot.add_cog(Leveling(bot))
