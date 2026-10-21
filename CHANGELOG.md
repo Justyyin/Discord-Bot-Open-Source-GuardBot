@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Much more detailed README in all 12 languages: bot permissions, first steps, a command section with example code blocks for every module, message placeholders, configuration paths and data locations.
+- A test checks that every command example in the README uses a real command and real parameter names.
+
 ## 1.1.1
 
 - Removed the copyright comment from the top of every source file. The license and the credit in the bot output stay.

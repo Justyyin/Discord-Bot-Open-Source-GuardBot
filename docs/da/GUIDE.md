@@ -112,6 +112,7 @@ Brug disse kommandoer på din server og erstat kanalnavnene med dine egne.
 /raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
 /antinuke setup enabled:True action:strip
 /verify setup channel:#verify mode:captcha timeout_minutes:30
+/welcome set channel:#welcome message:Welcome {user} to {server}!
 /backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
 /module list
