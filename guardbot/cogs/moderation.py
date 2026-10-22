@@ -97,6 +97,8 @@ class Moderation(commands.Cog):
         e.add_field(name="Moderator", value=f"{mod.mention} ({mod.id})")
         e.add_field(name="Reason", value=trim(case["reason"]), inline=False)
         self.bot.log(guild, "moderation", e)
+        if not (extra or {}).get("auto") and mod.id != guild.me.id:
+            self.bot.team_count(guild, mod.id, "cases")
         watch = self.bot.get_cog("ModWatch")
         if watch and kind in CASE_KEYS:
             await watch.count(guild, mod, CASE_KEYS[kind])
@@ -133,15 +135,15 @@ class Moderation(commands.Cog):
         cutoff = time.time() - days * 86400 if days else 0
         return sum(1 for c in self.bot.store.cases(gid) if c["type"] == "warn" and c["user"] == uid and c["active"] and c["ts"] >= cutoff)
 
-    async def warn_member(self, guild, member, mod, reason):
+    async def warn_member(self, guild, member, mod, reason, extra=None):
         """Create a warning, tell the member and run the escalation steps."""
-        case = await self.add_case(guild, "warn", member, mod, reason)
+        case = await self.add_case(guild, "warn", member, mod, reason, extra)
         count = self.active_warns(guild.id, member.id)
         await self.notify(guild, member, f"you received a warning ({count} active). Reason: {case['reason']}")
-        await self.escalate(guild, member, count)
+        await self.escalate(guild, member, count, case["id"])
         return case, count
 
-    async def escalate(self, guild, member, count):
+    async def escalate(self, guild, member, count, from_case=None):
         """Apply the punishment that is configured for the current number of warnings."""
         for rule in self.bot.cfg(guild.id)["mod"]["escalation"]:
             if rule["warns"] != count:
@@ -151,15 +153,15 @@ class Moderation(commands.Cog):
                 if act == "timeout":
                     mins = min(int(rule.get("minutes", 60)), 40320)
                     await member.timeout(timedelta(minutes=mins), reason=why)
-                    await self.add_case(guild, "mute", member, guild.me, why, {"auto": True, "minutes": mins})
+                    await self.add_case(guild, "mute", member, guild.me, why, {"auto": True, "minutes": mins, "from_case": from_case})
                 elif act == "kick":
                     await member.kick(reason=why)
-                    await self.add_case(guild, "kick", member, guild.me, why, {"auto": True})
+                    await self.add_case(guild, "kick", member, guild.me, why, {"auto": True, "from_case": from_case})
                 elif act == "ban":
                     await guild.ban(member, reason=why)
-                    await self.add_case(guild, "ban", member, guild.me, why, {"auto": True})
+                    await self.add_case(guild, "ban", member, guild.me, why, {"auto": True, "from_case": from_case})
                 elif act == "jail":
-                    await self.bot.get_cog("Jail").send_to_jail(member, guild.me, why, auto=True)
+                    await self.bot.get_cog("Jail").send_to_jail(member, guild.me, why, auto=True, from_case=from_case)
             except discord.HTTPException as exc:
                 log.warning("escalation %s for %s failed: %s", act, member, exc)
                 self.bot.log(guild, "moderation", emb("Automatic punishment failed", f"{act} for {member.mention}: {exc}", discord.Color.red()))
@@ -194,21 +196,75 @@ class Moderation(commands.Cog):
                 n += 1
         await ctx.send(f"Removed {n} warnings of {user}.")
 
+    async def punish(self, guild, mod, target, kind, reason=None, seconds=None, extra=None):
+        """Carry out one punishment and write the case. Returns (ok, text, case). Checks who may be punished, but not the rights of the moderator."""
+        member = target if isinstance(target, discord.Member) else guild.get_member(target.id)
+        err = self.target_error(guild, mod, member or target)
+        if err:
+            return False, err, None
+        extra = dict(extra or {})
+        why = reason or "No reason given"
+        try:
+            if kind == "mute":
+                if member is None:
+                    return False, "That user is not on this server.", None
+                secs = min(seconds or self.bot.cfg(guild.id)["mod"]["default_mute_minutes"] * 60, 28 * 86400)
+                await member.timeout(timedelta(seconds=secs), reason=reason)
+                case = await self.add_case(guild, "mute", member, mod, reason, {**extra, "seconds": secs})
+                await self.notify(guild, member, f"you were muted for {fmt_duration(secs)}. Reason: {case['reason']}")
+                return True, f"{member.mention} muted for {fmt_duration(secs)} (case #{case['id']}).", case
+            if kind == "kick":
+                if member is None:
+                    return False, "That user is not on this server.", None
+                await self.notify(guild, member, f"you were kicked. Reason: {why}")
+                await member.kick(reason=reason)
+                case = await self.add_case(guild, "kick", member, mod, reason, extra)
+                return True, f"{member} was kicked (case #{case['id']}).", case
+            if kind == "ban":
+                if member:
+                    await self.notify(guild, member, f"you were banned. Reason: {why}.{self.appeal_hint(guild)}")
+                await guild.ban(target, reason=reason)
+                case = await self.add_case(guild, "ban", target, mod, reason, extra)
+                return True, f"{target} was banned (case #{case['id']}).", case
+            if kind == "tempban":
+                if not seconds:
+                    return False, "A temporary ban needs a duration.", None
+                if member:
+                    await self.notify(guild, member, f"you were banned for {fmt_duration(seconds)}. Reason: {why}.{self.appeal_hint(guild)}")
+                await guild.ban(target, reason=f"Tempban {fmt_duration(seconds)}: {reason or 'no reason'}")
+                until = int(time.time()) + seconds
+                self.bot.cfg(guild.id)["mod"]["tempbans"][str(target.id)] = until
+                case = await self.add_case(guild, "ban", target, mod, reason, {**extra, "seconds": seconds, "until": until})
+                return True, f"{target} was banned for {fmt_duration(seconds)} (case #{case['id']}).", case
+            if kind == "warn":
+                if member is None:
+                    return False, "That user is not on this server.", None
+                case, count = await self.warn_member(guild, member, mod, reason, extra)
+                return True, f"{member.mention} was warned (case #{case['id']}, {count} active warnings).", case
+            if kind == "jail":
+                if member is None:
+                    return False, "That user is not on this server.", None
+                ok, text = await self.bot.get_cog("Jail").send_to_jail(member, mod, reason, seconds=seconds)
+                return ok, text, None
+        except discord.HTTPException as exc:
+            log.warning("%s of %s failed: %s", kind, target, exc)
+            return False, f"Discord refused: {exc}", None
+        return False, f"Unknown action {kind}.", None
+
+    async def gated(self, ctx, kind, target, reason, seconds=None):
+        """True if the action was sent to a second moderator for approval instead of being carried out."""
+        approval = self.bot.get_cog("Approval")
+        return bool(approval) and await approval.gate(ctx, kind, target, reason, seconds)
+
     @commands.hybrid_command(name="mute", description="Timeout a member")
     @app_commands.describe(member="Member", duration="For example 30m, 2h, 1d", reason="Reason")
     async def mute_cmd(self, ctx, member: discord.Member, duration: Optional[str] = None, *, reason: Optional[str] = None):
         """Timeout a member."""
-        err = self.target_error(ctx.guild, ctx.author, member)
-        if err:
-            return await ctx.send(err, ephemeral=True)
         secs = parse_duration(duration) if duration else None
         if duration and secs is None:
             reason, duration = f"{duration} {reason or ''}".strip(), None
-        secs = min(secs or self.bot.cfg(ctx.guild.id)["mod"]["default_mute_minutes"] * 60, 28 * 86400)
-        await member.timeout(timedelta(seconds=secs), reason=reason)
-        case = await self.add_case(ctx.guild, "mute", member, ctx.author, reason, {"seconds": secs})
-        await self.notify(ctx.guild, member, f"you were muted for {fmt_duration(secs)}. Reason: {case['reason']}")
-        await ctx.send(f"{member.mention} muted for {fmt_duration(secs)} (case #{case['id']}).")
+        ok, text, _ = await self.punish(ctx.guild, ctx.author, member, "mute", reason, secs)
+        await ctx.send(text, ephemeral=not ok)
 
     @commands.hybrid_command(name="unmute", description="Remove a timeout")
     async def unmute_cmd(self, ctx, member: discord.Member, *, reason: Optional[str] = None):
@@ -223,23 +279,21 @@ class Moderation(commands.Cog):
         err = self.target_error(ctx.guild, ctx.author, member)
         if err:
             return await ctx.send(err, ephemeral=True)
-        await self.notify(ctx.guild, member, f"you were kicked. Reason: {reason or 'No reason given'}")
-        await member.kick(reason=reason)
-        case = await self.add_case(ctx.guild, "kick", member, ctx.author, reason)
-        await ctx.send(f"{member} was kicked (case #{case['id']}).")
+        if await self.gated(ctx, "kick", member, reason):
+            return
+        ok, text, _ = await self.punish(ctx.guild, ctx.author, member, "kick", reason)
+        await ctx.send(text, ephemeral=not ok)
 
     @commands.hybrid_command(name="ban", description="Ban a user, also by ID")
     async def ban_cmd(self, ctx, user: discord.User, *, reason: Optional[str] = None):
         """Ban a user, also by ID."""
-        member = ctx.guild.get_member(user.id)
-        err = self.target_error(ctx.guild, ctx.author, member or user)
+        err = self.target_error(ctx.guild, ctx.author, ctx.guild.get_member(user.id) or user)
         if err:
             return await ctx.send(err, ephemeral=True)
-        if member:
-            await self.notify(ctx.guild, member, f"you were banned. Reason: {reason or 'No reason given'}.{self.appeal_hint(ctx.guild)}")
-        await ctx.guild.ban(user, reason=reason)
-        case = await self.add_case(ctx.guild, "ban", user, ctx.author, reason)
-        await ctx.send(f"{user} was banned (case #{case['id']}).")
+        if await self.gated(ctx, "ban", user, reason):
+            return
+        ok, text, _ = await self.punish(ctx.guild, ctx.author, user, "ban", reason)
+        await ctx.send(text, ephemeral=not ok)
 
     @commands.hybrid_command(name="unban", description="Unban a user by ID")
     async def unban_cmd(self, ctx, user: discord.User, *, reason: Optional[str] = None):
@@ -343,6 +397,83 @@ class Moderation(commands.Cog):
                 x["extra"]["links"].remove(y["id"])
         await ctx.send(i18n.say(ctx.bot, ctx.guild, "Link removed."), ephemeral=True)
 
+    async def undo_one(self, guild, mod, case, reason):
+        """Take back the effect of one case. Returns a short result text."""
+        kind, uid = case["type"], case["user"]
+        user = discord.Object(uid)
+        text = "marked as removed"
+        try:
+            if kind == "ban":
+                await guild.unban(user, reason=reason)
+                self.bot.cfg(guild.id)["mod"]["tempbans"].pop(str(uid), None)
+                text = "unbanned"
+            elif kind == "mute":
+                member = guild.get_member(uid)
+                if member is not None and member.timed_out_until:
+                    await member.timeout(None, reason=reason)
+                    text = "timeout removed"
+            elif kind == "jail":
+                member = guild.get_member(uid)
+                if member is not None and self.bot.store.users(guild.id).get(str(uid), {}).get("jailed"):
+                    ok, msg = await self.bot.get_cog("Jail").release(member, mod, reason)
+                    text = "released" if ok else msg
+            elif kind == "kick":
+                text = "a kick cannot be taken back, marked as removed"
+        except discord.NotFound:
+            text = "was already gone"
+        except discord.HTTPException as exc:
+            return f"#{case['id']} {kind}: Discord refused ({exc})"
+        case["active"] = False
+        case["extra"]["undone_by"] = mod.id
+        case["extra"]["undone_at"] = int(time.time())
+        self.bot.store.cases(guild.id)
+        return f"#{case['id']} {kind}: {text}"
+
+    def undo_set(self, gid, case, follow=True, batch=False):
+        """The cases that belong to an undo: the case itself, automatic punishments that its warning caused, and for a bulk action every case of the same run."""
+        cases = self.bot.store.cases(gid)
+        chosen = {case["id"]: case}
+        if follow:
+            for c in cases:
+                if c["extra"].get("from_case") == case["id"] and c["active"]:
+                    chosen[c["id"]] = c
+        batch_id = case["extra"].get("batch")
+        if batch and batch_id:
+            for c in cases:
+                if c["extra"].get("batch") == batch_id and c["active"]:
+                    chosen[c["id"]] = c
+        return [c for c in chosen.values() if c["active"] and c["type"] not in ("note", "unban", "unmute", "unjail")] or ([case] if case["active"] else [])
+
+    @case_cmd.command(name="undo", description="Take back a case and what it caused")
+    @app_commands.describe(case_id="Case number", reason="Why it is taken back", follow="Also take back automatic punishments caused by this warning", batch="For a bulk action: take back every case of the same run")
+    async def case_undo(self, ctx, case_id: int, reason: Optional[str] = None, follow: bool = True, batch: bool = False):
+        """Take back a case: unban, remove the timeout, release from the gulag or remove the warning, together with the follow-up punishments."""
+        c = self.find_case(ctx.guild.id, case_id)
+        if not c:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Case not found."), ephemeral=True)
+        if not c["active"] and not (c["extra"].get("batch") and batch):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "That case is already taken back."), ephemeral=True)
+        why = f"Case #{case_id} taken back: {reason or 'no reason'}"
+        chosen = self.undo_set(ctx.guild.id, c, follow, batch)
+        if len(chosen) > 25:
+            return await ctx.send(f"That would take back {len(chosen)} cases. At most 25 at once.", ephemeral=True)
+        await ctx.defer(ephemeral=True)
+        lines = []
+        for item in chosen:
+            if item["type"] == "warn":
+                item["active"] = False
+                item["extra"]["undone_by"] = ctx.author.id
+                item["extra"]["undone_at"] = int(time.time())
+                self.bot.store.cases(ctx.guild.id)
+                lines.append(f"#{item['id']} warn: removed")
+            else:
+                lines.append(await self.undo_one(ctx.guild, ctx.author, item, why))
+        e = emb(f"Case #{case_id} taken back", color=discord.Color.green(), user=ctx.author)
+        e.add_field(name="Reason", value=trim(reason or "none"), inline=False)
+        e.add_field(name="Result", value=trim("\n".join(lines), 1000), inline=False)
+        self.bot.log(ctx.guild, "moderation", e)
+        await ctx.send(trim("\n".join(lines), 1800), ephemeral=True)
+
     @case_cmd.command(name="edit", description="Change the reason of a case")
     @app_commands.describe(case_id="Case number", reason="New reason")
     async def case_edit(self, ctx, case_id: int, *, reason: str):
@@ -390,21 +521,13 @@ class Moderation(commands.Cog):
         secs = parse_duration(duration)
         if not secs:
             return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Invalid duration. Examples: 12h, 7d, 2w"), ephemeral=True)
-        member = ctx.guild.get_member(user.id)
-        err = self.target_error(ctx.guild, ctx.author, member or user)
+        err = self.target_error(ctx.guild, ctx.author, ctx.guild.get_member(user.id) or user)
         if err:
             return await ctx.send(err, ephemeral=True)
-        if member:
-            await self.notify(ctx.guild, member, f"you were banned for {fmt_duration(secs)}. Reason: {reason or 'No reason given'}.{self.appeal_hint(ctx.guild)}")
-        try:
-            await ctx.guild.ban(user, reason=f"Tempban {fmt_duration(secs)}: {reason or 'no reason'}")
-        except discord.HTTPException as exc:
-            log.warning("tempban of %s failed: %s", user, exc)
-            return await ctx.send(f"Discord refused the ban: {exc}", ephemeral=True)
-        until = int(time.time()) + secs
-        self.bot.cfg(ctx.guild.id)["mod"]["tempbans"][str(user.id)] = until
-        case = await self.add_case(ctx.guild, "ban", user, ctx.author, reason, {"seconds": secs, "until": until})
-        await ctx.send(f"{user} was banned for {fmt_duration(secs)} (case #{case['id']}).")
+        if await self.gated(ctx, "tempban", user, reason, secs):
+            return
+        ok, text, _ = await self.punish(ctx.guild, ctx.author, user, "tempban", reason, secs)
+        await ctx.send(text, ephemeral=not ok)
 
     @tasks.loop(seconds=60)
     async def tempban_loop(self):
@@ -460,6 +583,13 @@ class Moderation(commands.Cog):
         rules.append({"warns": warns, "action": action, "minutes": minutes})
         self.bot.cfg(it.guild_id)["mod"]["escalation"] = rules
         await it.response.send_message(f"{warns} warnings: {action}", ephemeral=True)
+
+    @esc.command(name="expiry", description="Warnings stop counting after this many days (0 = never)")
+    @app_commands.describe(days="Days until a warning no longer counts for the escalation")
+    async def esc_expiry(self, it: discord.Interaction, days: app_commands.Range[int, 0, 3650]):
+        """Warnings stop counting after this many days (0 = never)."""
+        self.bot.cfg(it.guild_id)["mod"]["warn_expiry_days"] = days
+        await it.response.send_message(f"Warnings stop counting after {days} days." if days else "Warnings count forever.", ephemeral=True)
 
     @esc.command(name="remove", description="Remove an escalation step")
     async def esc_remove(self, it: discord.Interaction, warns: int):

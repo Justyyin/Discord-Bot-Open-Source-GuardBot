@@ -4,6 +4,7 @@ import asyncio
 import io
 import logging
 import re
+import time
 from typing import Optional
 
 import discord
@@ -50,16 +51,18 @@ async def open_ticket(interaction, type_key):
         )
     except discord.HTTPException as exc:
         return await interaction.followup.send(f"Could not create the ticket: {exc}", ephemeral=True)
-    t["open"][str(ch.id)] = {"user": user.id, "type": type_key}
+    t["open"][str(ch.id)] = {"user": user.id, "type": type_key, "ts": int(time.time())}
+    bot.team_event(guild, "tickets_opened")
     view = discord.ui.View(timeout=None)
     view.add_item(TicketClose())
     info = t["types"][type_key]
-    mentions = user.mention + (f" {support.mention}" if support else "")
+    staff_text, staff_users, staff_roles = bot.staff_ping(guild, "tickets", t["support_role"])
+    mentions = user.mention + (f" {staff_text}" if staff_text else "")
     await ch.send(
         mentions,
         embed=emb(f"{info['label']} ticket", f"{user.mention}, describe your request. A staff member will answer here.\nPress the button below to close the ticket."),
         view=view,
-        allowed_mentions=discord.AllowedMentions(users=[user], roles=[support] if support else []),
+        allowed_mentions=discord.AllowedMentions(users=[user, *(discord.Object(u) for u in staff_users)], roles=[discord.Object(r) for r in staff_roles]),
     )
     await interaction.followup.send(f"Your ticket: {ch.mention}", ephemeral=True)
 
@@ -95,6 +98,9 @@ async def close_ticket(interaction):
         except discord.HTTPException as exc:
             log.warning("owner.send failed: %s", exc)
     t["open"].pop(str(ch.id), None)
+    bot.team_event(guild, "tickets_closed")
+    if member.id != data["user"]:
+        bot.team_count(guild, member.id, "tickets", time.time() - data["ts"] if data.get("ts") else None)
     await asyncio.sleep(5)
     try:
         await ch.delete(reason="Ticket closed")
@@ -163,7 +169,7 @@ class Tickets(commands.Cog):
             t["log_channel"] = log_channel.id
         if max_open:
             t["max_open"] = max_open
-        await it.response.send_message(i18n.say(it.client, it.guild, "Saved. Post a panel with /ticket panel."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Saved. Post a panel with /support ticket panel."), ephemeral=True)
 
     @grp.command(name="panel", description="Post the ticket panel with one button per type")
     async def t_panel(self, it: discord.Interaction, channel: discord.TextChannel, title: str = "Support", description: str = "Press a button to open a ticket."):

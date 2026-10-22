@@ -1,4 +1,4 @@
-"""Short top-level commands /block, /unblock and /blocklist for the AutoMod blocklist."""
+"""Short top-level commands /security block, /security unblock and /security blocklist for the AutoMod blocklist."""
 
 import discord
 from discord import app_commands
@@ -26,7 +26,7 @@ class Shortcuts(commands.Cog):
         await self.automod().am_block.callback(self.automod(), it, kind, value, image)
 
     @app_commands.command(name="unblock", description="Remove an entry from the blocklist")
-    @app_commands.describe(kind="Which list", number="Number from /blocklist")
+    @app_commands.describe(kind="Which list", number="Number from /security blocklist")
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def unblock(self, it: discord.Interaction, kind: Literal["link", "message", "image"], number: int):

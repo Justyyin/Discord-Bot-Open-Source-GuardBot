@@ -14,6 +14,8 @@ RUNTIME = (
     "suggestions.items", "suggestions.next", "modmail.open", "appeals.items", "appeals.last", "appeals.next", "jail.timed",
     "mod.tempbans", "verify.pending", "tempvoice.rooms", "tempvoice.owners", "counting.count", "counting.last_user",
     "counting.record", "automod.hits", "reports.seen", "reports.next", "debug.usage", "debug.errors", "debug.last_hash", "activity.days",
+    "approval.items", "approval.next", "watchlist.items", "archive.reported", "archive.last_scan", "temproles.items", "history", "team.stats",
+    "team.week", "team.last_report", "team.away", "team.assigned", "applications.items", "applications.next", "applications.last", "rules.message", "rules.changed",
 )
 
 
@@ -114,3 +116,101 @@ def parse(raw):
         return None, ["this is not a GuardBot settings file"]
     problems = validate(payload["settings"])
     return payload, problems
+
+
+# Sections that are not copied between servers or tracked in the history
+LOCAL_ONLY = ("history", "team", "debug", "dashboard_access", "appeals", "case_counter", "applications")
+MIN_ID = 10 ** 15
+
+
+def sections(cfg):
+    """The portable sections of a server as {name: value}, without runtime state."""
+    return {k: v for k, v in export_config(cfg)["settings"].items() if k not in LOCAL_ONLY}
+
+
+def restore(current, section, before):
+    """Put a section back to an earlier value. The runtime state inside the section (open tickets, counters) stays as it is now."""
+    new = copy.deepcopy(before)
+    for path in RUNTIME:
+        parts = path.split(".")
+        if parts[0] != section or len(parts) < 2:
+            continue
+        parent, key = _get(current, path)
+        if parent is None:
+            continue
+        target = new
+        for part in parts[1:-1]:
+            target = target.setdefault(part, {})
+        target[parts[-1]] = copy.deepcopy(parent[key])
+    fill_missing(new, DEFAULTS.get(section))
+    current[section] = new
+    return new
+
+
+def fill_missing(value, default):
+    """Add settings that an older copy does not have, with their defaults."""
+    if not isinstance(value, dict) or not isinstance(default, dict):
+        return
+    for key, ref in default.items():
+        if key not in value:
+            value[key] = copy.deepcopy(ref)
+        else:
+            fill_missing(value[key], ref)
+
+
+def remap(value, mapping):
+    """Replace channel and role IDs in a settings value with the IDs of another server. IDs without a counterpart are dropped (None, removed from lists and dicts). Returns (new value, mapped count, dropped count)."""
+    counts = [0, 0]
+
+    def big(x):
+        """True for something that looks like a Discord ID."""
+        return isinstance(x, int) and not isinstance(x, bool) and x >= MIN_ID
+
+    def walk(v):
+        """Rebuild a value with new IDs."""
+        if big(v):
+            if v in mapping:
+                counts[0] += 1
+                return mapping[v]
+            counts[1] += 1
+            return None
+        if isinstance(v, list):
+            out = []
+            for x in v:
+                new = walk(x)
+                if new is not None or not big(x):
+                    out.append(new)
+            return out
+        if isinstance(v, dict):
+            out = {}
+            for k, x in v.items():
+                if isinstance(k, str) and k.isdigit() and int(k) >= MIN_ID:
+                    if int(k) not in mapping:
+                        counts[1] += 1
+                        continue
+                    counts[0] += 1
+                    k = str(mapping[int(k)])
+                out[k] = walk(x)
+            return out
+        return v
+
+    return walk(value), counts[0], counts[1]
+
+
+def id_map(source, target):
+    """Match channels, categories and roles of two servers by name and type. @everyone maps to @everyone."""
+    mapping = {source.default_role.id: target.default_role.id}
+    roles = {}
+    for r in target.roles:
+        roles.setdefault(r.name.casefold(), r.id)
+    for r in source.roles:
+        if r.name.casefold() in roles and not r.is_default():
+            mapping[r.id] = roles[r.name.casefold()]
+    channels = {}
+    for c in target.channels:
+        channels.setdefault((c.name.casefold(), str(c.type)), c.id)
+    for c in source.channels:
+        key = (c.name.casefold(), str(c.type))
+        if key in channels:
+            mapping[c.id] = channels[key]
+    return mapping

@@ -101,12 +101,12 @@ class Jail(commands.Cog):
         channel = guild.get_channel(j["channel"]) if j["channel"] else None
         return j, role, channel
 
-    async def send_to_jail(self, member, moderator, reason=None, auto=False, seconds=None):
+    async def send_to_jail(self, member, moderator, reason=None, auto=False, seconds=None, from_case=None):
         """Replace the roles of a member with the gulag role and post the notice. Returns (success, message)."""
         guild = member.guild
         j, role, channel = self.parts(guild)
         if not role or not channel:
-            return False, "The gulag is not set up. Run /jailsetup setup first."
+            return False, "The gulag is not set up. Run /access jailsetup setup first."
         rec = self.bot.store.user(guild.id, member.id)
         if rec.get("jailed"):
             return False, "That member is already in the gulag."
@@ -127,7 +127,7 @@ class Jail(commands.Cog):
                 await member.move_to(None)
             except discord.HTTPException as exc:
                 log.warning("member.move_to failed: %s", exc)
-        await self.bot.get_cog("Moderation").add_case(guild, "jail", member, moderator, reason, {"auto": auto, "seconds": seconds})
+        await self.bot.get_cog("Moderation").add_case(guild, "jail", member, moderator, reason, {"auto": auto, "seconds": seconds, "from_case": from_case})
         try:
             await channel.send(member.mention, embed=notice_embed(j["staff_role"], j["notice"], until), allowed_mentions=discord.AllowedMentions(users=[member]))
         except discord.HTTPException as exc:

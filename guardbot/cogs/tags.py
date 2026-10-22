@@ -118,7 +118,7 @@ class Tags(commands.Cog):
         """Post a tag."""
         tag = self.conf(it.guild_id).get(name.lower())
         if not tag:
-            return await it.response.send_message(i18n.say(it.client, it.guild, "There is no tag with that name. Use /tag list."), ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "There is no tag with that name. Use /support tag list."), ephemeral=True)
         tag["uses"] = tag.get("uses", 0) + 1
         await it.response.send_message(fmt(tag["text"], it.user, it.guild), allowed_mentions=discord.AllowedMentions(users=[it.user]))
 
@@ -127,7 +127,7 @@ class Tags(commands.Cog):
         """List all tags."""
         names = sorted(self.conf(it.guild_id))
         prefix = self.bot.prefix_for(it.guild_id)
-        await it.response.send_message(embed=emb("Tags", " ".join(f"`{n}`" for n in names) or "No tags yet.", footer=f"Use /tag show or {prefix}name"), ephemeral=True)
+        await it.response.send_message(embed=emb("Tags", " ".join(f"`{n}`" for n in names) or "No tags yet.", footer=f"Use /support tag show or {prefix}name"), ephemeral=True)
 
     @tag.command(name="info", description="Show who made a tag and how often it was used")
     async def tag_info(self, it: discord.Interaction, name: str):
@@ -147,11 +147,11 @@ class Tags(commands.Cog):
         err = self.name_error(name)
         tags = self.conf(it.guild_id)
         if err or name in tags:
-            return await it.response.send_message(err or "That tag exists already. Use /tag edit.", ephemeral=True)
+            return await it.response.send_message(err or "That tag exists already. Use /support tag edit.", ephemeral=True)
         if len(tags) >= MAX_TAGS:
             return await it.response.send_message(f"A server can have {MAX_TAGS} tags at most.", ephemeral=True)
         tags[name] = {"text": text.replace("\\n", "\n"), "author": it.user.id, "uses": 0, "created": int(time.time())}
-        await it.response.send_message(f"Tag `{name}` created. Members can use `/tag show {name}` or `{self.bot.prefix_for(it.guild_id)}{name}`.", ephemeral=True)
+        await it.response.send_message(f"Tag `{name}` created. Members can use `/support tag show {name}` or `{self.bot.prefix_for(it.guild_id)}{name}`.", ephemeral=True)
 
     @tag.command(name="edit", description="Change the text of a tag")
     async def tag_edit(self, it: discord.Interaction, name: str, text: app_commands.Range[str, 1, 1900]):

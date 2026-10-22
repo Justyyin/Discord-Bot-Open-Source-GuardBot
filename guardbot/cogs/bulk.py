@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+import secrets
 from datetime import timedelta
 from typing import Optional
 
@@ -97,25 +98,34 @@ class Bulk(commands.Cog):
         await view.wait()
         if not view.answer:
             return await it.edit_original_response(content="Cancelled." if view.answer is False else "No answer, cancelled.", view=None)
-        self.running.add(it.guild_id)
+        approval = self.bot.get_cog("Approval")
+        if approval is not None and await approval.gate_bulk(it, kind, ids, reason, seconds):
+            return await it.edit_original_response(content="This action needs the approval of a second moderator. A request was posted.", view=None)
+        await it.edit_original_response(content=f"Working on {len(ids)} user(s).", view=None)
+        done, failed = await self.execute(it.guild, it.user, kind, ids, reason, seconds)
+        text = f"Done: {len(done)}. Failed: {len(failed)}." + ("\n" + trim("\n".join(failed), 1500) if failed else "")
+        await it.edit_original_response(content=text)
+
+    async def execute(self, guild, moderator, kind, ids, reason, seconds=None):
+        """Apply the action to each user. Returns (done ids, failure texts). Every case of one run shares a batch number."""
+        mod = self.bot.get_cog("Moderation")
+        batch = secrets.token_hex(4)
+        self.running.add(guild.id)
         done, failed = [], []
         try:
-            await it.edit_original_response(content=f"Working on {len(ids)} user(s).", view=None)
             for uid in ids:
                 try:
-                    await self.one(it, mod, kind, uid, reason, seconds)
+                    await self.one(guild, moderator, mod, kind, uid, reason, seconds, batch)
                     done.append(uid)
                 except (ValueError, discord.HTTPException) as exc:
                     failed.append(f"{uid}: {exc}")
                 await asyncio.sleep(0.5)
         finally:
-            self.running.discard(it.guild_id)
-        text = f"Done: {len(done)}. Failed: {len(failed)}." + ("\n" + trim("\n".join(failed), 1500) if failed else "")
-        await it.edit_original_response(content=text)
+            self.running.discard(guild.id)
+        return done, failed
 
-    async def one(self, it, mod, kind, uid, reason, seconds):
+    async def one(self, guild, moderator, mod, kind, uid, reason, seconds, batch):
         """Apply the action to one user. Raises ValueError with the reason when it is not allowed."""
-        guild = it.guild
         member = guild.get_member(uid)
         if kind == "ban":
             try:
@@ -126,21 +136,22 @@ class Bulk(commands.Cog):
             raise ValueError("not on this server")
         else:
             user = member
-        err = mod.target_error(guild, it.user, user)
+        err = mod.target_error(guild, moderator, user)
         if err:
             raise ValueError(err)
+        extra = {"bulk": True, "batch": batch}
         if kind == "ban":
             if member:
                 await mod.notify(guild, member, f"you were banned. Reason: {reason or 'No reason given'}.{mod.appeal_hint(guild)}")
             await guild.ban(user, reason=reason)
-            await mod.add_case(guild, "ban", user, it.user, reason, {"bulk": True})
+            await mod.add_case(guild, "ban", user, moderator, reason, extra)
         elif kind == "kick":
             await mod.notify(guild, member, f"you were kicked. Reason: {reason or 'No reason given'}")
             await member.kick(reason=reason)
-            await mod.add_case(guild, "kick", member, it.user, reason, {"bulk": True})
+            await mod.add_case(guild, "kick", member, moderator, reason, extra)
         else:
             await member.timeout(timedelta(seconds=seconds), reason=reason)
-            case = await mod.add_case(guild, "mute", member, it.user, reason, {"seconds": seconds, "bulk": True})
+            case = await mod.add_case(guild, "mute", member, moderator, reason, {**extra, "seconds": seconds})
             await mod.notify(guild, member, f"you were muted for {fmt_duration(seconds)}. Reason: {case['reason']}")
 
     @bg.command(name="ban", description="Ban several users")

@@ -164,7 +164,7 @@ class RoleMenus(commands.Cog):
     @rm.command(name="create", description="Post a new role menu")
     @app_commands.describe(title="Title of the post", kind="Buttons or a dropdown", single="Members may hold only one role of the menu", channel="Channel for the post")
     async def create(self, it: discord.Interaction, title: app_commands.Range[str, 1, 200], kind: Literal["buttons", "dropdown"] = "buttons", single: bool = False, channel: Optional[discord.TextChannel] = None):
-        """Post a new role menu. Roles are added with /rolemenu add."""
+        """Post a new role menu. Roles are added with /post rolemenu add."""
         c = self.conf(it.guild_id)
         if len(c["items"]) >= MAX_MENUS:
             return await it.response.send_message(f"A server can have {MAX_MENUS} menus.", ephemeral=True)
@@ -177,7 +177,7 @@ class RoleMenus(commands.Cog):
         menu["message"] = msg.id
         c["next"] += 1
         c["items"][str(mid)] = menu
-        await it.response.send_message(f"Menu {mid} posted in {channel.mention}. Add roles with /rolemenu add menu:{mid}.", ephemeral=True)
+        await it.response.send_message(f"Menu {mid} posted in {channel.mention}. Add roles with /post rolemenu add menu:{mid}.", ephemeral=True)
 
     @rm.command(name="add", description="Add a role to a menu")
     @app_commands.describe(menu="Menu number", role="Role", label="Text of the button or option")

@@ -84,7 +84,7 @@ class Utility(commands.Cog):
             return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Invalid time. Use values like 30m, 2h, 1d or 2w, between 5 seconds and one year."), ephemeral=True)
         rm = self.bot.cfg(ctx.guild.id)["reminders"]
         if sum(1 for i in rm["items"] if i["user"] == ctx.author.id) >= MAX_PER_USER:
-            return await ctx.send(f"You can have {MAX_PER_USER} reminders at once. Use /remind cancel.", ephemeral=True)
+            return await ctx.send(f"You can have {MAX_PER_USER} reminders at once. Use /community remind cancel.", ephemeral=True)
         item = {"id": rm["next"], "user": ctx.author.id, "channel": ctx.channel.id, "end": int(time.time()) + secs, "text": text[:500]}
         rm["next"] += 1
         rm["items"].append(item)
@@ -98,7 +98,7 @@ class Utility(commands.Cog):
         await ctx.send("\n".join(lines) or "You have no reminders.", ephemeral=True)
 
     @remind_cmd.command(name="cancel", description="Delete one of your reminders")
-    @app_commands.describe(id="Reminder number from /remind list")
+    @app_commands.describe(id="Reminder number from /community remind list")
     async def remind_cancel(self, ctx, id: int):
         """Delete one of your reminders."""
         rm = self.bot.cfg(ctx.guild.id)["reminders"]

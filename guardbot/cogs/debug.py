@@ -10,7 +10,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import __version__, i18n, updater
+from .. import __version__, i18n, layout, updater
 from ..defaults import LOG_CATEGORIES
 from ..utils import emb, trim
 
@@ -227,7 +227,7 @@ class Debug(commands.Cog):
         """Send a test message to the error channel."""
         ch = self.conf(it.guild_id)["error_channel"]
         if not ch:
-            return await it.response.send_message(i18n.say(it.client, it.guild, "Set an error channel first with /debug errorchannel."), ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Set an error channel first with /server debug errorchannel."), ephemeral=True)
         self.bot.queue.put_nowait((ch, emb("Error report test", "This is how an error report looks. Nothing is wrong.", discord.Color.green()), []))
         await it.response.send_message(i18n.say(it.client, it.guild, "Test sent."), ephemeral=True)
 
@@ -252,7 +252,7 @@ class Debug(commands.Cog):
         top = sorted(d["usage"].items(), key=lambda kv: -kv[1])[:15]
         rules = sorted(hits.items(), key=lambda kv: -kv[1])
         e = emb("Usage")
-        e.add_field(name="Commands", value="\n".join(f"/{k}: {v}" for k, v in top) or "nothing counted yet", inline=False)
+        e.add_field(name="Commands", value="\n".join(f"/{layout.slash_path(self.bot, k)}: {v}" for k, v in top) or "nothing counted yet", inline=False)
         e.add_field(name="AutoMod rules", value="\n".join(f"{k}: {v}" for k, v in rules) or "no hits yet", inline=False)
         e.add_field(name="Errors", value=str(d["errors"]))
         if reset:
@@ -300,7 +300,7 @@ class Debug(commands.Cog):
         if release is None:
             return await it.followup.send(f"You run the newest version ({__version__}).")
         if action == "check":
-            return await it.followup.send(f"Version {release['tag']} is available. Run /debug update action:install to install it.")
+            return await it.followup.send(f"Version {release['tag']} is available. Run /server debug update action:install to install it.")
         ok, message = await cog.install()
         await it.followup.send(("Done: " if ok else "Not installed: ") + message)
 

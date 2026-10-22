@@ -55,6 +55,7 @@ class ReportButton(discord.ui.DynamicItem[discord.ui.Button], template=r"gb:repo
         if not (perms.manage_messages if self.act == "delete" else perms.moderate_members):
             return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "You are not allowed to do this."), ephemeral=True)
         note = f"Resolved by {interaction.user.mention}"
+        interaction.client.team_count(interaction.guild, interaction.user.id, "reports", time.time() - interaction.message.created_at.timestamp())
         if self.act == "delete":
             channel = interaction.guild.get_channel_or_thread(self.channel_id)
             try:
@@ -135,12 +136,13 @@ class Reports(commands.Cog):
         view = discord.ui.View(timeout=None)
         view.add_item(ReportButton("resolve", message.channel.id, message.id))
         view.add_item(ReportButton("delete", message.channel.id, message.id))
-        role = guild.get_role(conf["ping_role"]) if conf["ping_role"] else None
+        ping, ping_users, ping_roles = self.bot.staff_ping(guild, "reports", conf["ping_role"])
         try:
-            await channel.send(role.mention if role else None, embed=e, view=view, allowed_mentions=discord.AllowedMentions(roles=[role] if role else []))
+            await channel.send(ping or None, embed=e, view=view, allowed_mentions=discord.AllowedMentions(users=[discord.Object(u) for u in ping_users], roles=[discord.Object(r) for r in ping_roles]))
         except discord.HTTPException as exc:
             log.warning("report could not be posted: %s", exc)
             return False, "The report could not be delivered. Please tell a moderator."
+        self.bot.team_event(guild, "reports")
         return True, "Thank you, the staff was notified."
 
     async def report_link(self, member, guild, link, reason):

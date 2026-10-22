@@ -95,7 +95,7 @@ class Updates(commands.Cog):
             return
         can = not updater.in_docker()
         if first:
-            how = "It is installing now." if self.auto and can else "Install it with /debug update action:install." if can else "This installation runs in a container, so update the image or run git pull and restart."
+            how = "It is installing now." if self.auto and can else "Install it with /server debug update action:install." if can else "This installation runs in a container, so update the image or run git pull and restart."
             await self.tell(f"Version {release['tag']} is available (you run {__version__}) and downloaded. {how}", release)
             self.bot.store.set_meta("update_notified", release["tag"])
         if self.auto and can:
@@ -152,7 +152,7 @@ class Updates(commands.Cog):
                 log.info("update notice could not be sent: %s", exc)
 
     def status(self):
-        """Describe the state of the update check for /debug update."""
+        """Describe the state of the update check for /server debug update."""
         lines = [f"Running: {__version__}", f"Repository: {self.repo or 'not set'}", f"Checks: {'every ' + format(self.hours, 'g') + ' h' if self.task else 'off'}", f"Automatic installation: {'on' if self.auto else 'off'}"]
         if updater.in_docker():
             lines.append("Container: updates are shown but not installed here")

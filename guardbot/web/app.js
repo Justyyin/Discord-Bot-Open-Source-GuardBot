@@ -1,8 +1,8 @@
 "use strict";
 (function () {
   var TEXT = {
-    en: { signin: "Sign in with Discord", intro: "Manage your GuardBot servers.", offline: "The bot is not connected right now. Try again in a moment.", server: "Server", overview: "Overview", members: "Members", cases: "Cases", modules: "Modules on", latency: "Latency", search: "Search settings", saved: "Saved", failed: "Could not save", none: "None", logout: "Log out", general: "General", modulesTitle: "Modules", moderation: "Moderation cases", backup: "Backup", export: "Download settings", import: "Import settings", importNote: "Importing replaces the settings of this server with the file. Counters, open tickets and other running data are kept.", imported: "Settings imported", noServers: "You do not manage any server where the bot is connected.", nocases: "No cases yet.", user: "User", type: "Type", reason: "Reason", moderator: "Moderator", when: "When", lines: "One entry per line", sections: "Settings", loginHelp: "Only members with the Manage Server permission can sign in, and only for servers the bot is connected to.", sure: "Replace all settings with this file?", about: "Version" },
-    de: { signin: "Mit Discord anmelden", intro: "Verwalte deine GuardBot-Server.", offline: "Der Bot ist gerade nicht verbunden. Versuche es gleich noch einmal.", server: "Server", overview: "Übersicht", members: "Mitglieder", cases: "Fälle", modules: "Module aktiv", latency: "Latenz", search: "Einstellungen suchen", saved: "Gespeichert", failed: "Speichern fehlgeschlagen", none: "Keine", logout: "Abmelden", general: "Allgemein", modulesTitle: "Module", moderation: "Moderationsfälle", backup: "Sicherung", export: "Einstellungen herunterladen", import: "Einstellungen importieren", importNote: "Der Import ersetzt die Einstellungen dieses Servers durch die Datei. Zähler, offene Tickets und andere laufende Daten bleiben erhalten.", imported: "Einstellungen importiert", noServers: "Du verwaltest keinen Server, auf dem der Bot verbunden ist.", nocases: "Noch keine Fälle.", user: "Nutzer", type: "Art", reason: "Grund", moderator: "Moderator", when: "Wann", lines: "Ein Eintrag pro Zeile", sections: "Einstellungen", loginHelp: "Nur Mitglieder mit der Berechtigung Server verwalten können sich anmelden, und nur für Server, auf denen der Bot verbunden ist.", sure: "Alle Einstellungen durch diese Datei ersetzen?", about: "Version" }
+    en: { signin: "Sign in with Discord", intro: "Manage your GuardBot servers.", offline: "The bot is not connected right now. Try again in a moment.", server: "Server", overview: "Overview", members: "Members", cases: "Cases", modules: "Modules on", latency: "Latency", search: "Search settings", saved: "Saved", failed: "Could not save", none: "None", logout: "Log out", general: "General", modulesTitle: "Modules", moderation: "Moderation cases", backup: "Backup", export: "Download settings", import: "Import settings", importNote: "Importing replaces the settings of this server with the file. Counters, open tickets and other running data are kept.", imported: "Settings imported", noServers: "You do not manage any server where the bot is connected.", nocases: "No cases yet.", user: "User", type: "Type", reason: "Reason", moderator: "Moderator", when: "When", lines: "One entry per line", sections: "Settings", loginHelp: "Only members with the Manage Server permission can sign in, and only for servers the bot is connected to.", sure: "Replace all settings with this file?", about: "Version", readOnly: "You can read this page but not change it. Ask an administrator for more access.", adminOnly: "Only administrators can download or import settings." },
+    de: { signin: "Mit Discord anmelden", intro: "Verwalte deine GuardBot-Server.", offline: "Der Bot ist gerade nicht verbunden. Versuche es gleich noch einmal.", server: "Server", overview: "Übersicht", members: "Mitglieder", cases: "Fälle", modules: "Module aktiv", latency: "Latenz", search: "Einstellungen suchen", saved: "Gespeichert", failed: "Speichern fehlgeschlagen", none: "Keine", logout: "Abmelden", general: "Allgemein", modulesTitle: "Module", moderation: "Moderationsfälle", backup: "Sicherung", export: "Einstellungen herunterladen", import: "Einstellungen importieren", importNote: "Der Import ersetzt die Einstellungen dieses Servers durch die Datei. Zähler, offene Tickets und andere laufende Daten bleiben erhalten.", imported: "Einstellungen importiert", noServers: "Du verwaltest keinen Server, auf dem der Bot verbunden ist.", nocases: "Noch keine Fälle.", user: "Nutzer", type: "Art", reason: "Grund", moderator: "Moderator", when: "Wann", lines: "Ein Eintrag pro Zeile", sections: "Einstellungen", loginHelp: "Nur Mitglieder mit der Berechtigung Server verwalten können sich anmelden, und nur für Server, auf denen der Bot verbunden ist.", sure: "Alle Einstellungen durch diese Datei ersetzen?", about: "Version", readOnly: "Du kannst diese Seite lesen, aber nicht ändern. Frage einen Administrator nach mehr Rechten.", adminOnly: "Nur Administratoren können Einstellungen herunterladen oder importieren." }
   };
   var lang = (navigator.language || "en").slice(0, 2);
   var T = TEXT[lang] || TEXT.en;
@@ -140,7 +140,7 @@
     function tile(v, l) { return h("div", { class: "tile" }, h("b", null, v === null ? "-" : v), h("span", null, l)); }
     return h("div", null, top(i.name),
       h("div", { class: "tiles" }, tile(i.members, T.members), tile(i.cases, T.cases), tile(i.modules_on + " / " + i.modules_total, T.modules), tile(i.latency_ms === null ? null : i.latency_ms + " ms", T.latency)),
-      h("div", { class: "group" }, T.modulesTitle), fieldsBox(i.sections.filter(function (s) { return s.key === "modules"; })[0].fields.slice(0, 8)),
+      h("div", { class: "group" }, T.modulesTitle), fieldsBox(i.sections.filter(function (s) { return s.key === "modules"; })[0].fields.slice(0, 8), i.level === "admin"),
       h("p", { class: "note flat" }, T.about + " " + S.version));
   }
 
@@ -164,12 +164,19 @@
       }
       cur.appendChild(fieldRow(f));
     });
+    if (!section.editable) lock(box, true);
     return box;
   }
 
-  function fieldsBox(fields) {
+  function lock(box, note) {
+    box.querySelectorAll("input:not(.search), select, textarea, button").forEach(function (el) { el.disabled = true; });
+    if (note) box.insertBefore(h("p", { class: "note flat" }, T.readOnly), box.children[1] || null);
+  }
+
+  function fieldsBox(fields, editable) {
     var box = h("div", { class: "fields" });
     fields.forEach(function (f) { box.appendChild(fieldRow(f)); });
+    if (editable === false) lock(box, false);
     return box;
   }
 
@@ -241,7 +248,7 @@
     var holder = h("div", null, top(T.moderation));
     var box = h("div", { class: "fields" }, h("div", { class: "empty" }, "..."));
     holder.appendChild(box);
-    api("GET", "/api/guild/" + S.gid + "/cases").then(function (r) {
+    api("GET", "/api/guild/" + S.gid + "/moderation cases").then(function (r) {
       if (r.status !== 200) return box.replaceChildren(h("div", { class: "empty" }, T.failed));
       if (!r.data.cases.length) return box.replaceChildren(h("div", { class: "empty" }, T.nocases));
       var rows = r.data.cases.map(function (c) {
@@ -261,6 +268,7 @@
         else toast(((r.data && r.data.errors && r.data.errors[0]) || T.failed), true);
       });
     } });
+    if (S.info.level !== "admin") return h("div", null, top(T.backup), h("div", { class: "fields" }, h("p", { class: "note" }, T.adminOnly)));
     return h("div", null, top(T.backup), h("div", { class: "fields" },
       h("div", { class: "actions" },
         h("a", { class: "btn", href: "/api/guild/" + S.gid + "/export", download: "" }, T.export),

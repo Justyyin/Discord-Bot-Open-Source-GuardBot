@@ -251,7 +251,7 @@ class Feeds(commands.Cog):
         await it.response.send_message("\n".join(lines) or "No feeds yet.", ephemeral=True)
 
     @fg.command(name="remove", description="Stop a feed")
-    @app_commands.describe(number="Number from /feed list")
+    @app_commands.describe(number="Number from /post feed list")
     async def remove(self, it: discord.Interaction, number: int):
         """Stop a feed."""
         gone = self.conf(it.guild_id)["items"].pop(str(number), None)

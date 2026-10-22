@@ -51,6 +51,11 @@ class Privacy(commands.Cog):
             if item.get("user") == int(uid) and item.get("name") != "deleted user":
                 item["name"] = "deleted user"
                 n += 1
+        for item in cfg["applications"]["items"].values():
+            if item.get("user") == int(uid) and item.get("name") != "deleted user":
+                item["name"], item["answers"] = "deleted user", []
+                n += 1
+        cfg["applications"]["last"].pop(str(uid), None)
         return n
 
     @commands.Cog.listener()
@@ -103,7 +108,8 @@ class Privacy(commands.Cog):
         cfg = self.bot.cfg(gid)
         reminders = [i for i in cfg["reminders"]["items"] if i["user"] == int(uid)]
         appeals = [i for i in cfg["appeals"]["items"].values() if i.get("user") == int(uid)]
-        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases, "reminders": reminders, "ban_appeals": appeals}
+        applications = [i for i in cfg["applications"]["items"].values() if i.get("user") == int(uid)]
+        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases, "reminders": reminders, "ban_appeals": appeals, "applications": applications}
 
     @md.command(name="export", description="Download the data this bot stores about you on this server")
     async def md_export(self, it: discord.Interaction):

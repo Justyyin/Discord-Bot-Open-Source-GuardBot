@@ -163,7 +163,7 @@ class Community(commands.Cog):
         if room.id not in t["rooms"]:
             return None, "This is not a temporary room."
         if t["owners"].get(str(room.id)) != it.user.id and not it.user.guild_permissions.manage_channels:
-            return None, f"Only the owner <@{t['owners'].get(str(room.id), 0)}> can do that. Use /voice claim if they left."
+            return None, f"Only the owner <@{t['owners'].get(str(room.id), 0)}> can do that. Use /community voice claim if they left."
         return room, None
 
     async def room_edit(self, it, success, **changes):

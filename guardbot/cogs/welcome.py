@@ -105,7 +105,7 @@ class Welcome(commands.Cog):
             if v:
                 w[k] = v
         g["modules"]["welcome"] = True
-        await it.response.send_message(i18n.say(it.client, it.guild, "Saved. Use /welcome test to preview."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Saved. Use /community welcome test to preview."), ephemeral=True)
 
     @wg.command(name="autorole", description="Toggle a role that new members get")
     async def w_autorole(self, it: discord.Interaction, role: discord.Role):

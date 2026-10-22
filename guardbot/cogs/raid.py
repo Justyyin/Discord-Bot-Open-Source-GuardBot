@@ -89,6 +89,7 @@ class Raid(commands.Cog):
             lines = [f"{m} ({m.id}), account {(discord.utils.utcnow() - m.created_at).days}d old" for m in targets[:15]]
             e.add_field(name="Members", value=trim("\n".join(lines)), inline=False)
             self.bot.log(member.guild, "security", e)
+            self.bot.team_event(member.guild, "raids")
 
     def swarm_check(self, member, r, now):
         """Look for new accounts with the same name pattern, the same picture or a similar creation time. Returns (note, members) pairs for groups that were not reported yet."""
@@ -216,7 +217,7 @@ class Raid(commands.Cog):
         await ctx.defer()
         n, failed = await self.lock(ctx.guild, reason or f"Lockdown by {ctx.author}", mode)
         note = f" {failed} failed, check my permissions." if failed else ""
-        await ctx.send(f"Server locked down ({n} items changed).{note} Use /unlock to end it.")
+        await ctx.send(f"Server locked down ({n} items changed).{note} Use /access unlock to end it.")
 
     @commands.hybrid_command(name="unlock", description="End the lockdown")
     async def unlock_cmd(self, ctx):
@@ -264,7 +265,7 @@ class Raid(commands.Cog):
         for key, value in (("swarm", enabled), ("swarm_min", minimum), ("swarm_minutes", minutes)):
             if value is not None:
                 r[key] = value
-        note = "" if r["enabled"] else " Raid protection itself is off, switch it on with /raid setup."
+        note = "" if r["enabled"] else " Raid protection itself is off, switch it on with /security raid setup."
         await it.response.send_message(f"Swarm detection: {'on' if r['swarm'] else 'off'}, {r['swarm_min']} matching accounts within {r['swarm_minutes']} minutes.{note}", ephemeral=True)
 
     @grp.command(name="status", description="Show the raid protection and lockdown state")

@@ -105,6 +105,21 @@ def word_in(text, word):
     return re.search(r"(?<!\w)" + re.escape(word.lower()) + r"(?!\w)", text) is not None
 
 
+RULE_KEYS = ("phishing", "blocklist", "shortlinks", "newlinks", "channel rule", "words", "invites", "pii", "doxxing", "threats", "caps", "mentions")
+
+
+def without_rule(a, rule):
+    """A shallow copy of the AutoMod settings with one rule switched off."""
+    b = dict(a)
+    if rule == "blocklist":
+        b["blocklist"] = {"link": [], "message": [], "image": []}
+    elif rule == "channel rule":
+        b["channels"] = {}
+    elif rule in b and isinstance(b[rule], dict):
+        b[rule] = {**b[rule], "enabled": False}
+    return b
+
+
 class AutoMod(commands.Cog):
     """Applies the automatic moderation rules to every message."""
     grp = app_commands.Group(
@@ -251,6 +266,20 @@ class AutoMod(commands.Cog):
             return "mentions", "mention spam", men["action"]
         return None
 
+    def excepted(self, msg, key):
+        """True if the channel or the roles of the author are excepted for a rule."""
+        ex = self.bot.get_cog("Exceptions")
+        return ex is not None and ex.check(msg, key)
+
+    async def scan_with_exceptions(self, msg, a):
+        """Scan a message. A rule that is excepted for this channel or author is switched off and the scan runs again, so a lower rule can still act."""
+        for _ in range(len(RULE_KEYS) + 1):
+            hit = await self.scan(msg, a)
+            if hit is None or not self.excepted(msg, hit[0]):
+                return hit
+            a = without_rule(a, hit[0])
+        return None
+
     @staticmethod
     def dry(a, rule):
         """True if a rule only reports because dry-run mode is on for it or for everything."""
@@ -361,12 +390,12 @@ class AutoMod(commands.Cog):
         if msg.author.bot or not msg.guild or not self.bot.module_on(msg.guild.id, "automod"):
             return
         a = self.bot.cfg(msg.guild.id)["automod"]
-        if self.exempt(msg, a):
+        if self.exempt(msg, a) or self.excepted(msg, "automod"):
             return
-        hit = await self.scan(msg, a)
+        hit = await self.scan_with_exceptions(msg, a)
         if hit:
             await self.act(msg, *hit)
-        elif a["flood"]["enabled"]:
+        elif a["flood"]["enabled"] and not self.excepted(msg, "flood"):
             await self.check_flood(msg, a["flood"])
 
     @commands.Cog.listener()
@@ -402,9 +431,9 @@ class AutoMod(commands.Cog):
         if after.author.bot or not after.guild or not self.bot.module_on(after.guild.id, "automod"):
             return
         a = self.bot.cfg(after.guild.id)["automod"]
-        if self.exempt(after, a):
+        if self.exempt(after, a) or self.excepted(after, "automod"):
             return
-        hit = await self.scan(after, a)
+        hit = await self.scan_with_exceptions(after, a)
         if hit:
             await self.act(after, *hit)
 

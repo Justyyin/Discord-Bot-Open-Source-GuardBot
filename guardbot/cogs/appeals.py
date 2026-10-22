@@ -125,6 +125,8 @@ class Appeals(commands.Cog):
         else:
             await self.dm(user, f"Your ban appeal for {guild.name} was denied.")
         item["status"] = "accepted" if action == "accept" else "denied"
+        self.bot.team_count(guild, interaction.user.id, "appeals", time.time() - item["ts"])
+        self.bot.team_event(guild, "appeals")
         e = interaction.message.embeds[0]
         e.color = discord.Color.green() if action == "accept" else discord.Color.red()
         e.add_field(name="Decision", value=f"{item['status']} by {interaction.user.mention}", inline=False)

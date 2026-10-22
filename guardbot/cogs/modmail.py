@@ -96,7 +96,8 @@ class Modmail(commands.Cog):
             c["open"][str(channel.id)] = {"user": member.id, "subject": subject, "ts": int(time.time())}
             head = emb("New mod-mail", f"{member.mention} ({member.id})\nAccount created <t:{int(member.created_at.timestamp())}:R>", discord.Color.blurple(), member)
             head.add_field(name="Subject", value=subject, inline=False)
-            await channel.send(staff.mention, embed=head, allowed_mentions=discord.AllowedMentions(roles=[staff]))
+            ping, ping_users, ping_roles = self.bot.staff_ping(guild, "modmail", c["staff_role"])
+            await channel.send(ping or staff.mention, embed=head, allowed_mentions=discord.AllowedMentions(users=[discord.Object(u) for u in ping_users], roles=[discord.Object(r) for r in (ping_roles or [staff.id])]))
             await channel.send(embed=emb("How it works", "Write here to answer. The member receives your message by direct message. Start a message with // to write a note only the staff sees. Close the conversation with /modmail close.", discord.Color.light_grey()))
         msg = discord.Embed(description=text, colour=discord.Colour.green())
         msg.set_author(name=f"{member} writes", icon_url=member.display_avatar.url)
@@ -150,6 +151,7 @@ class Modmail(commands.Cog):
         if not (it.user.guild_permissions.manage_messages or (staff and staff in it.user.roles)):
             return await it.response.send_message(i18n.say(it.client, it.guild, "Only the staff can close conversations."), ephemeral=True)
         await it.response.send_message(i18n.say(it.client, it.guild, "Closing the conversation in 5 seconds."))
+        self.bot.team_count(it.guild, it.user.id, "modmail", time.time() - data["ts"] if data.get("ts") else None)
         raw = await transcript(it.channel, f"Mod-mail of {data['user']} | closed by {it.user} | {reason}")
         dest = it.guild.get_channel(c["log_channel"]) if c["log_channel"] else None
         e = emb("Mod-mail closed", color=discord.Color.orange())

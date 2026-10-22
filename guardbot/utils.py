@@ -240,3 +240,11 @@ def import_hits(raw, window_of, convert, now=None):
         if fresh:
             hits[key] = deque(fresh)
     return hits
+
+
+async def require(it, perm="manage_guild"):
+    """True if the user of an interaction has a permission. Otherwise tell the user and return False. For commands that share a group with commands everyone may use."""
+    if it.guild and getattr(it.user.guild_permissions, perm, False):
+        return True
+    await it.response.send_message(f"You need the {perm.replace('_', ' ').title()} permission for this.", ephemeral=True)
+    return False

@@ -40,7 +40,7 @@ def v2_moved_commands(store):
         perms = cfg.get("perms")
         if isinstance(perms, dict):
             for old in [k for k in perms if k in MOVED]:
-                log.warning("server %s: the permission rule for /%s was removed because it is now /%s. Set it again with /perms if needed", gid, old, MOVED[old])
+                log.warning("server %s: the permission rule for /%s was removed because it is now /%s. Set it again with /admin perms if needed", gid, old, MOVED[old])
                 del perms[old]
                 changed = True
         if changed:

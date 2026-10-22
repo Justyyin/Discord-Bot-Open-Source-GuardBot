@@ -278,7 +278,7 @@ class Channels(commands.Cog):
         g = self.bot.cfg(it.guild_id)
         g["stats"]["channels"][str(channel.id)] = template
         g["modules"]["stats"] = True
-        await it.response.send_message(f"{channel.mention} will be renamed every 10 minutes. Use /stats refresh to do it now.", ephemeral=True)
+        await it.response.send_message(f"{channel.mention} will be renamed every 10 minutes. Use /server stats refresh to do it now.", ephemeral=True)
 
     @st.command(name="remove", description="Stop updating a channel")
     async def st_remove(self, it: discord.Interaction, channel: discord.abc.GuildChannel):

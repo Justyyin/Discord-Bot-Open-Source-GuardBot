@@ -119,7 +119,7 @@ class AntiScam(commands.Cog):
             return
         automod = self.bot.get_cog("AutoMod")
         a = self.bot.cfg(msg.guild.id)["automod"]
-        if automod is not None and automod.exempt(msg, a):
+        if automod is not None and (automod.exempt(msg, a) or automod.excepted(msg, "antiscam")):
             return
         c = self.conf(msg.guild.id)
         if c["text"]:

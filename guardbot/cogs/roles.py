@@ -204,7 +204,7 @@ class Roles(commands.Cog):
             msg = await channel.send(embed=discord.Embed(title=title, description=description.replace("\\n", "\n")))
         except discord.HTTPException:
             return await it.response.send_message(i18n.say(it.client, it.guild, "I cannot post in that channel."), ephemeral=True)
-        await it.response.send_message(f"Panel posted: {msg.jump_url}\nNow use /reactionrole add with this link.", ephemeral=True)
+        await it.response.send_message(f"Panel posted: {msg.jump_url}\nNow use /post reactionrole add with this link.", ephemeral=True)
 
     @nt.command(name="add", description="Create a notification topic with a role")
     @app_commands.describe(key="Short name without spaces", role="Role that is pinged for this topic", description="What the topic is about")

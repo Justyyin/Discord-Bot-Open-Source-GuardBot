@@ -1,5 +1,6 @@
 """Guided setup with buttons, AutoMod presets, server templates and the health overview."""
 
+import asyncio
 import logging
 
 import discord
@@ -7,7 +8,7 @@ from discord.ext import commands
 
 from .. import i18n
 from ..defaults import MODULES
-from ..presets import AUTOMOD_PRESETS, AUTOMOD_RULES, TEMPLATES, apply_automod_preset, apply_template
+from ..presets import AUTOMOD_PRESETS, AUTOMOD_RULES, BLUEPRINTS, TEMPLATES, apply_automod_preset, apply_template, blueprint_missing, blueprint_size
 from ..utils import emb
 
 log = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def overview(cfg, guild):
 
     rows = []
     log_ch = channel(cfg["log"].get("main"))
-    rows.append(("Log channel", bool(log_ch), log_ch or "not set, run /setup"))
+    rows.append(("Log channel", bool(log_ch), log_ch or "not set, run /admin setup"))
     welcome = channel(cfg["welcome"]["channel"])
     on = cfg["modules"].get("welcome")
     rows.append(("Welcome", bool(on and welcome), f"{welcome}" if on and welcome else "off" if not on else "no channel"))
@@ -55,7 +56,7 @@ def health_embed(bot, guild):
         value = f"{len(problems)} problem(s) in {checks} checks\n" + "\n".join(f"- {p}" for p in problems[:8]) if problems else f"All {checks} checks passed."
         e.add_field(name="Self-test", value=value[:1000], inline=False)
     todo = [name for name, ok, _ in rows if not ok]
-    e.set_footer(text=("Open: " + ", ".join(todo) + ". Run /setup to fix it.") if todo else "Everything important is set up.")
+    e.set_footer(text=("Open: " + ", ".join(todo) + ". Run /admin setup to fix it.") if todo else "Everything important is set up.")
     return e
 
 
@@ -75,13 +76,45 @@ class Picker(discord.ui.View):
     async def interaction_check(self, interaction):
         """Only the person who opened the assistant may use it."""
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This assistant belongs to someone else. Run /setup yourself."), ephemeral=True)
+            await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This assistant belongs to someone else. Run /admin setup yourself."), ephemeral=True)
             return False
         return True
 
 
+class BuildConfirm(discord.ui.View):
+    """Shows what the setup assistant would create and builds it after a click."""
+
+    def __init__(self, cog, user_id, name):
+        """Remember the blueprint and the person who may confirm."""
+        super().__init__(timeout=300)
+        self.cog, self.user_id, self.name = cog, user_id, name
+
+    async def interaction_check(self, interaction):
+        """Only the person who opened the assistant may confirm, and only with Manage Server."""
+        if interaction.user.id != self.user_id or not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This assistant belongs to someone else. Run /admin setup yourself."), ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Create", style=discord.ButtonStyle.danger)
+    async def create(self, interaction, button):
+        """Create the missing roles, categories and channels."""
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content="Creating, this takes a moment.", view=self)
+        text = await self.cog.build(interaction.guild, self.name, interaction.user)
+        await interaction.edit_original_response(content=text, view=None)
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction, button):
+        """Do nothing."""
+        await interaction.response.edit_message(content="Cancelled. Nothing was created.", view=None)
+        self.stop()
+
+
 class Wizard(discord.ui.View):
-    """The main window of /setup."""
+    """The main window of /admin setup."""
 
     def __init__(self, cog, user_id):
         """Keep the cog and the person who opened the window."""
@@ -99,7 +132,7 @@ class Wizard(discord.ui.View):
     async def interaction_check(self, interaction):
         """Only the person who opened the assistant may use it, and only with Manage Server."""
         if interaction.user.id != self.user_id or not interaction.user.guild_permissions.manage_guild:
-            await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This assistant belongs to someone else. Run /setup yourself."), ephemeral=True)
+            await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This assistant belongs to someone else. Run /admin setup yourself."), ephemeral=True)
             return False
         return True
 
@@ -115,7 +148,7 @@ class Wizard(discord.ui.View):
             ch = menu.values[0]
             self.cfg(it)["log"]["main"] = ch.id
             self.cfg(it)["modules"]["logging"] = True
-            await it.response.send_message(f"Logs go to {ch.mention}. Categories can be split later with /log.", ephemeral=True)
+            await it.response.send_message(f"Logs go to {ch.mention}. Categories can be split later with /server log.", ephemeral=True)
 
         async def create(it):
             """Create a private log channel."""
@@ -141,7 +174,7 @@ class Wizard(discord.ui.View):
             ch = menu.values[0]
             self.cfg(it)["welcome"]["channel"] = ch.id
             self.cfg(it)["modules"]["welcome"] = True
-            await it.response.send_message(f"Welcome messages go to {ch.mention}. Change the text with /welcome set.", ephemeral=True)
+            await it.response.send_message(f"Welcome messages go to {ch.mention}. Change the text with /community welcome set.", ephemeral=True)
 
         menu = discord.ui.ChannelSelect(channel_types=[discord.ChannelType.text], placeholder="Choose the welcome channel")
         menu.callback = chosen
@@ -159,7 +192,7 @@ class Wizard(discord.ui.View):
             c["modmail"]["staff_role"] = ids[0]
             c["antinuke"]["staff_roles"] = ids
             await it.response.send_message(
-                f"Staff roles set to {' '.join(f'<@&{i}>' for i in ids)}. The first one is used for the gulag, tickets and mod-mail. Command access still follows Discord permissions, change it with /perms.",
+                f"Staff roles set to {' '.join(f'<@&{i}>' for i in ids)}. The first one is used for the gulag, tickets and mod-mail. Command access still follows Discord permissions, change it with /admin perms.",
                 ephemeral=True,
             )
 
@@ -176,6 +209,25 @@ class Wizard(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
         self.cfg(interaction)["modules"]["jail"] = True
         await interaction.followup.send(await jail.build(interaction.guild), ephemeral=True)
+
+    @discord.ui.button(label="Create channels", style=discord.ButtonStyle.primary, row=0)
+    async def structure(self, interaction, button):
+        """Offer to create the roles, categories and channels of a template."""
+        async def chosen(it):
+            """Show what would be created."""
+            name = menu.values[0]
+            roles, cats, chans = blueprint_missing(BLUEPRINTS[name], {r.name.casefold() for r in it.guild.roles}, {c.name.casefold() for c in it.guild.channels}, {c.name.casefold() for c in it.guild.categories})
+            if not (roles or cats or chans):
+                return await it.response.send_message(f"Everything of the {name} template exists already.", ephemeral=True)
+            lines = [f"Roles: {', '.join(r['name'] for r in roles) or 'none'}", f"Categories: {', '.join(c['name'] for c in cats) or 'none'}", "Channels: " + (", ".join(f"{ch['name']}" for _, ch in chans) or "none")]
+            room = 500 - len(it.guild.channels)
+            if len(cats) + len(chans) > room:
+                return await it.response.send_message("The server would exceed the limit of 500 channels.", ephemeral=True)
+            await it.response.send_message(f"Template {name}. Nothing that exists is changed or deleted. This would be created:\n" + "\n".join(lines) + "\nStaff channels are only visible for the new staff role and me.", view=BuildConfirm(self.cog, self.user_id, name), ephemeral=True)
+
+        menu = discord.ui.Select(placeholder="Choose a template", options=[discord.SelectOption(label=k.capitalize(), value=k, description="%d roles, %d categories, %d channels" % blueprint_size(v)) for k, v in BLUEPRINTS.items()])
+        menu.callback = chosen
+        await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Which template should be created?"), view=Picker(self.user_id, menu), ephemeral=True)
 
     @discord.ui.button(label="Check", style=discord.ButtonStyle.success, row=4)
     async def check(self, interaction, button):
@@ -200,7 +252,7 @@ class Wizard(discord.ui.View):
     async def template(self, interaction, select):
         """Apply a server template."""
         mods = apply_template(self.cfg(interaction), select.values[0])
-        await interaction.response.send_message(f"Template {select.values[0]} applied. Switched on: {', '.join(mods)}. Nothing was switched off. Use /module to change it.", ephemeral=True)
+        await interaction.response.send_message(f"Template {select.values[0]} applied. Switched on: {', '.join(mods)}. Nothing was switched off. Use /admin module to change it.", ephemeral=True)
 
     @discord.ui.select(placeholder="Language of member messages", row=3, min_values=1, max_values=1)
     async def language(self, interaction, select):
@@ -217,6 +269,73 @@ class Setup(commands.Cog):
         """Keep the bot reference."""
         self.bot = bot
 
+    async def build(self, guild, name, user):
+        """Create the roles, categories and channels of a blueprint that do not exist yet and connect them to the settings. Returns a short result text."""
+        blueprint = BLUEPRINTS[name]
+        cfg = self.bot.cfg(guild.id)
+        made_roles, made_channels, failed = [], [], []
+        roles = {r.name.casefold(): r for r in guild.roles}
+        staff_role = None
+        for spec in blueprint["roles"]:
+            role = roles.get(spec["name"].casefold())
+            if role is None:
+                try:
+                    role = await guild.create_role(name=spec["name"], colour=discord.Colour(spec["color"]), permissions=discord.Permissions(**{p: True for p in spec["permissions"]}), hoist=True, reason=f"Setup assistant ({user})")
+                    made_roles.append(role.name)
+                except discord.HTTPException as exc:
+                    failed.append(f"role {spec['name']}: {exc}")
+                    continue
+                await asyncio.sleep(0.4)
+            if spec.get("staff"):
+                staff_role = role
+        everyone = guild.default_role
+        for cat in blueprint["categories"]:
+            category = discord.utils.find(lambda c: c.name.casefold() == cat["name"].casefold(), guild.categories)
+            over = {}
+            if cat.get("private"):
+                over = {everyone: discord.PermissionOverwrite(view_channel=False), guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True, embed_links=True, attach_files=True)}
+                if staff_role is not None:
+                    over[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+            try:
+                if category is None:
+                    category = await guild.create_category(cat["name"], overwrites=over, reason=f"Setup assistant ({user})")
+                    made_channels.append(f"category {cat['name']}")
+                    await asyncio.sleep(0.4)
+            except discord.HTTPException as exc:
+                failed.append(f"category {cat['name']}: {exc}")
+                continue
+            existing = {c.name.casefold() for c in guild.channels}
+            for ch in cat["channels"]:
+                if ch["name"].casefold() in existing:
+                    continue
+                perms = {everyone: discord.PermissionOverwrite(send_messages=False)} if ch.get("readonly") else {}
+                try:
+                    if ch["kind"] == "voice":
+                        made = await guild.create_voice_channel(ch["name"], category=category, reason=f"Setup assistant ({user})")
+                    else:
+                        made = await guild.create_text_channel(ch["name"], category=category, overwrites=perms, reason=f"Setup assistant ({user})")
+                except discord.HTTPException as exc:
+                    failed.append(f"channel {ch['name']}: {exc}")
+                    continue
+                made_channels.append(made.name)
+                key = ch.get("key")
+                if key == "log" and not cfg["log"]["main"]:
+                    cfg["log"]["main"], cfg["modules"]["logging"] = made.id, True
+                elif key == "rules" and not cfg["rules"]["channel"]:
+                    cfg["rules"]["channel"] = made.id
+                elif key == "welcome" and not cfg["welcome"]["channel"]:
+                    cfg["welcome"]["channel"] = made.id
+                await asyncio.sleep(0.4)
+        if staff_role is not None:
+            for section, key in (("jail", "staff_role"), ("tickets", "support_role"), ("modmail", "staff_role")):
+                if not cfg[section][key]:
+                    cfg[section][key] = staff_role.id
+        parts = [f"Created roles: {', '.join(made_roles) or 'none'}.", f"Created channels: {', '.join(made_channels) or 'none'}."]
+        if failed:
+            parts.append("Problems: " + "; ".join(failed[:5]))
+        parts.append("The log, rules and welcome channels and the staff role were set where they were empty. Give people the new staff role yourself.")
+        return " ".join(parts)[:1900]
+
     @commands.hybrid_command(name="setup", description="Guided setup with buttons, AutoMod presets and templates")
     @commands.guild_only()
     async def setup_cmd(self, ctx):
@@ -224,7 +343,7 @@ class Setup(commands.Cog):
         e = emb("Setup assistant", color=discord.Color.blurple())
         e.description = (
             "Set up the most important things with a few clicks.\n\n"
-            "Buttons: log channel, welcome channel, staff roles and the gulag.\n"
+            "Buttons: log channel, welcome channel, staff roles, the gulag and creating the channels and roles of a template.\n"
             "Menus: AutoMod preset (loose, normal, strict), server template (community, gaming, support) and the language of member messages.\n\n"
             "Nothing is switched off by a template. Press Check to see what is still open."
         )

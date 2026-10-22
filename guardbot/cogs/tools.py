@@ -24,7 +24,7 @@ def parse_color(text):
 
 
 def purge_check(kind, user):
-    """Build the filter function for /purge from a message type and an optional user."""
+    """Build the filter function for /moderation purge from a message type and an optional user."""
 
     def check(message):
         """True if the message should be deleted."""
@@ -132,9 +132,9 @@ class Tools(commands.Cog):
 
     @commands.hybrid_group(name="role", description="Give or take a role")
     async def role_group(self, ctx):
-        """Parent of /role add and /role remove."""
+        """Parent of /moderation role add and /moderation role remove."""
         if ctx.invoked_subcommand is None:
-            await ctx.send(i18n.say(ctx.bot, ctx.guild, "Use /role add or /role remove."), ephemeral=True)
+            await ctx.send(i18n.say(ctx.bot, ctx.guild, "Use /moderation role add or /moderation role remove."), ephemeral=True)
 
     def role_error(self, ctx, role):
         """Return why the moderator may not hand out this role, or None."""

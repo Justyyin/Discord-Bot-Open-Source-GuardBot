@@ -17,7 +17,7 @@ import aiohttp
 import discord
 from aiohttp import web
 
-from . import __version__, configio, i18n
+from . import __version__, configio, i18n, layout
 from .defaults import DEFAULTS, MODULES, PROTECTED_COMMANDS
 
 log = logging.getLogger(__name__)
@@ -35,8 +35,11 @@ COOKIE = "gb_session"
 STATE_COOKIE = "gb_state"
 # Settings that are state of the bot, not choices of the administrator
 HIDDEN_LEAVES = {"items", "next", "last", "hits", "saved", "active", "role_saved", "counter", "pending", "open", "hashes", "texts", "members"}
-HIDDEN_TOP = {"aliases", "perms", "case_counter", "reaction_roles", "chanlocks", "notify", "tags", "polls", "giveaways", "reminders", "autoresponder", "sticky", "rolemenus", "schedule", "feeds", "activity", "stats", "disabled_commands", "prefix", "language", "modules"}
+HIDDEN_TOP = {"aliases", "perms", "case_counter", "reaction_roles", "chanlocks", "notify", "tags", "polls", "giveaways", "reminders", "autoresponder", "sticky", "rolemenus", "schedule", "feeds", "activity", "stats", "disabled_commands", "prefix", "language", "modules", "history", "roletemplates", "temproles", "exceptions", "reasons", "dashboard_access"}
 SECRET_WORDS = ("token", "secret", "webhook", "password")
+# Access levels: viewers read, moderators change the settings of these sections, administrators change everything
+LEVELS = {"none": 0, "viewer": 1, "mod": 2, "admin": 3}
+MOD_SECTIONS = {"mod", "automod", "antiscam", "raid", "jail", "probation", "watchlist", "nicknames", "stickyroles", "exceptions", "welcome", "verify", "tickets", "reports", "suggestions", "modmail", "appeals"}
 CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://cdn.discordapp.com data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 
@@ -438,16 +441,31 @@ class Dashboard:
         """True while the bot is connected to Discord."""
         return self.bot.is_ready() and not self.bot.is_closed()
 
-    def guild_for(self, request, session, change=False):
-        """The server of a request if the bot is connected to it and the user manages it. Raises 503, 404 or 403."""
+    def guild_for(self, request, session, change=False, need="admin"):
+        """The server of a request if the bot is connected to it and the user has at least the needed level. Raises 503, 404 or 403."""
         if not self.ready():
             raise web.HTTPServiceUnavailable(text="the bot is not connected")
         guild = self.bot.get_guild(int(request.match_info["gid"]))
         if guild is None or guild.unavailable:
             raise web.HTTPNotFound(text="the bot is not on this server")
-        if not self.manages(guild, session["uid"]):
-            raise web.HTTPForbidden(text="you need the Manage Server permission")
+        if self.level(guild, session["uid"]) < LEVELS[need]:
+            raise web.HTTPForbidden(text="you need the Manage Server permission" if need == "admin" else "you have no access to this server")
         return guild
+
+    def level(self, guild, uid):
+        """Access level of a user on a server right now: 3 administrator, 2 moderator, 1 viewer, 0 none. The levels below administrator come from roles set with /admin dashaccess."""
+        if self.manages(guild, uid):
+            return LEVELS["admin"]
+        member = guild.get_member(uid)
+        if member is None:
+            return LEVELS["none"]
+        access = self.bot.cfg(guild.id)["dashboard_access"]
+        roles = {r.id for r in member.roles}
+        if roles & set(access["mod_roles"]):
+            return LEVELS["mod"]
+        if roles & set(access["viewer_roles"]):
+            return LEVELS["viewer"]
+        return LEVELS["none"]
 
     @staticmethod
     def manages(guild, uid):
@@ -544,7 +562,7 @@ class Dashboard:
 
     def commands(self):
         """Names of the top-level commands the bot has."""
-        return sorted({c.name for c in self.bot.tree.get_commands()})
+        return sorted(layout.all_keys(self.bot.tree))
 
     async def me(self, request):
         """The user and the servers they may manage. Only servers where the bot is connected are listed."""
@@ -554,7 +572,7 @@ class Dashboard:
         guilds = [
             {"id": str(g.id), "name": g.name, "icon": g.icon.with_size(64).url if g.icon else None}
             for g in self.bot.guilds
-            if not g.unavailable and self.manages(g, s["uid"])
+            if not g.unavailable and self.level(g, s["uid"]) >= LEVELS["viewer"]
         ]
         guilds.sort(key=lambda g: g["name"].lower())
         avatar = f"https://cdn.discordapp.com/avatars/{s['uid']}/{s['avatar']}.png?size=64" if s["avatar"] else None
@@ -563,7 +581,8 @@ class Dashboard:
     async def guild_info(self, request):
         """Overview, channels, roles and all settings of one server."""
         s = self.require(request)
-        guild = self.guild_for(request, s)
+        guild = self.guild_for(request, s, need="viewer")
+        level = self.level(guild, s["uid"])
         cfg = self.bot.cfg(guild.id)
         channels = [{"id": str(c.id), "name": c.name, "kind": "category" if isinstance(c, discord.CategoryChannel) else "voice" if isinstance(c, (discord.VoiceChannel, discord.StageChannel)) else "text"} for c in sorted(guild.channels, key=lambda c: (c.position, c.id))]
         roles = [{"id": str(r.id), "name": r.name} for r in sorted(guild.roles, key=lambda r: -r.position) if not r.is_default()]
@@ -572,8 +591,16 @@ class Dashboard:
             "id": str(guild.id), "name": guild.name, "icon": guild.icon.with_size(128).url if guild.icon else None,
             "members": guild.member_count, "cases": len(self.bot.store.cases(guild.id)), "modules_on": sum(1 for k in MODULES if modules.get(k, MODULES[k])), "modules_total": len(MODULES),
             "latency_ms": round(self.bot.latency * 1000) if math.isfinite(self.bot.latency) else None,
-            "channels": channels, "roles": roles, "sections": describe(cfg, self.commands()),
+            "channels": channels, "roles": roles, "sections": self.mark_editable(describe(cfg, self.commands()), level),
+            "level": next(k for k, v in LEVELS.items() if v == level),
         })
+
+    @staticmethod
+    def mark_editable(sections, level):
+        """Tell the page which sections the user may change."""
+        for s in sections:
+            s["editable"] = level >= LEVELS["admin"] or (level >= LEVELS["mod"] and s["key"] in MOD_SECTIONS)
+        return sections
 
     async def read_json(self, request):
         """Read a JSON object from the body."""
@@ -599,7 +626,8 @@ class Dashboard:
     async def guild_set(self, request):
         """Change one or more settings. Each change is checked, the first problem stops and is reported."""
         s = self.require(request, change=True)
-        guild = self.guild_for(request, s, change=True)
+        guild = self.guild_for(request, s, change=True, need="mod")
+        level = self.level(guild, s["uid"])
         data = await self.read_json(request)
         changes = data.get("changes")
         if not isinstance(changes, list) or not 1 <= len(changes) <= 50:
@@ -613,6 +641,10 @@ class Dashboard:
             if not isinstance(ch, dict) or not isinstance(ch.get("path"), str):
                 raise web.HTTPBadRequest(text="invalid change")
             path = ch["path"]
+            if level < LEVELS["admin"] and path.split(".")[0] not in MOD_SECTIONS:
+                errors[path] = "this setting needs the Manage Server permission"
+                continue
+            self.bot.note_actor(guild.id, s["uid"], "dashboard")
             try:
                 done[path] = apply_change(cfg, path, ch.get("value"), channels, roles, commands)
             except ValueError as exc:
@@ -624,7 +656,7 @@ class Dashboard:
     async def guild_cases(self, request):
         """The latest moderation cases, read only."""
         s = self.require(request)
-        guild = self.guild_for(request, s)
+        guild = self.guild_for(request, s, need="viewer")
         cases = self.bot.store.cases(guild.id)[-100:][::-1]
         out = [{"id": c["id"], "type": c["type"], "user": c["user_name"], "mod": c.get("mod_name", ""), "reason": str(c["reason"])[:300], "ts": c["ts"], "active": c.get("active", True)} for c in cases]
         return web.json_response({"cases": out})
@@ -648,5 +680,6 @@ class Dashboard:
         new = configio.apply_import(cfg, payload)
         cfg.clear()
         cfg.update(new)
+        self.bot.note_actor(guild.id, s["uid"], "dashboard import")
         self.audit(guild, s, "imported a settings file")
         return web.json_response({"ok": True})

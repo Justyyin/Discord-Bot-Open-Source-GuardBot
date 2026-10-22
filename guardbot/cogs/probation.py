@@ -63,7 +63,7 @@ class Probation(commands.Cog):
         c = self.conf(member.guild.id)
         role = member.guild.get_role(c["role"] or 0)
         if role is None or not role.is_assignable():
-            self.bot.log(member.guild, "security", discord.Embed(title="Probation role cannot be given", description="Move my role above the probation role or choose another one with /probation setup.", color=discord.Color.orange()))
+            self.bot.log(member.guild, "security", discord.Embed(title="Probation role cannot be given", description="Move my role above the probation role or choose another one with /access probation setup.", color=discord.Color.orange()))
             return False
         try:
             await member.add_roles(role, reason="Probation")
@@ -197,7 +197,7 @@ class Probation(commands.Cog):
     async def add(self, it: discord.Interaction, member: discord.Member):
         """Put a member on probation."""
         if not self.conf(it.guild_id)["role"]:
-            return await it.response.send_message(i18n.say(it.client, it.guild, "Run /probation setup first."), ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Run /access probation setup first."), ephemeral=True)
         await it.response.defer(ephemeral=True)
         ok = await self.start(member)
         await it.followup.send(f"{member.mention} is on probation." if ok else "I could not give the role.", allowed_mentions=discord.AllowedMentions.none())

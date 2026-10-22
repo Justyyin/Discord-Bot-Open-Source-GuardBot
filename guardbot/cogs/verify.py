@@ -265,7 +265,7 @@ class Verify(commands.Cog):
         v = self.conf(it.guild_id)
         channel = channel or it.guild.get_channel(v["channel"] or 0)
         if not channel:
-            return await it.response.send_message(i18n.say(it.client, it.guild, "Run /verify setup first."), ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Run /access verify setup first."), ephemeral=True)
         view = discord.ui.View(timeout=None)
         view.add_item(VerifyButton())
         await channel.send(embed=emb("Verification", "Press the button to verify and unlock the server."), view=view)

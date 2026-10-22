@@ -11,6 +11,7 @@ import sqlite3
 import sys
 import threading
 import time
+from collections import deque
 import traceback
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from discord.ext import commands
 from discord.ext.commands.hybrid import HybridAppCommand
 
 from . import __version__, i18n, migrations
+from . import layout
 from .dashboard import Dashboard
 from .health import StatusServer, write_heartbeat
 from .defaults import COMMAND_MODULES, DEFAULTS, FALLBACK_PERMS
@@ -67,6 +69,14 @@ EXTENSIONS = (
     "bulk",
     "antiscam",
     "probation",
+    "approval",
+    "members",
+    "structure",
+    "rules",
+    "history",
+    "team",
+    "applications",
+    "exceptions",
     "shortcuts",
     "builder",
     "updates",
@@ -359,16 +369,32 @@ def _prefix(bot, message):
 
 class Tree(app_commands.CommandTree):
     """Command tree that applies module, disable and permission checks to slash commands."""
+
+    def __init__(self, *args, **kwargs):
+        """While the cogs load, more than 100 top-level commands are allowed, because they are folded into groups afterwards."""
+        super().__init__(*args, **kwargs)
+        self.loading = True
+
+    def add_command(self, command, /, *, guild=discord.utils.MISSING, guilds=discord.utils.MISSING, override=False):
+        """Add a command. During loading the limit of 100 top-level commands is not checked, arrange_commands() brings the number down."""
+        if self.loading and guild is discord.utils.MISSING and guilds is discord.utils.MISSING and not isinstance(command, app_commands.ContextMenu):
+            root = command.root_parent or command
+            if root.name in self._global_commands and not override:
+                raise app_commands.CommandAlreadyRegistered(root.name, None)
+            self._global_commands[root.name] = root
+            return
+        super().add_command(command, guild=guild, guilds=guilds, override=override)
     async def interaction_check(self, interaction):
         """Block slash commands that are disabled or not allowed for the user."""
         cmd = interaction.command
         if cmd is None or interaction.guild is None:
             return True
-        root = cmd.root_parent.name if getattr(cmd, "root_parent", None) else cmd.name
+        root = layout.command_key(cmd)
         problem = interaction.client.check_command(interaction.user, interaction.guild, root)
         if problem:
             await interaction.response.send_message(problem, ephemeral=True)
             return False
+        interaction.client.note_actor(interaction.guild.id, interaction.user.id, "/" + cmd.qualified_name)
         if not isinstance(cmd, HybridAppCommand):
             interaction.client.count_use(interaction.guild.id, root)
         return True
@@ -422,6 +448,8 @@ class Bot(commands.AutoShardedBot):
         self._state_seen = {}
         self.closing = False
         self.restart_requested = False
+        self.layout = {}
+        self.actors = {}
         self.status_server = StatusServer(self)
         self.dashboard = Dashboard(self)
         self.add_check(self._global_check)
@@ -473,7 +501,39 @@ class Bot(commands.AutoShardedBot):
         if problem:
             raise commands.CheckFailure(problem)
         self.count_use(ctx.guild.id, root)
+        self.note_actor(ctx.guild.id, ctx.author.id, self.prefix_for(ctx.guild.id) + root)
         return True
+
+    def note_actor(self, gid, uid, what):
+        """Remember who used which command or button on a server just now. The settings history uses this to say who probably made a change."""
+        dq = self.actors.setdefault(gid, deque(maxlen=8))
+        dq.append((time.time(), uid, what))
+
+    async def on_interaction(self, interaction):
+        """Remember buttons, menus and forms of the setup assistant and other windows."""
+        if interaction.guild_id and interaction.type in (discord.InteractionType.component, discord.InteractionType.modal_submit) and interaction.user:
+            self.note_actor(interaction.guild_id, interaction.user.id, "button or menu")
+
+    def team_count(self, guild, uid, kind, seconds=None):
+        """Count a handled case, ticket, report, appeal or mod-mail for a staff member. Does nothing when the team module is missing."""
+        team = self.get_cog("Team")
+        if team is not None and uid and uid != getattr(self.user, "id", None):
+            team.count(guild, uid, kind, seconds)
+
+    def team_event(self, guild, name, amount=1):
+        """Count an event for the weekly report."""
+        team = self.get_cog("Team")
+        if team is not None:
+            team.event(guild, name, amount)
+
+    def staff_ping(self, guild, feature, role_id):
+        """Return (text, user ids, role ids) for a staff ping. With routing on, one available staff member is pinged instead of the whole role."""
+        team = self.get_cog("Team")
+        if team is not None:
+            return team.ping(guild, feature, role_id)
+        if role_id:
+            return f"<@&{role_id}>", [], [role_id]
+        return "", [], []
 
     def count_use(self, gid, root):
         """Count one use of a command, if usage statistics are on for the server."""
@@ -603,6 +663,12 @@ class Bot(commands.AutoShardedBot):
                 log.exception("housekeeping failed")
             await asyncio.sleep(30)
 
+    def arrange_commands(self):
+        """Apply the renames from settings.json, then gather the commands into their groups."""
+        self.apply_command_names()
+        layout.apply(self)
+        self.tree.loading = False
+
     def apply_command_names(self):
         """Rename commands as configured in settings.json."""
         for old, new in self.settings.get("command_names", {}).items():
@@ -637,7 +703,7 @@ class Bot(commands.AutoShardedBot):
         self._jobs = [asyncio.create_task(self._log_worker()), asyncio.create_task(self._autosave()), asyncio.create_task(self._housekeeping())]
         for ext in EXTENSIONS:
             await self.load_extension(f"guardbot.cogs.{ext}")
-        self.apply_command_names()
+        self.arrange_commands()
         await self.status_server.start()
         await self.dashboard.start()
         payload = json.dumps([c.to_dict(self.tree) for c in self.tree.get_commands()], sort_keys=True, default=str)

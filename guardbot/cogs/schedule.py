@@ -160,7 +160,7 @@ class Schedule(commands.Cog):
         await it.response.send_message("\n".join(lines) or "Nothing is scheduled.", ephemeral=True)
 
     @sg.command(name="remove", description="Delete a scheduled message")
-    @app_commands.describe(number="Number from /schedule list")
+    @app_commands.describe(number="Number from /post schedule list")
     async def remove(self, it: discord.Interaction, number: int):
         """Delete a scheduled message."""
         gone = self.conf(it.guild_id)["items"].pop(str(number), None)

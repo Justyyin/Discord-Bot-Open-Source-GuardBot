@@ -9,7 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import __version__, configio, i18n
+from .. import __version__, configio, i18n, layout
 from ..defaults import COMMAND_MODULES, DEFAULTS, FALLBACK_PERMS, MODULES, PROTECTED_COMMANDS
 from ..utils import emb, trim
 
@@ -78,7 +78,7 @@ class Admin(commands.Cog):
     async def m_enable(self, it: discord.Interaction, name: str):
         """Turn a module on."""
         if name not in MODULES:
-            return await it.response.send_message(f"Unknown module. Use /module list. Modules: {', '.join(MODULES)}", ephemeral=True)
+            return await it.response.send_message(f"Unknown module. Use /admin module list. Modules: {', '.join(MODULES)}", ephemeral=True)
         self.bot.cfg(it.guild_id)["modules"][name] = True
         await it.response.send_message(f"{name}: on", ephemeral=True)
 
@@ -87,7 +87,7 @@ class Admin(commands.Cog):
     async def m_disable(self, it: discord.Interaction, name: str):
         """Turn a module off."""
         if name not in MODULES:
-            return await it.response.send_message(f"Unknown module. Use /module list. Modules: {', '.join(MODULES)}", ephemeral=True)
+            return await it.response.send_message(f"Unknown module. Use /admin module list. Modules: {', '.join(MODULES)}", ephemeral=True)
         self.bot.cfg(it.guild_id)["modules"][name] = False
         await it.response.send_message(f"{name}: off", ephemeral=True)
 
@@ -240,7 +240,7 @@ class Admin(commands.Cog):
         await it.response.send_message(i18n.say(it.client, it.guild, "Settings without running data such as open tickets, polls or counters. Keep the file private."), file=discord.File(io.BytesIO(raw), filename="guardbot-settings.json"), ephemeral=True)
 
     @config.command(name="import", description="Load settings from an exported file (first without confirm to only check it)")
-    @app_commands.describe(file="File from /config export", confirm="Set to true to really apply it")
+    @app_commands.describe(file="File from /admin config export", confirm="Set to true to really apply it")
     async def cfg_import(self, it: discord.Interaction, file: discord.Attachment, confirm: bool = False):
         """Load settings from an exported file (first without confirm to only check it)."""
         if file.size > configio.MAX_BYTES:
@@ -249,12 +249,12 @@ class Admin(commands.Cog):
         if problems:
             return await it.response.send_message(trim("The file was not imported:\n" + "\n".join(f"- {p}" for p in problems[:15]), 1900), ephemeral=True)
         if not confirm:
-            return await it.response.send_message(f"The file is valid (made with GuardBot {payload.get('version', '?')}). This replaces all settings of this server except running data. Channel and role IDs belong to the server where the file was made, so run /diagnose afterwards. Repeat the command with confirm set to true to apply it.", ephemeral=True)
+            return await it.response.send_message(f"The file is valid (made with GuardBot {payload.get('version', '?')}). This replaces all settings of this server except running data. Channel and role IDs belong to the server where the file was made, so run /server diagnose afterwards. Repeat the command with confirm set to true to apply it.", ephemeral=True)
         cfg = self.bot.cfg(it.guild_id)
         new = configio.apply_import(cfg, payload)
         cfg.clear()
         cfg.update(new)
-        await it.response.send_message(i18n.say(it.client, it.guild, "Settings imported. Run /diagnose to check that the channels and roles exist."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Settings imported. Run /server diagnose to check that the channels and roles exist."), ephemeral=True)
 
     @app_commands.command(name="settings", description="Overview of the current configuration")
     @app_commands.default_permissions(manage_guild=True)
@@ -280,9 +280,15 @@ class Admin(commands.Cog):
     def find_command(self, words):
         """Find a slash command or subcommand by the words the user typed, honouring renamed commands."""
         renamed = {old: new for new, old in self.bot.canonical.items()}
+        words = list(words)
+        first = words[0]
+        if first in self.bot.layout:
+            words = self.bot.layout[first].split() + words[1:]
         cmd = self.bot.tree.get_command(renamed.get(words[0], words[0]))
-        if cmd is not None and hasattr(cmd, "get_command") and len(words) > 1:
-            return cmd.get_command(words[1]) or cmd
+        for word in words[1:]:
+            if cmd is None or not hasattr(cmd, "get_command"):
+                break
+            cmd = cmd.get_command(renamed.get(word, word)) or cmd
         return cmd
 
     @commands.hybrid_command(name="help", description="List the commands, or explain one command")
@@ -295,7 +301,7 @@ class Admin(commands.Cog):
             cmd = self.find_command(words) if words else None
             if cmd is None:
                 return await ctx.send(i18n.say(ctx.bot, ctx.guild, "I do not know that command. Use /help for the list."), ephemeral=True)
-            root = cmd.root_parent.name if getattr(cmd, "root_parent", None) else cmd.name
+            root = layout.command_key(cmd)
             root = self.bot.canonical.get(root, root)
             e = emb(f"/{cmd.qualified_name}", cmd.description)
             if hasattr(cmd, "commands"):
@@ -314,7 +320,7 @@ class Admin(commands.Cog):
         by_module = {}
         for cmd, mod in COMMAND_MODULES.items():
             by_module.setdefault(mod, []).append(cmd)
-        lines = [f"**{mod}**{'' if self.bot.module_on(ctx.guild.id, mod) else ' (off)'}: " + " ".join(f"`{c}`" for c in cmds) for mod, cmds in by_module.items()]
+        lines = [f"**{mod}**{'' if self.bot.module_on(ctx.guild.id, mod) else ' (off)'}: " + " ".join(f"`{layout.slash_path(self.bot, c)}`" for c in cmds) for mod, cmds in by_module.items()]
         lines.append("**admin**: " + " ".join(f"`{c}`" for c in PROTECTED_COMMANDS))
         e = emb("Commands", f"Slash commands and text commands ({prefix}) are available. Use /help command:ban to explain one command.\n\n" + "\n".join(lines))
         await ctx.send(embed=e, ephemeral=True)

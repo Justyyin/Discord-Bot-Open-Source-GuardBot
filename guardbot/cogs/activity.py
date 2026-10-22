@@ -104,7 +104,7 @@ class Activity(commands.Cog):
         e.add_field(name="Left", value=str(leaves))
         e.add_field(name="Members", value=f"{ctx.guild.member_count} (change {joins - leaves:+d})")
         if not self.bot.module_on(ctx.guild.id, "activity"):
-            e.set_footer(text="The activity module is off, so nothing is counted. Switch it on with /module.")
+            e.set_footer(text="The activity module is off, so nothing is counted. Switch it on with /admin module.")
         await ctx.send(embed=e, ephemeral=True)
 
     @activity.command(name="channels", description="The busiest channels")
