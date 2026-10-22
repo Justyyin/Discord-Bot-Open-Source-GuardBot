@@ -2,6 +2,8 @@
 
 Цей посібник показує, як запустити GuardBot на власному комп'ютері або на VPS. Це займе близько 15 хвилин.
 
+> Бета: GuardBot і його панель керування перебувають у стадії бети. Їх не було ретельно протестовано, особливо на великих серверах і в усіх ситуаціях Discord. Можливі помилки, робіть резервні копії папки data та повідомляйте про проблеми. Використання на власний ризик.
+
 <!-- toc -->
 
 - [Створення Discord-бота](#створення-discord-бота)
@@ -12,6 +14,9 @@
 - [Запуск через Docker](#запуск-через-docker)
 - [Перші кроки в Discord](#перші-кроки-в-discord)
 - [Оновлення та резервні копії](#оновлення-та-резервні-копії)
+- [Музика (необов'язково)](#музика-необовязково)
+- [Необов'язково: читання зображень і мови](#необовязково-читання-зображень-і-мови)
+- [Панель керування](#панель-керування)
 - [Усунення несправностей](#усунення-несправностей)
 - [Підтримка](#підтримка)
 
@@ -71,7 +76,7 @@ python main.py
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ sudo systemctl restart guardbot
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## Музика (необов'язково)
+
+Для модуля музики потрібен ffmpeg на комп'ютері, де працює бот. Покладіть свою музику в папку music/ як Виконавець/Альбом/01 - Назва.flac або дозвольте завантаження. Папка може стати великою, тому тримайте її на диску з місцем або в томі Docker.
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## Необов'язково: читання зображень і мови
+
+Щоб модуль захисту від шахрайства читав текст на зображеннях, встановіть tesseract на комп'ютері, де працює бот (в образі Docker він уже є). Потім перевірте командою /antiscam status, що він готовий. Мову повідомлень, які бачать учасники, обирають командою /language.
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## Панель керування
+
+Панель керування — це вебсторінка, що працює всередині бота. Після входу через Discord ви змінюєте налаштування своїх серверів перемикачами, меню та полями замість команд: модулі, канали, ролі, порогові значення, тексти, префікс і мова. Вона також показує останні справи модерації, експортує та імпортує налаштування. Вона однаково працює на вашому комп'ютері та на VPS і вимкнена, доки ви її не ввімкнете.
+
+1. Відкрийте свій застосунок у Developer Portal, перейдіть до OAuth2 і скопіюйте Client Secret у файл .env.
+2. На тій самій сторінці додайте адресу перенаправлення http://localhost:8080/callback.
+3. Увімкніть панель у settings.json.
+4. Перезапустіть бота та відкрийте http://localhost:8080 у браузері. Увійдіть через Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+Залиште host рівним 127.0.0.1 і виберіть один із двох шляхів. Перший — SSH-тунель: назовні нічого не відкривається, а http://localhost:8080 ви відкриваєте на своєму комп'ютері, поки працює тунель.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Другий — HTTPS через зворотний проксі, наприклад Caddy, який сам отримує сертифікат (див. deploy/Caddyfile.example). Потім вкажіть у public_url свою https-адресу, додайте https://ваша-адреса/callback як перенаправлення в Developer Portal і встановіть trust_proxy у true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## Усунення несправностей

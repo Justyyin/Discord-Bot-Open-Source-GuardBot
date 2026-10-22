@@ -13,7 +13,7 @@ RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/opt/guardbot/data
+ReadWritePaths=/opt/guardbot/data /opt/guardbot/music
 
 [Install]
 WantedBy=multi-user.target

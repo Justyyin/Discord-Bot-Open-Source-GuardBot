@@ -4,6 +4,8 @@
 
 Бот для Discord, який ви розміщуєте самостійно, для модерації, безпеки та спільноти. Відкритий код, безкоштовно, а ваші дані залишаються на вашому комп'ютері.
 
+> Бета: GuardBot і його панель керування перебувають у стадії бети. Їх не було ретельно протестовано, особливо на великих серверах і в усіх ситуаціях Discord. Можливі помилки, робіть резервні копії папки data та повідомляйте про проблеми. Використання на власний ризик.
+
 <!-- toc -->
 
 - [Про проєкт](#про-проєкт)
@@ -16,8 +18,17 @@
 - [Стан проєкту](#стан-проєкту)
 - [Вимоги](#вимоги)
 - [Швидкий старт](#швидкий-старт)
+  - [Linux](#linux)
+  - [macOS](#macos)
+  - [Windows](#windows)
+  - [Скрипти запуску та автозапуск](#скрипти-запуску-та-автозапуск)
+  - [Оновлення](#оновлення)
 - [Права бота](#права-бота)
 - [Перші кроки в Discord](#перші-кроки-в-discord)
+- [Панель керування](#панель-керування)
+  - [Налаштування панелі](#налаштування-панелі)
+  - [Безпека](#безпека-1)
+  - [Панель на VPS](#панель-на-vps)
 - [Команди](#команди)
   - [Модерація](#модерація-1)
   - [Гулаг (jail)](#гулаг-jail)
@@ -36,14 +47,35 @@
   - [Тимчасові голосові канали](#тимчасові-голосові-канали)
   - [Резервні копії та відновлення](#резервні-копії-та-відновлення)
   - [Дані та конфіденційність](#дані-та-конфіденційність)
+  - [Інструменти модератора](#інструменти-модератора)
+  - [Інформація](#інформація)
+  - [Оголошення, теги та нагадування](#оголошення-теги-та-нагадування)
+  - [Мод-пошта та апеляції на бан](#мод-пошта-та-апеляції-на-бан)
+  - [Канал рахунку, закріплені повідомлення та статистика](#канал-рахунку-закріплені-повідомлення-та-статистика)
+  - [Додаткові можливості наявних функцій](#додаткові-можливості-наявних-функцій)
+  - [Інші інструменти AutoMod](#інші-інструменти-automod)
+  - [Ліміти модераторів і аудит прав](#ліміти-модераторів-і-аудит-прав)
+  - [Скарги та відстеження запрошень](#скарги-та-відстеження-запрошень)
+  - [Діагностика та налагодження](#діагностика-та-налагодження)
+  - [Музика](#музика)
+  - [Налаштування та перевірка стану](#налаштування-та-перевірка-стану)
+  - [Економіка](#економіка)
+  - [Меню ролей, відкладені повідомлення та стрічки](#меню-ролей-відкладені-повідомлення-та-стрічки)
+  - [Активність, масові дії та пошук справ](#активність-масові-дії-та-пошук-справ)
+  - [Захист від шахрайства та крипто-скаму](#захист-від-шахрайства-та-крипто-скаму)
+  - [Випробувальний термін, виявлення рою, хронологія та навчання](#випробувальний-термін-виявлення-рою-хронологія-та-навчання)
+  - [Конструктор повідомлень та оновлення](#конструктор-повідомлень-та-оновлення)
+  - [Експлуатація](#експлуатація)
   - [Адміністрування](#адміністрування-1)
 - [Підстановки в повідомленнях](#підстановки-в-повідомленнях)
 - [Налаштування](#налаштування)
 - [Дані та зберігання](#дані-та-зберігання)
 - [Структура репозиторію](#структура-репозиторію)
+- [Переклади](#переклади)
 - [Плани](#плани)
 - [Конфіденційність і безпека](#конфіденційність-і-безпека)
 - [Підтримка](#підтримка)
+- [Подяки](#подяки)
 - [Ліцензія](#ліцензія)
 
 <!-- tocstop -->
@@ -64,6 +96,7 @@ GuardBot об'єднує функції, за які багато сервері
 - Канал «гулаг»: учасники, які публікують шахрайські посилання чи зображення, переміщуються в один канал з інструкцією із захисту акаунта. Модератори також можуть використовувати /jail і /unjail.
 - Верифікація кнопкою або капчею з автоматичним видаленням учасників, які не пройшли її вчасно.
 - Захист від нюку також стежить за видачею прав, новими вебхуками, доданими ботами та перейменуванням сервера.
+- Захист від шахрайства: підроблені розіграші та крипто-скам видаляються в тексті й на зображеннях за мілісекунди, зокрема скам із MrBeast за будь-якого написання.
 
 ### Модерація
 
@@ -84,6 +117,7 @@ GuardBot об'єднує функції, за які багато сервері
 - XP і рівні від 1 до 100 за чат і голос, ролі за рівні та дні народження.
 - Starboard і тимчасові голосові канали.
 - Гулаг на заданий час, опитування з множинним вибором, картки рангу у вигляді зображень і бонуси XP для ролей.
+- Економіка з магазином, меню ролей із кнопками чи списком, відкладені повідомлення, стрічки YouTube, Twitch і RSS, статистика активності та покроковий /setup. Повідомлення для учасників доступні 12 мовами.
 
 ### Адміністрування
 
@@ -91,6 +125,7 @@ GuardBot об'єднує функції, за які багато сервері
 - Власний префікс, псевдоніми команд і перейменування команд.
 - Резервне копіювання та відновлення ролей і структури каналів.
 - Автоматичні резервні копії за розкладом для ролей, каналів, емодзі та вебхуків, із командою відновлення, яка додає лише те, чого бракує.
+- Панель керування: зміна налаштувань кожного сервера в браузері після входу через Discord, лише для учасників, які керують сервером, і лише доки бот підключений.
 
 ## Стан проєкту
 
@@ -101,20 +136,90 @@ GuardBot ще молодий і поки що не використовував�
 - Python 3.11 або новіший
 - Застосунок Discord із токеном бота
 - Комп'ютер або VPS, що завжди в мережі
+- ffmpeg (лише для модуля музики)
+- tesseract-ocr (необов'язково, лише для читання тексту на зображеннях)
 
 ## Швидкий старт
 
-```
+Оберіть свою систему. Для будь-якого варіанта потрібні Python 3.11 або новіший і токен вашого бота. Докладний покроковий посібник міститься в [GUIDE.md](GUIDE.md).
+
+### Linux
+
+```bash
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg tesseract-ocr
 git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+nano .env
 python main.py
 ```
 
-Повний покроковий посібник міститься в [GUIDE.md](GUIDE.md).
+### macOS
+
+```bash
+brew install python@3.12 git ffmpeg tesseract
+git clone <REPOSITORY_URL>
+cd guardbot
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+open -e .env
+python main.py
+```
+
+### Windows
+
+```powershell
+winget install Python.Python.3.12 Git.Git Gyan.FFmpeg UB-Mannheim.TesseractOCR
+git clone <REPOSITORY_URL>
+cd guardbot
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+notepad .env
+python main.py
+```
+
+### Скрипти запуску та автозапуск
+
+Скрипти запуску створюють віртуальне середовище, встановлюють пакети та запускають бота. Під час першого запуску вони створюють файл .env і зупиняються, щоб ви могли вписати токен. Після цього запустіть їх знову.
+
+```bash
+./start.sh
+```
+
+```bat
+start.bat
+```
+
+Щоб бот працював і після перезавантаження комп'ютера, використовуйте службу. Linux (systemd) і macOS (launchd):
+
+```bash
+sudo cp deploy/guardbot.service /etc/systemd/system/
+sudo systemctl enable --now guardbot
+journalctl -u guardbot -f
+```
+
+```bash
+cp deploy/de.guardbot.plist ~/Library/LaunchAgents/de.guardbot.plist
+launchctl load ~/Library/LaunchAgents/de.guardbot.plist
+```
+
+У Windows створіть у Планувальнику завдань завдання, яке запускає start.bat під час входу в систему, або скористайтеся оболонкою для служб, наприклад NSSM. Для Docker дивіться [GUIDE.md](GUIDE.md).
+
+### Оновлення
+
+Зупиніть бота, виконайте ці команди та запустіть його знову. Ваші дані в папці data залишаються недоторканими, а перед кожною зміною формату даних бот робить резервну копію бази.
+
+```bash
+git pull
+.venv/bin/pip install -r requirements.txt
+```
 
 ## Права бота
 
@@ -150,6 +255,74 @@ Optional
 /module list
 ```
 
+## Панель керування
+
+Панель керування — це вебсторінка, що працює всередині бота. Після входу через Discord ви змінюєте налаштування своїх серверів перемикачами, меню та полями замість команд: модулі, канали, ролі, порогові значення, тексти, префікс і мова. Вона також показує останні справи модерації, експортує та імпортує налаштування. Вона однаково працює на вашому комп'ютері та на VPS і вимкнена, доки ви її не ввімкнете.
+
+### Налаштування панелі
+
+1. Відкрийте свій застосунок у Developer Portal, перейдіть до OAuth2 і скопіюйте Client Secret у файл .env.
+2. На тій самій сторінці додайте адресу перенаправлення http://localhost:8080/callback.
+3. Увімкніть панель у settings.json.
+4. Перезапустіть бота та відкрийте http://localhost:8080 у браузері. Увійдіть через Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+### Безпека
+
+- Вхід лише через Discord (OAuth2, область identify). Токен доступу одразу відкликається й ніколи не зберігається.
+- Доступ мають лише власник сервера та учасники з правом «Адміністратор» або «Керувати сервером», і лише до цього сервера. Право перевіряється заново під час кожного запиту.
+- Відкрити можна лише сервери, до яких бот підключений саме зараз. Якщо бот не в мережі, не на сервері або ще запускається, панель відмовляє в усьому. Вона працює всередині бота й не має власної бази даних чи служби.
+- За замовчуванням вона слухає лише 127.0.0.1, тому ніхто інший у мережі не може до неї дістатися. Публічна адреса приймається лише з HTTPS, інакше панель не запускається.
+- Сесії використовують випадковий токен у cookie HttpOnly з SameSite і, за HTTPS, з префіксом __Host-. Вони закінчуються через 8 годин і зберігаються лише в пам'яті, тому перезапуск завершує всі сесії.
+- Кожна зміна потребує CSRF-токена та відповідного Origin. Заголовок Host перевіряється проти DNS rebinding. Сторінка не завантажує зовнішніх скриптів, сувора Content Security Policy блокує вбудований код, запити обмежені за частотою, а тіло запиту обмежене 256 КБ.
+- Кожне значення перевіряється за типом налаштування, а ID Discord мають існувати на сервері. Внутрішній стан, як-от лічильники, тікети та збережені записи, змінити не можна. Кожна зміна записується в канал журналу безпеки сервера.
+- Вміст повідомлень ніколи не показується. Справи модерації доступні лише для читання.
+
+### Панель на VPS
+
+Залиште host рівним 127.0.0.1 і виберіть один із двох шляхів. Перший — SSH-тунель: назовні нічого не відкривається, а http://localhost:8080 ви відкриваєте на своєму комп'ютері, поки працює тунель.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Другий — HTTPS через зворотний проксі, наприклад Caddy, який сам отримує сертифікат (див. deploy/Caddyfile.example). Потім вкажіть у public_url свою https-адресу, додайте https://ваша-адреса/callback як перенаправлення в Developer Portal і встановіть trust_proxy у true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
+```
+
+Редактор показує кожне налаштування, що є перемикачем, числом, текстом, каналом, роллю або простим списком. Те, що створюється командами, наприклад товари магазину, меню ролей, стрічки, теги та тікети, залишається за командами. Сторінка доступна англійською та німецькою і слідує мові браузера. У Docker публікуйте порт лише на 127.0.0.1 (127.0.0.1:8080:8080), а в контейнері встановіть host у 0.0.0.0 і allow_insecure_http у true.
+
 ## Команди
 
 Більшість команд є слеш-командами, команди модерації працюють і з префіксом. Повний список міститься в довіднику команд: [COMMANDS.md](../COMMANDS.md).
@@ -172,7 +345,7 @@ Optional
 /cases kind:ban page:2                             # filter by type
 /cases search:john                                 # filter by part of a name
 /warnings user:@User
-/case case_id:12
+/case view case_id:12
 
 /escalation list
 /escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
@@ -347,7 +520,7 @@ Optional
 Учасники публікують пропозиції, які команда може схвалити або відхилити, а популярні повідомлення виділяються.
 
 ```
-/suggestionsetup set channel:#suggestions review_role:@Staff
+/suggestion setup set channel:#suggestions review_role:@Staff
 /suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
@@ -368,11 +541,11 @@ XP за чат і голос, ролі за рівні, бонуси для ро
 /xp boost role:@Booster multiplier:1.5             # 1.0 removes the boost
 /xp ignore channel:#spam                           # toggle
 
-/levelrole add level:10 role:@Active
-/levelrole add level:50 role:@Veteran
-/levelrole remove level:10
-/levelrole list
-/levelrole sync                                    # apply to everyone who already has XP
+/xp levelrole add level:10 role:@Active
+/xp levelrole add level:50 role:@Veteran
+/xp levelrole remove level:10
+/xp levelrole list
+/xp levelrole sync                                    # apply to everyone who already has XP
 
 /xp give user:@User amount:500
 /xp take user:@User amount:100
@@ -396,9 +569,9 @@ XP за чат і голос, ролі за рівні, бонуси для ро
 /reactionrole remove message:<message link> emoji:<any emoji>
 /reactionrole list
 
-/notifytopic add key:events role:@Events description:Server events
-/notifytopic panel channel:#roles title:Notifications   # one button per topic
-/notifytopic remove key:events
+/notify topic add key:events role:@Events description:Server events
+/notify topic panel channel:#roles title:Notifications   # one button per topic
+/notify topic remove key:events
 /notify subscribe topic:events                     # members choose for themselves
 /notify unsubscribe topic:events
 /notify list
@@ -409,8 +582,8 @@ XP за чат і голос, ролі за рівні, бонуси для ро
 Учасники вказують день і місяць, бот видає роль і пише повідомлення цього дня.
 
 ```
-/birthdaysetup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
-/birthdaysetup set message:Happy birthday {user}!
+/birthday setup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
+/birthday setup set message:Happy birthday {user}!
 
 /birthday set day:14 month:3                       # members enter day and month only
 /birthday show user:@User
@@ -453,6 +626,429 @@ XP за чат і голос, ролі за рівні, бонуси для ро
 /privacy delete user_id:123456789012345678 cases:True
 ```
 
+### Інструменти модератора
+
+Очищення каналів, керування ролями та особисті нотатки. Кожна дія записується в журнал.
+
+```
+/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/slowmode seconds:10 channel:#general              # 0 turns it off
+/lockchannel channel:#general reason:Spam wave
+/unlockchannel channel:#general
+
+/role add member:@User role:@Member
+/role remove member:@User role:@Member
+
+/note user:@User text:Watch this member            # private, shown in /cases
+/tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/jailed                                            # who is in the gulag right now
+
+/case view case_id:12
+/case edit case_id:12 reason:Corrected reason
+/case delete case_id:12
+```
+
+### Інформація
+
+Довідка про користувачів, сервер, ролі та бота.
+
+```
+/userinfo user:@User
+/serverinfo
+/roleinfo role:@Moderator
+/avatar user:@User
+/help command:ban                                  # explains one command
+/ping
+/botinfo
+```
+
+### Оголошення, теги та нагадування
+
+Повідомлення від імені бота, власні команди, автовідповіді на повідомлення та нагадування.
+
+```
+/say channel:#news message:Maintenance tonight
+/embed channel:#news title:Update description:New rules color:#5865F2
+
+/tag create name:rules text:Be kind to each other
+/tag show name:rules
+/tag list
+/tag info name:rules
+/tag edit name:rules text:Be kind and read the pinned message
+/tag delete name:rules
+
+/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/autoresponder list
+/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+
+/remind set duration:2h text:Stream starts
+/remind list
+/remind cancel id:1
+/afk reason:Lunch                                  # the bot tells others who mention you
+```
+
+### Мод-пошта та апеляції на бан
+
+Учасники пишуть команді через приватний канал на сервері. Нікому не потрібно писати боту в особисті повідомлення.
+
+```
+/modmail setup set category:Mod-mail staff_role:@Moderator log_channel:#modmail-log anonymous:False
+/modmail setup panel channel:#help text:Press the button to write to the staff
+/modmail setup block member:@User                   # toggles
+/modmail setup status
+
+/modmail send text:I need help with my account     # inside a mod-mail channel
+/modmail close reason:Solved
+
+/appeal setup set main_server_id:123456789012345678 staff_channel:#appeals cooldown_days:7
+/appeal setup set invite:https://discord.gg/example rejoin_invite:https://discord.gg/example
+/appeal setup status
+/appeal send text:I understand the rule now and ask for a second chance
+```
+
+### Канал рахунку, закріплені повідомлення та статистика
+
+Гра в рахунок, повідомлення, що залишаються внизу каналу, та канали з живими числами.
+
+```
+/counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/counting status
+/counting set number:100
+/counting off
+
+/sticky set channel:#rules text:Read the rules before you write
+/sticky list
+/sticky remove channel:#rules
+
+/stats create template:Members: {members} category:Statistics
+/stats add channel:#info template:Boosts: {boosts}
+/stats list
+/stats refresh
+/stats remove channel:#info
+```
+
+### Додаткові можливості наявних функцій
+
+Доповнення для тикетів, розіграшів, голосових кімнат, XP, днів народження, резервних копій, журналів та екранів стану.
+
+```
+/ticket claim
+/ticket rename name:billing-help
+/ticket list
+
+/giveaway cancel giveaway_id:3
+/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+
+/voice rename name:Study room                      # only the owner of the room
+/voice limit limit:4
+/voice lock
+/voice unlock
+/voice kick member:@User
+/voice transfer member:@User
+/voice claim                                       # if the owner left
+
+/xp channelboost channel:#chat multiplier:1.5
+/xp resetall confirm:True
+/leaderboard page:2
+
+/birthday list
+/birthday setup user member:@User day:14 month:3
+/birthday setup clear member:@User
+
+/backup info name:weekly
+/log show
+/log ignorechannel channel:#bots
+/log ignoreuser user:@Bot
+/log sent enabled:True
+
+/automod status
+/verify status
+/raid status
+/welcome show
+/starboard show
+```
+
+### Інші інструменти AutoMod
+
+Перевірка коротких посилань, обмеження посилань для новачків, пошук ghost ping і перевірка правил без покарань.
+
+```
+/automod toggle rule:shortlinks enabled:True action:delete    # follow short links and judge the target
+/automod set rule:shortlinks option:resolve value:true         # false = block short links outright
+/automod set rule:shortlinks option:block_unresolved value:false
+/automod add name:shortlink_domains value:example.link
+
+/automod toggle rule:newlinks enabled:True action:delete       # new members may not post links
+/automod set rule:newlinks option:hours value:48
+/automod add name:newlinks_allow value:tenor.com
+
+/automod ghostping enabled:True notify:True max_age:120
+/automod dryrun rule:words enabled:True                        # report only, rule: all, words, caps, phishing, flood ...
+/automod test text:free nitro at bit.ly/example member:@User
+```
+
+### Ліміти модераторів і аудит прав
+
+Сигнал, якщо модератор надто часто банить або кікає, та огляд ролей із небезпечними правами.
+
+```
+/modwatch status
+/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/modwatch exclude member:@TrustedMod
+
+/permaudit run                                                  # roles with dangerous permissions and who holds them
+/permaudit watch enabled:True                                   # alarm when a role or member gets one
+/permaudit trust role:@Admin
+```
+
+### Скарги та відстеження запрошень
+
+Учасники скаржаться на повідомлення команді, а бот запам'ятовує, яке запрошення привело нового учасника.
+
+```
+/report setup set channel:#reports ping_role:@Moderator cooldown:60 anonymous:False
+/report setup ignorechannel channel:#staff
+/report setup status
+
+/report send message_link:https://discord.com/channels/1/2/3 reason:Spam
+# or right click a message, Apps, Report message
+
+/invites who member:@User
+/invites stats user:@User
+/invites top
+/invites setup log:True alert_joins:5 alert_minutes:60
+```
+
+### Діагностика та налагодження
+
+Пошук відсутніх прав і хибних налаштувань, звіти про помилки в каналі, експорт та імпорт налаштувань.
+
+```
+/diagnose                                                       # permissions, role order, deleted channels and roles
+/debug status
+/debug errorchannel channel:#bot-errors
+/debug errortest
+/debug selftest enabled:True                                    # check at start-up
+/debug usagestats enabled:True
+/debug usage reset:False
+/debug level level:DEBUG                                        # owner of the bot only
+/debug db action:check                                          # owner of the bot only: check, vacuum, size
+
+/config export
+/config import file:guardbot-settings.json confirm:False        # first without confirm
+```
+
+### Музика
+
+Відтворює посилання та файли з папки music у голосовому каналі. Завантаження зберігаються як music/Виконавець/Альбом/Трек. Потрібні ffmpeg і пакети з requirements.txt.
+
+```
+/play query:daft punk one more time                            # library first, then the web
+/play query:https://example.com/track                           # a link that yt-dlp supports
+
+/music queue page:1
+/music nowplaying
+/music skip
+/music pause
+/music resume
+/music stop
+/music volume percent:70
+/music loop mode:queue
+/music shuffle
+/music remove number:3
+/music clear
+/music seek position:1:30
+/music join
+/music leave
+
+/music library search query:discovery
+/music library list artist:Daft Punk
+/music library play query:one more time
+/music library scan                                             # after you copied files into music/
+/music library info
+/music library download url:https://example.com/track format:best
+
+/music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
+/music settings allow_links:True allow_search:True allow_playlists:True library:True
+/music settings allow_download:True download_format:best announce:True
+/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/music cleardj
+/music status
+```
+
+Без втрат: ваші власні файли (FLAC, WAV, ALAC) та джерела з FLAC відтворюються без змін. YouTube, SoundCloud та подібні сайти віддають лише звук із втратами, який неможливо потім зробити lossless. Discord передає голос у форматі Opus, бот використовує бітрейт голосового каналу. Відповідальність: завантаження та відтворення вмісту може порушувати правила сайту або авторське право. Завантаження типово вимкнені, модуль вимкнений, доки ви його не ввімкнете. За відтворюване та збережене відповідає оператор бота.
+
+### Налаштування та перевірка стану
+
+Покроковий помічник налаштовує найважливіше кнопками та меню: канал логів, канал привітань, ролі команди, гулаг, пресет AutoMod (м'який, звичайний, суворий), шаблон сервера (спільнота, ігри, підтримка) та мову. /health показує, що вже налаштовано і що ще лишилося. Мова змінює тексти, які бачать учасники: привітання за замовчуванням, сповіщення AutoMod, верифікацію, тікети, апеляції, мод-пошту та меню ролей. Фіксовані відповіді адміністраторам перекладено, відповіді з іменами та числами залишаються англійською.
+
+```
+/setup                                                         # buttons and menus, nothing is switched off by a template
+/health                                                        # what is set up, what is open, and the self-test
+/language code:de
+```
+
+### Економіка
+
+Валюта сервера з щоденною нагородою, роботою, переказами, рейтингом і магазином, товари якого можуть видавати роль. Вмикається модулем economy. Команди працюють і з префіксом, наприклад !economy daily.
+
+```
+/module enable name:economy
+/economy balance member:@User                                  # same as !economy
+/economy daily
+/economy work
+/economy pay member:@User amount:50
+/economy leaderboard
+/economy shop
+/economy buy item:1
+/economy inventory
+
+/economy give member:@User amount:500                          # staff, a negative amount takes away
+/economy shopadd name:VIP price:1000 role:@VIP stock:10
+/economy shopremove item:1
+/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+```
+
+### Меню ролей, відкладені повідомлення та стрічки
+
+Меню ролей видають ролі кнопками або випадним списком. Відкладені повідомлення публікуються один раз або повторюються щогодини, щодня чи щотижня. Стрічки публікують нові відео YouTube, трансляції Twitch і записи RSS. Для YouTube потрібен ID каналу (починається з UC). Для Twitch у файлі .env потрібні TWITCH_CLIENT_ID і TWITCH_CLIENT_SECRET. Час записується як in 2h, 18:30 або як дата з часом, наприклад 2026-12-24 18:00, у часовому поясі сервера. Перша перевірка стрічки лише запам'ятовує те, що вже є.
+
+```
+/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/rolemenu add menu:1 role:@Red label:Red
+/rolemenu remove menu:1 role:@Red
+/rolemenu delete menu:1
+/rolemenu list
+
+/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/schedule list
+/schedule remove number:1
+/schedule timezone name:Europe/Berlin
+
+/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/feed add kind:twitch target:somestreamer channel:#live
+/feed add kind:rss target:https://example.com/feed.xml channel:#news
+/feed list
+/feed check
+/feed remove number:1
+```
+
+### Активність, масові дії та пошук справ
+
+Активність рахує повідомлення за каналами та входи й виходи за днями, але ніколи не вміст і не імена. Масові дії банять, кікають або відправляють у тайм-аут до 25 користувачів після підтвердження. Справи можна шукати за користувачем, типом, ім'ям, причиною, модератором і давністю та пов'язувати між собою, наприклад нотатку з баном.
+
+```
+/module enable name:activity
+/activity overview days:7
+/activity channels days:30
+/activity growth days:14
+/activity reset
+
+/bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+
+/cases user:@User kind:ban text:scam moderator:@Mod days:30
+/case link case_id:12 other:15
+/case unlink case_id:12 other:15
+```
+
+### Захист від шахрайства та крипто-скаму
+
+Видаляє підроблені розіграші, як-от типовий скам із MrBeast, у тексті та на зображеннях за мілісекунди. Імена з миттєвого списку видаляються одразу за будь-якого написання (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Інакше слова зі списків (імена, приманки, крипто, посилання, суми) додаються, і повідомлення видаляється при досягненні порогу. Зображення читаються через OCR, а зображення, яке раз визнали скамом, видаляється без повторного читання. Для читання зображень потрібен tesseract, без нього перевіряється лише текст. Сервер про MrBeast може прибрати ім'я з миттєвого списку або виключити канали командою /automod exemptchannel. Перевірте роботу командою /antiscam test, перш ніж на неї покладатися.
+
+```
+/antiscam status
+/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/antiscam words action:add kind:instant word:mrbeast
+/antiscam words action:remove kind:crypto word:token
+/antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/antiscam testimage image:scam.png
+/antiscam forget
+/automod dryrun rule:antiscam enabled:True                     # only report, do not remove
+```
+
+### Випробувальний термін, виявлення рою, хронологія та навчання
+
+Випробувальний термін поміщає нових учасників у роль. Поки вони не напишуть задану кількість звичайних повідомлень або не мине заданий час, посилання, запрошення та файли видаляються з коротким сповіщенням. Захист від рейдів також розпізнає рій: кілька нових облікових записів з однаковим шаблоном імені, однаковою аватаркою або створених з різницею в кілька хвилин. Хронологія (/case timeline) збирає в порядку часу створення облікового запису, вхід і запрошення, випробувальний термін, справи та апеляції одного користувача. Повідомлення ніколи не зберігаються, тому в неї не входять. /block, /unblock і /blocklist керують блок-списком AutoMod короткими командами. Модератори навчають модуль захисту від шахрайства через пункт контекстного меню Mark as scam біля повідомлення або реакцією з емодзі з learn_emoji: повідомлення видаляється, а його зображення й текст відтоді видаляються одразу. Кожну частину вимикають її модулем або налаштуваннями.
+
+```
+/module enable name:probation
+/probation setup minutes:10 messages:1 block_links:True block_files:True
+/probation status
+/probation release member:@User
+/probation add member:@User
+
+/raid swarm enabled:True minimum:4 minutes:10
+/case timeline user:@User
+
+/block kind:link value:evil.example
+/blocklist
+/unblock kind:link number:1
+/antiscam set learn_emoji:X
+```
+
+### Конструктор повідомлень та оновлення
+
+Конструктор повідомлень публікує повідомлення з кількома ембедами та кнопками-посиланнями з JSON. Він читає JSON, який експортують генератори ембедів, як-от Embed Generator, тож ви створюєте повідомлення там і публікуєте його ботом. Передайте JSON текстом, файлом .json або https-посиланням, що веде прямо на JSON, наприклад на «сирий» файл репозиторію (посилання з перенаправленням відхиляються). Створюються лише кнопки-посилання, кнопки, що потребують взаємодії, пропускаються. Кожне посилання має бути http або https, згадки в тексті ніколи не сповіщають, діють обмеження Discord. /message copy експортує наявне повідомлення в JSON, /message edit змінює повідомлення бота, а /message preview показує результат лише вам. Посилання для поширення з вебредакторів не відкриваються, бо їхній формат не публічний.
+
+```json
+{
+  "content": "Rules were updated",
+  "embeds": [{"title": "Rules", "description": "Read them here.", "color": "#5865f2"}],
+  "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "Open rules", "url": "https://example.com/rules"}]}]
+}
+```
+
+Кожні 12 годин бот перевіряє репозиторій GitHub з update.repo (задається скриптом scripts/set_repo_url.py) на наявність новішої версії. Якщо вона є, власник бота отримує особисте повідомлення з описом релізу, а реліз завантажується й перевіряється: контрольна сума SHA-256, безпечні шляхи всередині архіву та версія, що збігається з тегом. Встановлюється командою /debug update action:install або сама, якщо ввімкнено auto_install. Перед встановленням замінювані файли зберігаються в data/update, встановлюються нові пакети, а новий код пробно імпортується. У разі помилки старі файли відновлюються. Ваші .env, settings.json, data і music ніколи не змінюються. Потім бот перезапускається сам. У Docker нічого не встановлюється на місці, оновіть образ. Оновлення виконує код із репозиторію, тому вказуйте лише репозиторій, якому довіряєте. Вимикається параметром enabled зі значенням false.
+
+```json
+{
+  "update": {
+    "enabled": true,
+    "repo": "NAME/guardbot",
+    "check_hours": 12,
+    "auto_install": false,
+    "require_checksum": false
+  }
+}
+```
+
+```
+/message send channel:#news url:https://example.com/message.json
+/message send channel:#news file:message.json
+/message preview url:https://example.com/message.json
+/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/message copy message:https://discord.com/channels/1/2/3
+/module disable name:builder
+/debug update action:status
+/debug update action:check
+/debug update action:install
+```
+
+### Експлуатація
+
+Бот зберігає дані кожні кілька секунд і тримає резервні копії бази в data/dbbackups: одну перед кожною зміною формату даних і одну на день. Черга музики, закріплені повідомлення та лічильники модераторів переживають перезапуск. Великі боти можуть працювати на кількох шардах. Файл heartbeat і необов'язкова сторінка стану допомагають системам моніторингу. Ці параметри задаються в settings.json:
+
+```json
+{
+  "shard_count": null,
+  "db_backup_hours": 24,
+  "db_backup_keep": 7,
+  "health_port": 0,
+  "health_host": "127.0.0.1",
+  "tesseract": null,
+  "music_generic": true
+}
+```
+
+```
+/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/debug db action:list
+```
+
 ### Адміністрування
 
 Вмикання й вимикання модулів і команд, зміна префікса, псевдоніми та обмеження команд за ролями.
@@ -488,7 +1084,7 @@ XP за чат і голос, ролі за рівні, бонуси для ро
 /welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
 /booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
-/birthdaysetup set   message                         {user} {name}
+/birthday setup set   message                         {user} {name}
 /tempvoice setup     name                            {name}
 /jailsetup notice    text                            {staff}
 ```
@@ -561,15 +1157,19 @@ guardbot/
   data/                   created at runtime, holds your settings and data
 ```
 
+## Переклади
+
+Англійська — мова оригіналу проєкту. Усі переклади документації, панелі та повідомлень бота створені машинним перекладом і не перевірялися носіями мови. Можливі невдалі формулювання та помилки, будь ласка, повідомляйте про них або надсилайте виправлення. Файли містяться в docs/ та guardbot/locales/.
+
 ## Плани
 
-- Локальна веб-панель, що працює на вашому комп'ютері, щоб змінювати налаштування без розміщених сервісів.
-- Перекладені повідомлення бота.
-- Експорт та імпорт налаштувань.
+- Графіки активності та модерації в панелі.
+- Перевірка всіх перекладів носіями мови.
+- Переклад більшої кількості фіксованих текстів відповідей.
 
 ## Конфіденційність і безпека
 
-- Жодної телеметрії та зовнішніх сервісів. Бот спілкується лише з Discord.
+- Жодної телеметрії. Бот спілкується з Discord і, для перевірки оновлень, з GitHub (особисті дані не надсилаються, вимикається параметром update.enabled). Посилання, які дають адміністратори, як-от стрічки, музика й посилання на JSON, відкриваються лише на запит.
 - Усі дані зберігаються в папці data на вашому комп'ютері: налаштування, XP, дні народження (лише день і місяць) та випадки модерації.
 - Бот ігнорує приватні повідомлення від учасників.
 - Токен читається з файлу .env. Нікому його не передавайте і не публікуйте.
@@ -579,6 +1179,10 @@ guardbot/
 ## Підтримка
 
 Помилки, ідеї та пропозиції: пишіть мені в Discord, @justyyin, або створіть issue на GitHub.
+
+## Подяки
+
+GuardBot натхненний проєктом [Embed Generator](https://github.com/merlinfuchs/embed-generator) Мерліна Фукса (ліцензія MIT, розміщений на message.style). Конструктор повідомлень читає той самий формат JSON, тому повідомлення, створені там, можна публікувати цим ботом. Код того проєкту не включено. Дякуємо авторам discord.py, aiohttp, Pillow, yt-dlp, mutagen і Tesseract.
 
 ## Ліцензія
 

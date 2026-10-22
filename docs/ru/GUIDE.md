@@ -2,6 +2,8 @@
 
 Это руководство показывает, как запустить GuardBot на своём компьютере или на VPS. Это займёт около 15 минут.
 
+> Бета: GuardBot и его панель управления находятся в стадии беты. Они не были тщательно протестированы, особенно на больших серверах и во всех ситуациях Discord. Возможны ошибки, делайте резервные копии папки data и сообщайте о проблемах. Использование на свой риск.
+
 <!-- toc -->
 
 - [Создание Discord-бота](#создание-discord-бота)
@@ -12,6 +14,9 @@
 - [Запуск через Docker](#запуск-через-docker)
 - [Первые шаги в Discord](#первые-шаги-в-discord)
 - [Обновления и резервные копии](#обновления-и-резервные-копии)
+- [Музыка (необязательно)](#музыка-необязательно)
+- [Необязательно: чтение изображений и языки](#необязательно-чтение-изображений-и-языки)
+- [Панель управления](#панель-управления)
 - [Устранение неполадок](#устранение-неполадок)
 - [Поддержка](#поддержка)
 
@@ -71,7 +76,7 @@ python main.py
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ sudo systemctl restart guardbot
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## Музыка (необязательно)
+
+Для модуля музыки нужен ffmpeg на компьютере, где работает бот. Положите свою музыку в папку music/ как Исполнитель/Альбом/01 - Название.flac или разрешите загрузки. Папка может стать большой, поэтому держите её на диске с местом или в томе Docker.
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## Необязательно: чтение изображений и языки
+
+Чтобы модуль защиты от мошенничества читал текст на изображениях, установите tesseract на компьютер, где работает бот (в образе Docker он уже есть). Затем проверьте командой /antiscam status, что он готов. Язык сообщений, которые видят участники, выбирается командой /language.
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## Панель управления
+
+Панель управления — это веб-страница, которая работает внутри бота. После входа через Discord вы меняете настройки своих серверов переключателями, меню и полями вместо команд: модули, каналы, роли, пороговые значения, тексты, префикс и язык. Она также показывает последние дела модерации, экспортирует и импортирует настройки. Она одинаково работает на вашем компьютере и на VPS и выключена, пока вы её не включите.
+
+1. Откройте своё приложение в Developer Portal, перейдите в OAuth2 и скопируйте Client Secret в файл .env.
+2. На той же странице добавьте адрес перенаправления http://localhost:8080/callback.
+3. Включите панель в settings.json.
+4. Перезапустите бота и откройте http://localhost:8080 в браузере. Войдите через Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+Оставьте host равным 127.0.0.1 и выберите один из двух путей. Первый — SSH-туннель: ничего не открывается наружу, а http://localhost:8080 вы открываете на своём компьютере, пока работает туннель.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Второй — HTTPS через обратный прокси, например Caddy, который сам получает сертификат (см. deploy/Caddyfile.example). Затем укажите в public_url свой https-адрес, добавьте https://ваш-адрес/callback как перенаправление в Developer Portal и установите trust_proxy в true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## Устранение неполадок

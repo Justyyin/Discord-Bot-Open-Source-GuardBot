@@ -2,6 +2,8 @@
 
 Den här guiden visar hur du kör GuardBot på din egen dator eller på en VPS. Det tar cirka 15 minuter.
 
+> Beta: GuardBot och dess kontrollpanel är i en betafas. De har inte testats grundligt, särskilt inte på stora servrar eller i alla situationer på Discord. Räkna med buggar, säkerhetskopiera mappen data och rapportera problem. Användning på egen risk.
+
 <!-- toc -->
 
 - [Skapa Discord-boten](#skapa-discord-boten)
@@ -12,6 +14,9 @@ Den här guiden visar hur du kör GuardBot på din egen dator eller på en VPS. 
 - [Köra med Docker](#köra-med-docker)
 - [Första stegen i Discord](#första-stegen-i-discord)
 - [Uppdateringar och säkerhetskopior](#uppdateringar-och-säkerhetskopior)
+- [Musik (valfritt)](#musik-valfritt)
+- [Valfritt: läsa bilder och språk](#valfritt-läsa-bilder-och-språk)
+- [Kontrollpanel](#kontrollpanel)
 - [Felsökning](#felsökning)
 - [Support](#support)
 
@@ -71,7 +76,7 @@ Dessa kommandon gäller Ubuntu eller Debian och ställer in boten som en tjänst
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ Säkerhetskopiera dina inställningar genom att kopiera mappen data, till exempe
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## Musik (valfritt)
+
+Musikmodulen behöver ffmpeg på datorn som kör boten. Lägg din egen musik i mappen music/ som Artist/Album/01 - Titel.flac, eller tillåt nedladdningar. Mappen kan bli stor, så ha den på en disk med utrymme eller i en Docker-volym.
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## Valfritt: läsa bilder och språk
+
+För att anti-bedrägerimodulen ska läsa text i bilder, installera tesseract på datorn som kör boten (Docker-avbilden innehåller det redan). Kontrollera sedan med /antiscam status att det är redo. Välj språk för de meddelanden medlemmarna ser med /language.
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## Kontrollpanel
+
+Kontrollpanelen är en webbsida som körs inuti boten. Efter inloggning med Discord ändrar du inställningarna för dina servrar med reglage, menyer och fält i stället för kommandon: moduler, kanaler, roller, tröskelvärden, texter, prefixet och språket. Den visar också de senaste moderationsärendena samt exporterar och importerar inställningar. Den fungerar likadant på din egen dator och på en VPS och är avstängd tills du slår på den.
+
+1. Öppna din applikation i Developer Portal, gå till OAuth2 och kopiera Client Secret till filen .env.
+2. Lägg till omdirigeringsadressen http://localhost:8080/callback på samma sida.
+3. Slå på kontrollpanelen i settings.json.
+4. Starta om boten och öppna http://localhost:8080 i webbläsaren. Logga in med Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+Låt host vara 127.0.0.1 och välj en av två vägar. Först en SSH-tunnel: ingenting exponeras och du öppnar http://localhost:8080 på din dator medan tunneln körs.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Sedan HTTPS via en omvänd proxy som Caddy, som skaffar ett certifikat själv (se deploy/Caddyfile.example). Sätt då public_url till din https-adress, lägg till https://din-adress/callback som omdirigering i Developer Portal och sätt trust_proxy till true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## Felsökning

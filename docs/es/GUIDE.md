@@ -2,6 +2,8 @@
 
 Esta guía muestra cómo ejecutar GuardBot en tu ordenador o en un VPS. Lleva unos 15 minutos.
 
+> Beta: GuardBot y su panel de control están en fase beta. No se han probado a fondo, sobre todo no en servidores grandes ni ante todas las situaciones de Discord. Cuenta con errores, haz copias de la carpeta data e informa de los problemas. Uso bajo tu propia responsabilidad.
+
 <!-- toc -->
 
 - [Crear el bot de Discord](#crear-el-bot-de-discord)
@@ -12,6 +14,9 @@ Esta guía muestra cómo ejecutar GuardBot en tu ordenador o en un VPS. Lleva un
 - [Ejecutarlo con Docker](#ejecutarlo-con-docker)
 - [Primeros pasos en Discord](#primeros-pasos-en-discord)
 - [Actualizaciones y copias de seguridad](#actualizaciones-y-copias-de-seguridad)
+- [Música (opcional)](#música-opcional)
+- [Opcional: leer imágenes e idiomas](#opcional-leer-imágenes-e-idiomas)
+- [Panel de control](#panel-de-control)
 - [Solución de problemas](#solución-de-problemas)
 - [Soporte](#soporte)
 
@@ -71,7 +76,7 @@ Estos comandos son para Ubuntu o Debian y configuran el bot como un servicio que
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ Guarda tus ajustes copiando la carpeta data, por ejemplo:
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## Música (opcional)
+
+El módulo de música necesita ffmpeg en el equipo que ejecuta el bot. Coloca tu música en la carpeta music/ como Artista/Álbum/01 - Título.flac, o permite las descargas. La carpeta puede crecer mucho: mantenla en un disco con espacio o en un volumen de Docker.
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## Opcional: leer imágenes e idiomas
+
+Para que el módulo anti-estafa lea el texto de las imágenes, instala tesseract en el equipo que ejecuta el bot (la imagen de Docker ya lo incluye). Después comprueba con /antiscam status que está listo. Elige el idioma de los mensajes que ven los miembros con /language.
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## Panel de control
+
+El panel de control es una página web que se ejecuta dentro del bot. Tras iniciar sesión con Discord, cambias los ajustes de tus servidores con interruptores, menús y campos en lugar de comandos: módulos, canales, roles, umbrales, textos, el prefijo y el idioma. También muestra los últimos casos de moderación y exporta e importa ajustes. Funciona igual en tu propio equipo y en un VPS, y está desactivado hasta que lo actives.
+
+1. Abre tu aplicación en el Developer Portal, ve a OAuth2 y copia el Client Secret en el archivo .env.
+2. En la misma página añade la dirección de redirección http://localhost:8080/callback.
+3. Activa el panel en settings.json.
+4. Reinicia el bot y abre http://localhost:8080 en el navegador. Inicia sesión con Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+Deja host en 127.0.0.1 y elige una de dos vías. Primero, un túnel SSH: no se expone nada y abres http://localhost:8080 en tu equipo mientras el túnel está activo.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Segundo, HTTPS mediante un proxy inverso como Caddy, que obtiene su propio certificado (consulta deploy/Caddyfile.example). Entonces pon public_url con tu dirección https, añade https://tu-direccion/callback como redirección en el Developer Portal y pon trust_proxy en true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## Solución de problemas

@@ -4,6 +4,8 @@
 
 Bot de Discord autoalojado para moderación, seguridad y comunidad. Código abierto, gratuito, y tus datos se quedan en tu propio equipo.
 
+> Beta: GuardBot y su panel de control están en fase beta. No se han probado a fondo, sobre todo no en servidores grandes ni ante todas las situaciones de Discord. Cuenta con errores, haz copias de la carpeta data e informa de los problemas. Uso bajo tu propia responsabilidad.
+
 <!-- toc -->
 
 - [Acerca del proyecto](#acerca-del-proyecto)
@@ -16,8 +18,17 @@ Bot de Discord autoalojado para moderación, seguridad y comunidad. Código abie
 - [Estado del proyecto](#estado-del-proyecto)
 - [Requisitos](#requisitos)
 - [Inicio rápido](#inicio-rápido)
+  - [Linux](#linux)
+  - [macOS](#macos)
+  - [Windows](#windows)
+  - [Scripts de inicio y arranque automático](#scripts-de-inicio-y-arranque-automático)
+  - [Actualizar](#actualizar)
 - [Permisos del bot](#permisos-del-bot)
 - [Primeros pasos en Discord](#primeros-pasos-en-discord)
+- [Panel de control](#panel-de-control)
+  - [Configurar el panel](#configurar-el-panel)
+  - [Seguridad](#seguridad-1)
+  - [Panel en un VPS](#panel-en-un-vps)
 - [Comandos](#comandos)
   - [Moderación](#moderación-1)
   - [Gulag (jail)](#gulag-jail)
@@ -36,14 +47,35 @@ Bot de Discord autoalojado para moderación, seguridad y comunidad. Código abie
   - [Canales de voz temporales](#canales-de-voz-temporales)
   - [Copia de seguridad y restauración](#copia-de-seguridad-y-restauración)
   - [Datos y privacidad](#datos-y-privacidad)
+  - [Herramientas de moderación](#herramientas-de-moderación)
+  - [Información](#información)
+  - [Anuncios, etiquetas y recordatorios](#anuncios-etiquetas-y-recordatorios)
+  - [Mod-mail y apelaciones de baneo](#mod-mail-y-apelaciones-de-baneo)
+  - [Canal de conteo, mensajes fijos y estadísticas](#canal-de-conteo-mensajes-fijos-y-estadísticas)
+  - [Más opciones de las funciones existentes](#más-opciones-de-las-funciones-existentes)
+  - [Más herramientas de AutoMod](#más-herramientas-de-automod)
+  - [Límites de moderadores y auditoría de permisos](#límites-de-moderadores-y-auditoría-de-permisos)
+  - [Reportes y seguimiento de invitaciones](#reportes-y-seguimiento-de-invitaciones)
+  - [Diagnóstico y depuración](#diagnóstico-y-depuración)
+  - [Música](#música)
+  - [Configuración y estado de salud](#configuración-y-estado-de-salud)
+  - [Economía](#economía)
+  - [Menús de roles, mensajes programados y feeds](#menús-de-roles-mensajes-programados-y-feeds)
+  - [Actividad, acciones masivas y búsqueda de casos](#actividad-acciones-masivas-y-búsqueda-de-casos)
+  - [Anti-estafa y anti-cripto](#anti-estafa-y-anti-cripto)
+  - [Periodo de prueba, detección de enjambres, cronología y aprendizaje](#periodo-de-prueba-detección-de-enjambres-cronología-y-aprendizaje)
+  - [Creador de mensajes y actualizaciones](#creador-de-mensajes-y-actualizaciones)
+  - [Operación](#operación)
   - [Administración](#administración-1)
 - [Marcadores en los mensajes](#marcadores-en-los-mensajes)
 - [Configuración](#configuración)
 - [Datos y almacenamiento](#datos-y-almacenamiento)
 - [Estructura del repositorio](#estructura-del-repositorio)
+- [Traducciones](#traducciones)
 - [Hoja de ruta](#hoja-de-ruta)
 - [Privacidad y seguridad](#privacidad-y-seguridad)
 - [Soporte](#soporte)
+- [Créditos](#créditos)
 - [Licencia](#licencia)
 
 <!-- tocstop -->
@@ -64,6 +96,7 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 - Canal gulag: quienes publican enlaces o imágenes de estafa pasan a un único canal con instrucciones para proteger su cuenta. Los moderadores también pueden usar /jail y /unjail.
 - Verificación con botón o captcha, con expulsión automática de quienes no se verifican a tiempo.
 - El anti-nuke vigila también la concesión de permisos, los nuevos webhooks, los bots añadidos y los cambios de nombre del servidor.
+- Anti-estafa: los sorteos falsos y las estafas cripto se eliminan en texto e imágenes en milisegundos, incluida la estafa de MrBeast con cualquier ortografía.
 
 ### Moderación
 
@@ -84,6 +117,7 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 - XP y niveles del 1 al 100 para chat y voz, roles por nivel y cumpleaños.
 - Starboard y canales de voz temporales.
 - Jail con duración, encuestas de opción múltiple, tarjetas de rango como imagen y bonificaciones de XP por rol.
+- Economía con tienda, menús de roles con botones o menú desplegable, mensajes programados, feeds de YouTube, Twitch y RSS, estadísticas de actividad y un /setup guiado. Los mensajes a los miembros están disponibles en 12 idiomas.
 
 ### Administración
 
@@ -91,6 +125,7 @@ Los bots alojados guardan datos del servidor, IDs de miembros y a veces correos 
 - Prefijo propio, alias de comandos y comandos renombrables.
 - Copia de seguridad y restauración de roles y estructura de canales.
 - Copias de seguridad automáticas programadas de roles, canales, emojis y webhooks, con un comando de restauración que solo añade lo que falta.
+- Panel de control: cambia los ajustes de cada servidor en el navegador tras iniciar sesión con Discord, solo para miembros que administran el servidor y solo mientras el bot esté conectado.
 
 ## Estado del proyecto
 
@@ -101,20 +136,90 @@ GuardBot es joven y todavía no se ha usado en servidores grandes. Las pruebas a
 - Python 3.11 o superior
 - Una aplicación de Discord con token de bot
 - Un ordenador o VPS que permanezca en línea
+- ffmpeg (solo para el módulo de música)
+- tesseract-ocr (opcional, solo para leer texto en imágenes)
 
 ## Inicio rápido
 
-```
+Elige tu sistema. Cada variante necesita Python 3.11 o superior y el token de tu bot. La guía detallada paso a paso está en [GUIDE.md](GUIDE.md).
+
+### Linux
+
+```bash
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg tesseract-ocr
 git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+nano .env
 python main.py
 ```
 
-La guía completa paso a paso está en [GUIDE.md](GUIDE.md).
+### macOS
+
+```bash
+brew install python@3.12 git ffmpeg tesseract
+git clone <REPOSITORY_URL>
+cd guardbot
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+open -e .env
+python main.py
+```
+
+### Windows
+
+```powershell
+winget install Python.Python.3.12 Git.Git Gyan.FFmpeg UB-Mannheim.TesseractOCR
+git clone <REPOSITORY_URL>
+cd guardbot
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+notepad .env
+python main.py
+```
+
+### Scripts de inicio y arranque automático
+
+Los scripts de inicio crean el entorno virtual, instalan los paquetes y arrancan el bot. En la primera ejecución crean el archivo .env y se detienen para que introduzcas el token. Vuelve a ejecutarlos después.
+
+```bash
+./start.sh
+```
+
+```bat
+start.bat
+```
+
+Para que el bot siga funcionando tras reiniciar el equipo, usa un servicio. Linux (systemd) y macOS (launchd):
+
+```bash
+sudo cp deploy/guardbot.service /etc/systemd/system/
+sudo systemctl enable --now guardbot
+journalctl -u guardbot -f
+```
+
+```bash
+cp deploy/de.guardbot.plist ~/Library/LaunchAgents/de.guardbot.plist
+launchctl load ~/Library/LaunchAgents/de.guardbot.plist
+```
+
+En Windows, crea una tarea en el Programador de tareas que ejecute start.bat al iniciar sesión, o usa un envoltorio de servicio como NSSM. Para Docker, consulta [GUIDE.md](GUIDE.md).
+
+### Actualizar
+
+Detén el bot, ejecuta estos comandos y vuelve a iniciarlo. Tus datos de la carpeta data no se tocan, y el bot hace una copia de la base de datos antes de cada cambio de formato.
+
+```bash
+git pull
+.venv/bin/pip install -r requirements.txt
+```
 
 ## Permisos del bot
 
@@ -150,6 +255,74 @@ Una configuración inicial razonable. Ejecuta estos comandos en tu servidor y su
 /module list
 ```
 
+## Panel de control
+
+El panel de control es una página web que se ejecuta dentro del bot. Tras iniciar sesión con Discord, cambias los ajustes de tus servidores con interruptores, menús y campos en lugar de comandos: módulos, canales, roles, umbrales, textos, el prefijo y el idioma. También muestra los últimos casos de moderación y exporta e importa ajustes. Funciona igual en tu propio equipo y en un VPS, y está desactivado hasta que lo actives.
+
+### Configurar el panel
+
+1. Abre tu aplicación en el Developer Portal, ve a OAuth2 y copia el Client Secret en el archivo .env.
+2. En la misma página añade la dirección de redirección http://localhost:8080/callback.
+3. Activa el panel en settings.json.
+4. Reinicia el bot y abre http://localhost:8080 en el navegador. Inicia sesión con Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+### Seguridad
+
+- Inicio de sesión solo con Discord (OAuth2, ámbito identify). El token de acceso se revoca al instante y nunca se guarda.
+- Solo el propietario de un servidor y los miembros con el permiso Administrador o Administrar servidor tienen acceso, y solo a ese servidor. El permiso se vuelve a comprobar en cada petición.
+- Solo se pueden abrir servidores a los que el bot está conectado en ese momento. Si el bot está sin conexión, no está en el servidor o aún está arrancando, el panel rechaza todo. Se ejecuta dentro del bot y no tiene base de datos ni servicio propios.
+- Por defecto solo escucha en 127.0.0.1, así que nadie más en la red puede acceder. Una dirección pública solo se acepta con HTTPS; si no, el panel no arranca.
+- Las sesiones usan un token aleatorio en una cookie HttpOnly con SameSite y, bajo HTTPS, el prefijo __Host-. Caducan a las 8 horas y solo viven en memoria, así que un reinicio cierra todas las sesiones.
+- Cada cambio exige un token CSRF y un Origin válido. La cabecera Host se comprueba contra DNS rebinding. La página no carga scripts externos, una Content Security Policy estricta bloquea el código en línea, las peticiones tienen límite de frecuencia y el cuerpo está limitado a 256 KB.
+- Cada valor se comprueba según el tipo del ajuste y los ID de Discord deben existir en el servidor. El estado interno, como contadores, tickets y elementos guardados, no se puede editar. Cada cambio se escribe en el canal de registro de seguridad del servidor.
+- El contenido de los mensajes nunca se muestra. Los casos de moderación son de solo lectura.
+
+### Panel en un VPS
+
+Deja host en 127.0.0.1 y elige una de dos vías. Primero, un túnel SSH: no se expone nada y abres http://localhost:8080 en tu equipo mientras el túnel está activo.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Segundo, HTTPS mediante un proxy inverso como Caddy, que obtiene su propio certificado (consulta deploy/Caddyfile.example). Entonces pon public_url con tu dirección https, añade https://tu-direccion/callback como redirección en el Developer Portal y pon trust_proxy en true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
+```
+
+El editor muestra cada ajuste que sea un interruptor, un número, un texto, un canal, un rol o una lista simple. Lo que se crea con comandos, como artículos de tienda, menús de roles, feeds, tags y tickets, sigue siendo cosa de comandos. La página está en inglés y alemán y sigue el idioma del navegador. En Docker, publica el puerto solo en 127.0.0.1 (127.0.0.1:8080:8080) y pon en el contenedor host en 0.0.0.0 y allow_insecure_http en true.
+
 ## Comandos
 
 La mayoría de los comandos son comandos slash, los de moderación también funcionan con prefijo. La lista completa está en la referencia de comandos: [COMMANDS.md](../COMMANDS.md).
@@ -172,7 +345,7 @@ Advertencias, silencios, expulsiones y baneos funcionan como comandos slash y co
 /cases kind:ban page:2                             # filter by type
 /cases search:john                                 # filter by part of a name
 /warnings user:@User
-/case case_id:12
+/case view case_id:12
 
 /escalation list
 /escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
@@ -347,7 +520,7 @@ Botones para votar y participar. Las duraciones aceptan valores como 30m, 2h y 1
 Los miembros publican sugerencias que el equipo puede aprobar o rechazar, y los mensajes populares se destacan.
 
 ```
-/suggestionsetup set channel:#suggestions review_role:@Staff
+/suggestion setup set channel:#suggestions review_role:@Staff
 /suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
@@ -368,11 +541,11 @@ XP por chat y voz, roles por nivel, bonificaciones por rol y tarjetas de rango.
 /xp boost role:@Booster multiplier:1.5             # 1.0 removes the boost
 /xp ignore channel:#spam                           # toggle
 
-/levelrole add level:10 role:@Active
-/levelrole add level:50 role:@Veteran
-/levelrole remove level:10
-/levelrole list
-/levelrole sync                                    # apply to everyone who already has XP
+/xp levelrole add level:10 role:@Active
+/xp levelrole add level:50 role:@Veteran
+/xp levelrole remove level:10
+/xp levelrole list
+/xp levelrole sync                                    # apply to everyone who already has XP
 
 /xp give user:@User amount:500
 /xp take user:@User amount:100
@@ -396,9 +569,9 @@ Da roles con cualquier emoji y deja que los miembros elijan sus temas de notific
 /reactionrole remove message:<message link> emoji:<any emoji>
 /reactionrole list
 
-/notifytopic add key:events role:@Events description:Server events
-/notifytopic panel channel:#roles title:Notifications   # one button per topic
-/notifytopic remove key:events
+/notify topic add key:events role:@Events description:Server events
+/notify topic panel channel:#roles title:Notifications   # one button per topic
+/notify topic remove key:events
 /notify subscribe topic:events                     # members choose for themselves
 /notify unsubscribe topic:events
 /notify list
@@ -409,8 +582,8 @@ Da roles con cualquier emoji y deja que los miembros elijan sus temas de notific
 Los miembros guardan día y mes, el bot da un rol y publica un mensaje ese día.
 
 ```
-/birthdaysetup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
-/birthdaysetup set message:Happy birthday {user}!
+/birthday setup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
+/birthday setup set message:Happy birthday {user}!
 
 /birthday set day:14 month:3                       # members enter day and month only
 /birthday show user:@User
@@ -453,6 +626,429 @@ Los miembros pueden exportar y borrar sus datos. Los administradores controlan c
 /privacy delete user_id:123456789012345678 cases:True
 ```
 
+### Herramientas de moderación
+
+Limpiar canales, gestionar roles y guardar notas privadas. Cada acción queda registrada.
+
+```
+/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/slowmode seconds:10 channel:#general              # 0 turns it off
+/lockchannel channel:#general reason:Spam wave
+/unlockchannel channel:#general
+
+/role add member:@User role:@Member
+/role remove member:@User role:@Member
+
+/note user:@User text:Watch this member            # private, shown in /cases
+/tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/jailed                                            # who is in the gulag right now
+
+/case view case_id:12
+/case edit case_id:12 reason:Corrected reason
+/case delete case_id:12
+```
+
+### Información
+
+Consultar usuarios, el servidor, los roles y el bot.
+
+```
+/userinfo user:@User
+/serverinfo
+/roleinfo role:@Moderator
+/avatar user:@User
+/help command:ban                                  # explains one command
+/ping
+/botinfo
+```
+
+### Anuncios, etiquetas y recordatorios
+
+Escribir en nombre del bot, crear comandos propios, responder mensajes automáticamente y crear recordatorios.
+
+```
+/say channel:#news message:Maintenance tonight
+/embed channel:#news title:Update description:New rules color:#5865F2
+
+/tag create name:rules text:Be kind to each other
+/tag show name:rules
+/tag list
+/tag info name:rules
+/tag edit name:rules text:Be kind and read the pinned message
+/tag delete name:rules
+
+/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/autoresponder list
+/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+
+/remind set duration:2h text:Stream starts
+/remind list
+/remind cancel id:1
+/afk reason:Lunch                                  # the bot tells others who mention you
+```
+
+### Mod-mail y apelaciones de baneo
+
+Los miembros escriben al equipo mediante un canal privado del servidor. Nadie tiene que enviar un mensaje directo al bot.
+
+```
+/modmail setup set category:Mod-mail staff_role:@Moderator log_channel:#modmail-log anonymous:False
+/modmail setup panel channel:#help text:Press the button to write to the staff
+/modmail setup block member:@User                   # toggles
+/modmail setup status
+
+/modmail send text:I need help with my account     # inside a mod-mail channel
+/modmail close reason:Solved
+
+/appeal setup set main_server_id:123456789012345678 staff_channel:#appeals cooldown_days:7
+/appeal setup set invite:https://discord.gg/example rejoin_invite:https://discord.gg/example
+/appeal setup status
+/appeal send text:I understand the rule now and ask for a second chance
+```
+
+### Canal de conteo, mensajes fijos y estadísticas
+
+Un juego de conteo, mensajes que se quedan al final de un canal y canales que muestran cifras en directo.
+
+```
+/counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/counting status
+/counting set number:100
+/counting off
+
+/sticky set channel:#rules text:Read the rules before you write
+/sticky list
+/sticky remove channel:#rules
+
+/stats create template:Members: {members} category:Statistics
+/stats add channel:#info template:Boosts: {boosts}
+/stats list
+/stats refresh
+/stats remove channel:#info
+```
+
+### Más opciones de las funciones existentes
+
+Ampliaciones de tickets, sorteos, salas de voz, XP, cumpleaños, copias de seguridad, registros y vistas de estado.
+
+```
+/ticket claim
+/ticket rename name:billing-help
+/ticket list
+
+/giveaway cancel giveaway_id:3
+/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+
+/voice rename name:Study room                      # only the owner of the room
+/voice limit limit:4
+/voice lock
+/voice unlock
+/voice kick member:@User
+/voice transfer member:@User
+/voice claim                                       # if the owner left
+
+/xp channelboost channel:#chat multiplier:1.5
+/xp resetall confirm:True
+/leaderboard page:2
+
+/birthday list
+/birthday setup user member:@User day:14 month:3
+/birthday setup clear member:@User
+
+/backup info name:weekly
+/log show
+/log ignorechannel channel:#bots
+/log ignoreuser user:@Bot
+/log sent enabled:True
+
+/automod status
+/verify status
+/raid status
+/welcome show
+/starboard show
+```
+
+### Más herramientas de AutoMod
+
+Seguir enlaces acortados, limitar los enlaces de los miembros nuevos, detectar ghost pings y probar reglas sin castigar a nadie.
+
+```
+/automod toggle rule:shortlinks enabled:True action:delete    # follow short links and judge the target
+/automod set rule:shortlinks option:resolve value:true         # false = block short links outright
+/automod set rule:shortlinks option:block_unresolved value:false
+/automod add name:shortlink_domains value:example.link
+
+/automod toggle rule:newlinks enabled:True action:delete       # new members may not post links
+/automod set rule:newlinks option:hours value:48
+/automod add name:newlinks_allow value:tenor.com
+
+/automod ghostping enabled:True notify:True max_age:120
+/automod dryrun rule:words enabled:True                        # report only, rule: all, words, caps, phishing, flood ...
+/automod test text:free nitro at bit.ly/example member:@User
+```
+
+### Límites de moderadores y auditoría de permisos
+
+Recibir una alarma cuando un moderador banea o expulsa demasiado y ver qué roles tienen permisos peligrosos.
+
+```
+/modwatch status
+/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/modwatch exclude member:@TrustedMod
+
+/permaudit run                                                  # roles with dangerous permissions and who holds them
+/permaudit watch enabled:True                                   # alarm when a role or member gets one
+/permaudit trust role:@Admin
+```
+
+### Reportes y seguimiento de invitaciones
+
+Los miembros reportan mensajes al equipo y el bot registra qué invitación trajo a cada miembro nuevo.
+
+```
+/report setup set channel:#reports ping_role:@Moderator cooldown:60 anonymous:False
+/report setup ignorechannel channel:#staff
+/report setup status
+
+/report send message_link:https://discord.com/channels/1/2/3 reason:Spam
+# or right click a message, Apps, Report message
+
+/invites who member:@User
+/invites stats user:@User
+/invites top
+/invites setup log:True alert_joins:5 alert_minutes:60
+```
+
+### Diagnóstico y depuración
+
+Encontrar permisos que faltan y ajustes rotos, recibir informes de error en un canal y exportar o importar los ajustes.
+
+```
+/diagnose                                                       # permissions, role order, deleted channels and roles
+/debug status
+/debug errorchannel channel:#bot-errors
+/debug errortest
+/debug selftest enabled:True                                    # check at start-up
+/debug usagestats enabled:True
+/debug usage reset:False
+/debug level level:DEBUG                                        # owner of the bot only
+/debug db action:check                                          # owner of the bot only: check, vacuum, size
+
+/config export
+/config import file:guardbot-settings.json confirm:False        # first without confirm
+```
+
+### Música
+
+Reproduce enlaces y archivos de la carpeta music en un canal de voz. Las descargas se guardan como music/Artista/Álbum/Pista. Necesita ffmpeg y los paquetes de requirements.txt.
+
+```
+/play query:daft punk one more time                            # library first, then the web
+/play query:https://example.com/track                           # a link that yt-dlp supports
+
+/music queue page:1
+/music nowplaying
+/music skip
+/music pause
+/music resume
+/music stop
+/music volume percent:70
+/music loop mode:queue
+/music shuffle
+/music remove number:3
+/music clear
+/music seek position:1:30
+/music join
+/music leave
+
+/music library search query:discovery
+/music library list artist:Daft Punk
+/music library play query:one more time
+/music library scan                                             # after you copied files into music/
+/music library info
+/music library download url:https://example.com/track format:best
+
+/music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
+/music settings allow_links:True allow_search:True allow_playlists:True library:True
+/music settings allow_download:True download_format:best announce:True
+/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/music cleardj
+/music status
+```
+
+Sin pérdida: tus propios archivos (FLAC, WAV, ALAC) y las fuentes que ofrecen FLAC se reproducen sin cambios. YouTube, SoundCloud y sitios similares solo ofrecen audio con pérdida, y eso no se puede convertir después en sin pérdida. Discord transmite la voz como Opus; el bot usa la tasa de bits del canal de voz. Responsabilidad: descargar y reproducir contenido puede infringir las condiciones de un sitio o los derechos de autor. Las descargas están desactivadas por defecto y el módulo está desactivado hasta que lo actives. Quien opera el bot es responsable de lo que se reproduce y se guarda.
+
+### Configuración y estado de salud
+
+Un asistente guiado configura lo más importante con botones y menús: canal de registros, canal de bienvenida, roles del equipo, el gulag, un ajuste preestablecido de AutoMod (suave, normal, estricto), una plantilla de servidor (comunidad, juegos, soporte) y el idioma. /health muestra lo que está configurado y lo que falta. El idioma cambia los textos que ven los miembros, como los mensajes de bienvenida por defecto, los avisos de AutoMod, la verificación, los tickets, las apelaciones, el mod-mail y los menús de roles. Las respuestas fijas a los administradores están traducidas, las que llevan nombres y números siguen en inglés.
+
+```
+/setup                                                         # buttons and menus, nothing is switched off by a template
+/health                                                        # what is set up, what is open, and the self-test
+/language code:de
+```
+
+### Economía
+
+Una moneda del servidor con recompensa diaria, trabajo, pagos, clasificación y una tienda cuyos artículos pueden dar un rol. Actívala con el módulo economy. Los comandos también funcionan con el prefijo, por ejemplo !economy daily.
+
+```
+/module enable name:economy
+/economy balance member:@User                                  # same as !economy
+/economy daily
+/economy work
+/economy pay member:@User amount:50
+/economy leaderboard
+/economy shop
+/economy buy item:1
+/economy inventory
+
+/economy give member:@User amount:500                          # staff, a negative amount takes away
+/economy shopadd name:VIP price:1000 role:@VIP stock:10
+/economy shopremove item:1
+/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+```
+
+### Menús de roles, mensajes programados y feeds
+
+Los menús de roles dan roles con botones o un menú desplegable. Los mensajes programados se publican una vez o se repiten cada hora, día o semana. Los feeds publican vídeos nuevos de YouTube, directos de Twitch y elementos RSS. Para YouTube usa el ID del canal (empieza por UC). Twitch necesita TWITCH_CLIENT_ID y TWITCH_CLIENT_SECRET en el archivo .env. Las horas se escriben como in 2h, 18:30 o como fecha con hora, por ejemplo 2026-12-24 18:00, en la zona horaria del servidor. La primera comprobación de un feed solo recuerda lo que ya existe.
+
+```
+/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/rolemenu add menu:1 role:@Red label:Red
+/rolemenu remove menu:1 role:@Red
+/rolemenu delete menu:1
+/rolemenu list
+
+/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/schedule list
+/schedule remove number:1
+/schedule timezone name:Europe/Berlin
+
+/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/feed add kind:twitch target:somestreamer channel:#live
+/feed add kind:rss target:https://example.com/feed.xml channel:#news
+/feed list
+/feed check
+/feed remove number:1
+```
+
+### Actividad, acciones masivas y búsqueda de casos
+
+La actividad cuenta mensajes por canal y entradas y salidas por día, nunca contenido ni nombres. Las acciones masivas banean, expulsan o aíslan hasta 25 usuarios tras una confirmación. Los casos se buscan por usuario, tipo, nombre, motivo, moderador y antigüedad, y se pueden enlazar entre sí, por ejemplo una nota con un baneo.
+
+```
+/module enable name:activity
+/activity overview days:7
+/activity channels days:30
+/activity growth days:14
+/activity reset
+
+/bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+
+/cases user:@User kind:ban text:scam moderator:@Mod days:30
+/case link case_id:12 other:15
+/case unlink case_id:12 other:15
+```
+
+### Anti-estafa y anti-cripto
+
+Elimina sorteos falsos, como la típica estafa de MrBeast, en texto e imágenes en milisegundos. Los nombres de la lista inmediata se eliminan al instante con cualquier ortografía (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Si no, las palabras de las listas (nombres, cebos, cripto, enlaces, importes) se suman y el mensaje se elimina al llegar al umbral. Las imágenes se leen con OCR, y una imagen ya juzgada como estafa se elimina sin volver a leerla. Leer imágenes necesita tesseract; sin él solo se revisa el texto. Un servidor sobre MrBeast puede quitar el nombre de la lista inmediata o excluir canales con /automod exemptchannel. Pruébalo con /antiscam test antes de fiarte de él.
+
+```
+/antiscam status
+/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/antiscam words action:add kind:instant word:mrbeast
+/antiscam words action:remove kind:crypto word:token
+/antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/antiscam testimage image:scam.png
+/antiscam forget
+/automod dryrun rule:antiscam enabled:True                     # only report, do not remove
+```
+
+### Periodo de prueba, detección de enjambres, cronología y aprendizaje
+
+El periodo de prueba pone a los miembros nuevos en un rol. Hasta que escriban el número de mensajes normales indicado o pasen los minutos, los enlaces, invitaciones y archivos se eliminan con un aviso breve. La protección contra raids también reconoce un enjambre: varias cuentas nuevas con el mismo patrón de nombre, la misma foto de perfil o creadas con minutos de diferencia. La cronología (/case timeline) reúne en orden temporal la creación de la cuenta, la entrada y la invitación, el periodo de prueba, los casos y las apelaciones de un usuario. Los mensajes nunca se guardan, así que no forman parte de ella. /block, /unblock y /blocklist gestionan la lista de bloqueo de AutoMod con comandos cortos. Los moderadores enseñan al módulo anti-estafa con la entrada de menú contextual Mark as scam en un mensaje o con una reacción con el emoji de learn_emoji: el mensaje se elimina y sus imágenes y su texto se eliminan al instante a partir de entonces. Cada parte se desactiva con su módulo o sus ajustes.
+
+```
+/module enable name:probation
+/probation setup minutes:10 messages:1 block_links:True block_files:True
+/probation status
+/probation release member:@User
+/probation add member:@User
+
+/raid swarm enabled:True minimum:4 minutes:10
+/case timeline user:@User
+
+/block kind:link value:evil.example
+/blocklist
+/unblock kind:link number:1
+/antiscam set learn_emoji:X
+```
+
+### Creador de mensajes y actualizaciones
+
+El creador de mensajes publica mensajes con varios embeds y botones de enlace a partir de JSON. Lee el JSON que exportan los generadores de embeds como Embed Generator, así que diseñas un mensaje allí y lo publicas con el bot. Indica el JSON como texto, como archivo .json o como enlace https que apunte directamente al JSON, por ejemplo el archivo sin procesar de un repositorio (los enlaces con redirección se rechazan). Solo se crean botones de enlace, los botones que necesitan una interacción se omiten. Cada enlace debe ser http o https, las menciones del texto nunca avisan y se aplican los límites de Discord. /message copy exporta un mensaje existente como JSON, /message edit cambia un mensaje del bot y /message preview muestra el resultado solo a ti. Los enlaces para compartir de editores web no se abren, porque su formato no es público.
+
+```json
+{
+  "content": "Rules were updated",
+  "embeds": [{"title": "Rules", "description": "Read them here.", "color": "#5865f2"}],
+  "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "Open rules", "url": "https://example.com/rules"}]}]
+}
+```
+
+Cada 12 horas el bot comprueba si el repositorio de GitHub indicado en update.repo (definido con scripts/set_repo_url.py) tiene una versión más reciente. Si la hay, el propietario del bot recibe un mensaje directo con las notas de la versión, y la versión se descarga y se comprueba: suma SHA-256 de la versión, rutas seguras dentro del archivo y una versión que coincide con la etiqueta. Se instala con /debug update action:install, o sola si auto_install está activado. Antes de instalar, los archivos reemplazados se guardan en data/update, se instalan los paquetes nuevos y el código nuevo se importa de prueba. Si algo falla, se restauran los archivos antiguos. Tu .env, settings.json, data y music nunca se tocan. Después el bot se reinicia solo. En Docker no se instala nada en el sitio, actualiza la imagen. Una actualización ejecuta código del repositorio, así que apúntala solo a un repositorio de confianza. Desactívala con enabled en false.
+
+```json
+{
+  "update": {
+    "enabled": true,
+    "repo": "NAME/guardbot",
+    "check_hours": 12,
+    "auto_install": false,
+    "require_checksum": false
+  }
+}
+```
+
+```
+/message send channel:#news url:https://example.com/message.json
+/message send channel:#news file:message.json
+/message preview url:https://example.com/message.json
+/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/message copy message:https://discord.com/channels/1/2/3
+/module disable name:builder
+/debug update action:status
+/debug update action:check
+/debug update action:install
+```
+
+### Operación
+
+El bot guarda sus datos cada pocos segundos y conserva copias de la base de datos en data/dbbackups, una antes de cada cambio del formato de datos y una al día. La cola de música, los mensajes fijos y los contadores de moderadores sobreviven a un reinicio. Los bots grandes pueden funcionar con varios shards. Un archivo heartbeat y una página de estado opcional ayudan a las herramientas de monitorización. Estas opciones se configuran en settings.json:
+
+```json
+{
+  "shard_count": null,
+  "db_backup_hours": 24,
+  "db_backup_keep": 7,
+  "health_port": 0,
+  "health_host": "127.0.0.1",
+  "tesseract": null,
+  "music_generic": true
+}
+```
+
+```
+/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/debug db action:list
+```
+
 ### Administración
 
 Activar o desactivar módulos y comandos, cambiar el prefijo, definir alias y limitar comandos a roles.
@@ -488,7 +1084,7 @@ Estos marcadores se sustituyen en los textos que configures:
 /welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
 /booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
-/birthdaysetup set   message                         {user} {name}
+/birthday setup set   message                         {user} {name}
 /tempvoice setup     name                            {name}
 /jailsetup notice    text                            {staff}
 ```
@@ -561,15 +1157,19 @@ guardbot/
   data/                   created at runtime, holds your settings and data
 ```
 
+## Traducciones
+
+El inglés es el idioma original del proyecto. Todas las traducciones de la documentación, del panel y de los mensajes del bot se crearon con traducción automática y no han sido revisadas por hablantes nativos. Cuenta con expresiones torpes y errores, y por favor avísanos o envía una corrección. Los archivos están en docs/ y guardbot/locales/.
+
 ## Hoja de ruta
 
-- Panel web local que se ejecuta en tu propio equipo, para cambiar ajustes sin ningún servicio alojado.
-- Mensajes del bot traducidos.
-- Exportación e importación de ajustes.
+- Gráficos de actividad y moderación en el panel.
+- Revisión de todas las traducciones por hablantes nativos.
+- Más textos de respuesta fijos traducidos.
 
 ## Privacidad y seguridad
 
-- Sin telemetría y sin servicios externos. El bot solo se comunica con Discord.
+- Sin telemetría. El bot se comunica con Discord y, para comprobar actualizaciones, con GitHub (no se envían datos personales, desactívalo con update.enabled). Los enlaces que le dan los administradores, como feeds, música y enlaces JSON, solo se abren a petición.
 - Todos los datos están en la carpeta data de tu equipo: ajustes, XP, cumpleaños (solo día y mes) y casos de moderación.
 - El bot ignora los mensajes directos de los miembros.
 - El token se lee del archivo .env. No lo compartas nunca ni lo subas.
@@ -579,6 +1179,10 @@ guardbot/
 ## Soporte
 
 Errores, ideas y sugerencias: escríbeme en Discord, @justyyin, o abre un issue en GitHub.
+
+## Créditos
+
+GuardBot se inspira en [Embed Generator](https://github.com/merlinfuchs/embed-generator) de Merlin Fuchs (licencia MIT, alojado en message.style). El creador de mensajes lee el mismo formato JSON, así que los mensajes diseñados allí se pueden publicar con este bot. No se incluye código de ese proyecto. Gracias a los autores de discord.py, aiohttp, Pillow, yt-dlp, mutagen y Tesseract.
 
 ## Licencia
 

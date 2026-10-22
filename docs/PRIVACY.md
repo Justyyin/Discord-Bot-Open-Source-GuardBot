@@ -1,6 +1,6 @@
 # Privacy notes for server operators
 
-GuardBot runs on your own machine. The bot does not send data to anyone except Discord. This page lists what is stored so you can inform your members.
+GuardBot runs on your own machine. The bot does not send data to anyone except Discord. The only other connection is the update check to GitHub, which sends no personal data and can be switched off with `update.enabled` in `settings.json`. This page lists what is stored so you can inform your members.
 
 <!-- toc -->
 
@@ -19,11 +19,27 @@ GuardBot runs on your own machine. The bot does not send data to anyone except D
 | User ID, XP, level | Level system | `data/guardbot.db` |
 | Birthday (day and month only) | Birthday role and message | `data/guardbot.db` |
 | Moderation cases (user ID, name at the time, moderator, reason, date) | History of warnings, mutes, kicks, bans, jail | `data/guardbot.db` |
+| Reminders (user ID, channel, text, time) | `/remind`, deleted when sent | `data/guardbot.db` |
+| AFK status (reason, time) | `/afk`, removed with your next message | `data/guardbot.db` |
+| Ban appeals (user ID, name, text, status) | Decision of the staff | `data/guardbot.db` |
+| Mod-mail conversations (user ID, channel) | Link between member and channel while open | `data/guardbot.db` |
+| Invite used when joining (invite code, inviter ID) | Invite tracking, only with the module on | `data/guardbot.db` |
+| Reports (message excerpt, reporter ID) | Posted to the report channel of your server, the database only keeps message and user IDs for 7 days to block duplicates | Discord and `data/guardbot.db` |
+| Command counters (number per command, no user) | `/debug usage`, can be turned off | `data/guardbot.db` |
+| Currency balance, shop items bought, last daily and work time | Economy module | `data/guardbot.db` |
+| Messages and joins per channel and day (numbers only, no content, no names) | Activity module, kept 120 days | `data/guardbot.db` |
+| Dashboard sessions (Discord user ID and name, no password, no token) | Only if the dashboard is on, kept in memory for 8 hours, never written to disk | Memory only |
+| Fingerprints (hash) of images that were judged as scam | Remove the same image again without reading it, no image is stored | `data/guardbot.db` |
+| Fingerprints (hash) of texts that a moderator marked as scam | Remove the same text again, the text itself is not stored | `data/guardbot.db` |
+| Probation (member ID, start time, count of normal messages) | Probation module, removed when the probation ends | `data/guardbot.db` |
+| Scheduled messages, feeds and role menus | Settings of your server | `data/guardbot.db` |
+| Copies of the database | Restore after damage, contain everything above | `data/dbbackups` |
+| Music library | Files you add or download | `music/` |
 | Roles of a jailed member | Restore after release | `data/guardbot.db` |
 | Message log entries | Log channel in your server | Discord, not on disk |
 | Backups (roles, channels, emojis, webhooks, member roles) | Restore after damage | `data/backups` |
 
-Message content is not written to disk by the bot. It is posted to the log channel you configure, so the access rights of that channel decide who can read it.
+Message content is not written to disk by the bot. Images are read in memory by the anti-scam module and are not saved. It is posted to the log channel you configure, so the access rights of that channel decide who can read it.
 
 ## Rights of members
 

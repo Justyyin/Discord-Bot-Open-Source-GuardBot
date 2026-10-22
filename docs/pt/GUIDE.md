@@ -2,6 +2,8 @@
 
 Este guia mostra como executar o GuardBot no seu computador ou em um VPS. Leva cerca de 15 minutos.
 
+> Beta: o GuardBot e o seu painel estão em fase beta. Não foram testados a fundo, sobretudo não em servidores grandes nem em todas as situações do Discord. Conte com erros, faça cópias da pasta data e comunique os problemas. Uso por sua conta e risco.
+
 <!-- toc -->
 
 - [Criar o bot do Discord](#criar-o-bot-do-discord)
@@ -12,6 +14,9 @@ Este guia mostra como executar o GuardBot no seu computador ou em um VPS. Leva c
 - [Executar com Docker](#executar-com-docker)
 - [Primeiros passos no Discord](#primeiros-passos-no-discord)
 - [Atualizações e backups](#atualizações-e-backups)
+- [Música (opcional)](#música-opcional)
+- [Opcional: ler imagens e idiomas](#opcional-ler-imagens-e-idiomas)
+- [Painel](#painel)
 - [Solução de problemas](#solução-de-problemas)
 - [Suporte](#suporte)
 
@@ -71,7 +76,7 @@ Estes comandos valem para Ubuntu ou Debian e configuram o bot como um serviço q
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ Faça backup das configurações copiando a pasta data, por exemplo:
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## Música (opcional)
+
+O módulo de música precisa de ffmpeg no computador onde o bot corre. Coloque a sua música na pasta music/ como Artista/Álbum/01 - Título.flac, ou permita downloads. A pasta pode crescer muito: guarde-a num disco com espaço ou num volume Docker.
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## Opcional: ler imagens e idiomas
+
+Para que o módulo anti-burla leia o texto das imagens, instale o tesseract no computador onde o bot corre (a imagem Docker já o inclui). Depois verifique com /antiscam status se está pronto. Escolha o idioma das mensagens que os membros veem com /language.
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## Painel
+
+O painel é uma página web que corre dentro do bot. Depois de iniciar sessão com o Discord, altera as definições dos seus servidores com interruptores, menus e campos em vez de comandos: módulos, canais, cargos, limites, textos, o prefixo e o idioma. Mostra também os últimos casos de moderação e exporta e importa definições. Funciona da mesma forma no seu computador e num VPS, e está desligado até o ativar.
+
+1. Abra a sua aplicação no Developer Portal, vá a OAuth2 e copie o Client Secret para o ficheiro .env.
+2. Na mesma página, adicione o endereço de redirecionamento http://localhost:8080/callback.
+3. Ative o painel em settings.json.
+4. Reinicie o bot e abra http://localhost:8080 no navegador. Inicie sessão com o Discord.
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+Deixe host em 127.0.0.1 e escolha um de dois caminhos. Primeiro, um túnel SSH: nada é exposto e abre http://localhost:8080 no seu computador enquanto o túnel estiver ativo.
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+Segundo, HTTPS através de um proxy inverso como o Caddy, que obtém o seu próprio certificado (veja deploy/Caddyfile.example). Depois defina public_url com o seu endereço https, adicione https://o-seu-endereco/callback como redirecionamento no Developer Portal e ponha trust_proxy em true:
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## Solução de problemas

@@ -2,6 +2,8 @@
 
 本指南介绍如何在自己的电脑或 VPS 上运行 GuardBot，大约需要 15 分钟。
 
+> 测试版：GuardBot 及其控制面板处于测试阶段，尚未经过充分测试，尤其没有在大型服务器上、也没有覆盖 Discord 上的所有情况。可能存在错误，请定期备份 data 文件夹并反馈问题。使用风险自负。
+
 <!-- toc -->
 
 - [创建 Discord 机器人](#创建-discord-机器人)
@@ -12,6 +14,9 @@
 - [使用 Docker 运行](#使用-docker-运行)
 - [在 Discord 中的第一步](#在-discord-中的第一步)
 - [更新与备份](#更新与备份)
+- [音乐（可选）](#音乐可选)
+- [可选：读取图片与语言](#可选读取图片与语言)
+- [控制面板](#控制面板)
 - [故障排除](#故障排除)
 - [支持](#支持)
 
@@ -71,7 +76,7 @@ python main.py
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ sudo systemctl restart guardbot
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## 音乐（可选）
+
+音乐模块需要在运行机器人的电脑上安装 ffmpeg。把自己的音乐放进 music/ 文件夹，格式为 艺术家/专辑/01 - 曲名.flac，或允许下载。文件夹可能变得很大，请放在有空间的磁盘或 Docker 卷中。
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## 可选：读取图片与语言
+
+要让反诈骗模块读取图片中的文字，请在运行机器人的电脑上安装 tesseract（Docker 镜像已包含）。然后用 /antiscam status 检查是否就绪。用 /language 选择成员看到的消息语言。
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## 控制面板
+
+控制面板是运行在机器人内部的网页。用 Discord 登录后，你可以用开关、菜单和输入框代替命令来修改服务器的设置：模块、频道、身份组、阈值、文本、前缀和语言。它还会显示最近的管理案件，并可导出和导入设置。它在你自己的电脑和 VPS 上的使用方式完全相同，在你开启之前处于关闭状态。
+
+1. 在 Developer Portal 中打开你的应用，进入 OAuth2，把 Client Secret 复制到 .env 文件中。
+2. 在同一页面添加重定向地址 http://localhost:8080/callback。
+3. 在 settings.json 中开启控制面板。
+4. 重启机器人，在浏览器中打开 http://localhost:8080，用 Discord 登录。
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+保持 host 为 127.0.0.1，并在两种方式中选一种。第一种是 SSH 隧道：不对外暴露任何东西，隧道运行期间在你的电脑上打开 http://localhost:8080 即可。
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+第二种是通过 Caddy 之类的反向代理使用 HTTPS，它会自动获取证书（见 deploy/Caddyfile.example）。然后把 public_url 设为你的 https 地址，在 Developer Portal 中添加 https://你的地址/callback 作为重定向，并把 trust_proxy 设为 true：
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## 故障排除

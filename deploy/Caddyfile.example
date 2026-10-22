@@ -1,0 +1,5 @@
+# HTTPS for the dashboard on a VPS. Replace the domain, point its DNS record to the server, and run Caddy.
+# In settings.json: "host": "127.0.0.1", "port": 8080, "public_url": "https://dashboard.example.com", "trust_proxy": true
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}

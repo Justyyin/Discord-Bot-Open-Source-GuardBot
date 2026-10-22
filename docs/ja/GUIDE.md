@@ -2,6 +2,8 @@
 
 このガイドでは、自分のコンピューターまたは VPS で GuardBot を動かす方法を説明します。所要時間は約 15 分です。
 
+> ベータ版：GuardBot とそのダッシュボードはベータ段階です。十分にテストされておらず、特に大規模なサーバーや Discord のあらゆる状況では確認していません。不具合が起こりうるため、data フォルダーのバックアップを取り、問題を報告してください。自己責任でご利用ください。
+
 <!-- toc -->
 
 - [Discord ボットを作成する](#discord-ボットを作成する)
@@ -12,6 +14,9 @@
 - [Docker で動かす](#docker-で動かす)
 - [Discord での最初の手順](#discord-での最初の手順)
 - [更新とバックアップ](#更新とバックアップ)
+- [音楽（任意）](#音楽任意)
+- [任意：画像の読み取りと言語](#任意画像の読み取りと言語)
+- [ダッシュボード](#ダッシュボード)
 - [トラブルシューティング](#トラブルシューティング)
 - [サポート](#サポート)
 
@@ -71,7 +76,7 @@ python main.py
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0 ffmpeg libopus0
 sudo git clone <REPOSITORY_URL> /opt/guardbot
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin guardbot
 cd /opt/guardbot
@@ -135,6 +140,91 @@ data フォルダーをコピーして設定をバックアップします。例
 
 ```bash
 tar czf guardbot-data-$(date +%F).tar.gz data
+```
+
+## 音楽（任意）
+
+音楽モジュールには、ボットを動かすコンピューターに ffmpeg が必要です。自分の音楽を music/ フォルダに アーティスト/アルバム/01 - 曲名.flac の形で置くか、ダウンロードを許可してください。フォルダは大きくなることがあるため、空き容量のあるディスクか Docker ボリュームに置いてください。
+
+```
+# Windows
+winget install Gyan.FFmpeg
+# macOS
+brew install ffmpeg
+# Ubuntu or Debian
+sudo apt install -y ffmpeg libopus0
+
+# in Discord
+/module enable name:music
+/music settings allow_download:True
+```
+
+## 任意：画像の読み取りと言語
+
+詐欺対策モジュールに画像内の文字を読ませるには、ボットを動かすコンピューターに tesseract をインストールします（Docker イメージには含まれています）。その後 /antiscam status で準備できているか確認します。メンバーに表示されるメッセージの言語は /language で選びます。
+
+```
+# Ubuntu or Debian
+sudo apt install -y tesseract-ocr
+# macOS
+brew install tesseract
+# Windows
+winget install UB-Mannheim.TesseractOCR
+
+# in Discord
+/antiscam status
+/language code:de
+```
+
+## ダッシュボード
+
+ダッシュボードはボットの中で動くウェブページです。Discord でログインすると、コマンドの代わりにスイッチ、メニュー、入力欄でサーバーの設定を変更できます。対象はモジュール、チャンネル、ロール、しきい値、テキスト、プレフィックス、言語です。直近のモデレーションケースの表示や、設定のエクスポートとインポートもできます。自分のコンピューターでも VPS でも同じように動作し、オンにするまでは無効です。
+
+1. Developer Portal でアプリケーションを開き、OAuth2 に進んで、Client Secret を .env ファイルにコピーします。
+2. 同じページでリダイレクトアドレス http://localhost:8080/callback を追加します。
+3. settings.json でダッシュボードをオンにします。
+4. ボットを再起動し、ブラウザで http://localhost:8080 を開いて Discord でログインします。
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+host は 127.0.0.1 のままにして、2 つの方法から選びます。1 つ目は SSH トンネルです。何も公開せず、トンネルが動いている間、自分のコンピューターで http://localhost:8080 を開きます。
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+2 つ目は Caddy のようなリバースプロキシを使った HTTPS です。証明書は自動で取得されます（deploy/Caddyfile.example を参照）。その場合は public_url を https アドレスにし、Developer Portal に https://あなたのアドレス/callback をリダイレクトとして追加し、trust_proxy を true にします：
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
 ```
 
 ## トラブルシューティング

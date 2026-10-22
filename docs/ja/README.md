@@ -4,6 +4,8 @@
 
 モデレーション、セキュリティ、コミュニティのための自己ホスト型 Discord ボット。オープンソースで無料、データは自分のコンピューターに残ります。
 
+> ベータ版：GuardBot とそのダッシュボードはベータ段階です。十分にテストされておらず、特に大規模なサーバーや Discord のあらゆる状況では確認していません。不具合が起こりうるため、data フォルダーのバックアップを取り、問題を報告してください。自己責任でご利用ください。
+
 <!-- toc -->
 
 - [プロジェクトについて](#プロジェクトについて)
@@ -16,8 +18,17 @@
 - [プロジェクトの状況](#プロジェクトの状況)
 - [動作要件](#動作要件)
 - [クイックスタート](#クイックスタート)
+  - [Linux](#linux)
+  - [macOS](#macos)
+  - [Windows](#windows)
+  - [起動スクリプトと自動起動](#起動スクリプトと自動起動)
+  - [更新](#更新)
 - [ボットの権限](#ボットの権限)
 - [Discord での最初の手順](#discord-での最初の手順)
+- [ダッシュボード](#ダッシュボード)
+  - [ダッシュボードの設定](#ダッシュボードの設定)
+  - [セキュリティ](#セキュリティ-1)
+  - [VPS でのダッシュボード](#vps-でのダッシュボード)
 - [コマンド](#コマンド)
   - [モデレーション](#モデレーション-1)
   - [グラグ（ジェイル）](#グラグジェイル)
@@ -36,14 +47,35 @@
   - [一時ボイスチャンネル](#一時ボイスチャンネル)
   - [バックアップと復元](#バックアップと復元)
   - [データとプライバシー](#データとプライバシー)
+  - [モデレーター用ツール](#モデレーター用ツール)
+  - [情報](#情報)
+  - [お知らせ、タグ、リマインダー](#お知らせタグリマインダー)
+  - [モデメールとBAN異議申し立て](#モデメールとban異議申し立て)
+  - [カウントチャンネル、固定メッセージ、統計](#カウントチャンネル固定メッセージ統計)
+  - [既存機能の追加オプション](#既存機能の追加オプション)
+  - [その他の AutoMod ツール](#その他の-automod-ツール)
+  - [モデレーターの上限と権限監査](#モデレーターの上限と権限監査)
+  - [通報と招待の追跡](#通報と招待の追跡)
+  - [診断とデバッグ](#診断とデバッグ)
+  - [音楽](#音楽)
+  - [セットアップとヘルスチェック](#セットアップとヘルスチェック)
+  - [経済](#経済)
+  - [ロールメニュー、予約メッセージ、フィード](#ロールメニュー予約メッセージフィード)
+  - [アクティビティ、一括操作、ケース検索](#アクティビティ一括操作ケース検索)
+  - [詐欺対策・暗号資産対策](#詐欺対策暗号資産対策)
+  - [仮参加期間、群れの検出、タイムライン、学習](#仮参加期間群れの検出タイムライン学習)
+  - [メッセージビルダーと更新](#メッセージビルダーと更新)
+  - [運用](#運用)
   - [管理](#管理-1)
 - [メッセージのプレースホルダー](#メッセージのプレースホルダー)
 - [設定](#設定)
 - [データと保存場所](#データと保存場所)
 - [リポジトリの構成](#リポジトリの構成)
+- [翻訳](#翻訳)
 - [ロードマップ](#ロードマップ)
 - [プライバシーとセキュリティ](#プライバシーとセキュリティ)
 - [サポート](#サポート)
+- [クレジット](#クレジット)
 - [ライセンス](#ライセンス)
 
 <!-- tocstop -->
@@ -64,6 +96,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - グラグチャンネル：詐欺リンクや画像を投稿したメンバーは、アカウント保護の手順が書かれた専用チャンネルだけに移されます。モデレーターは /jail と /unjail も使えます。
 - ボタンまたはキャプチャによる認証と、期限内に認証しないメンバーの自動削除。
 - Anti-Nuke は、権限の付与、新しい Webhook、追加されたボット、サーバー名の変更も監視します。
+- 詐欺対策：偽のプレゼント企画や暗号資産詐欺を、テキストでも画像でも数ミリ秒で削除します。どんな綴りの MrBeast 詐欺にも対応します。
 
 ### モデレーション
 
@@ -84,6 +117,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - チャットとボイスの XP とレベル 1〜100、レベルロール、誕生日。
 - スターボードと一時ボイスチャンネル。
 - 期限付きジェイル、複数選択の投票、画像のランクカード、ロールごとの XP ブースト。
+- ショップ付きの経済、ボタンまたはドロップダウンのロールメニュー、予約メッセージ、YouTube・Twitch・RSS フィード、アクティビティ統計、ガイド付きの /setup。メンバー向けメッセージは12言語に対応します。
 
 ### 管理
 
@@ -91,6 +125,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - 独自のプレフィックス、コマンドのエイリアス、コマンド名の変更。
 - ロールとチャンネル構成のバックアップと復元。
 - ロール、チャンネル、絵文字、Webhook のスケジュール自動バックアップと、足りないものだけを追加する復元コマンド。
+- ダッシュボード：Discord でログインしたあと、ブラウザーで各サーバーの設定を変更できます。対象はサーバーを管理するメンバーのみで、ボットが接続している間だけ使えます。
 
 ## プロジェクトの状況
 
@@ -101,20 +136,90 @@ GuardBot はまだ新しく、大規模なサーバーでは使われていま�
 - Python 3.11 以降
 - ボットトークンを持つ Discord アプリケーション
 - 常時オンラインのコンピューターまたは VPS
+- ffmpeg（音楽モジュールのみ）
+- tesseract-ocr（任意、画像内の文字を読み取る場合のみ）
 
 ## クイックスタート
 
-```
+お使いのシステムを選んでください。どの方法でも Python 3.11 以上とボットのトークンが必要です。詳しい手順は [GUIDE.md](GUIDE.md) にあります。
+
+### Linux
+
+```bash
+sudo apt install -y python3 python3-venv python3-pip git ffmpeg tesseract-ocr
 git clone <REPOSITORY_URL>
 cd guardbot
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+nano .env
 python main.py
 ```
 
-詳しい手順は次のガイドにあります： [GUIDE.md](GUIDE.md).
+### macOS
+
+```bash
+brew install python@3.12 git ffmpeg tesseract
+git clone <REPOSITORY_URL>
+cd guardbot
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+open -e .env
+python main.py
+```
+
+### Windows
+
+```powershell
+winget install Python.Python.3.12 Git.Git Gyan.FFmpeg UB-Mannheim.TesseractOCR
+git clone <REPOSITORY_URL>
+cd guardbot
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+notepad .env
+python main.py
+```
+
+### 起動スクリプトと自動起動
+
+起動スクリプトは仮想環境を作成し、パッケージをインストールして、ボットを起動します。初回は .env ファイルを作成して停止するので、トークンを入力してください。その後、もう一度実行します。
+
+```bash
+./start.sh
+```
+
+```bat
+start.bat
+```
+
+コンピューターの再起動後もボットを動かし続けるには、サービスを使います。Linux（systemd）と macOS（launchd）：
+
+```bash
+sudo cp deploy/guardbot.service /etc/systemd/system/
+sudo systemctl enable --now guardbot
+journalctl -u guardbot -f
+```
+
+```bash
+cp deploy/de.guardbot.plist ~/Library/LaunchAgents/de.guardbot.plist
+launchctl load ~/Library/LaunchAgents/de.guardbot.plist
+```
+
+Windows では、タスクスケジューラでログオン時に start.bat を実行するタスクを作るか、NSSM などのサービスラッパーを使います。Docker については [GUIDE.md](GUIDE.md) を参照してください。
+
+### 更新
+
+ボットを止めて、次のコマンドを実行し、再び起動します。data フォルダーのデータには手を加えず、データ形式を変更する前にボットがデータベースをバックアップします。
+
+```bash
+git pull
+.venv/bin/pip install -r requirements.txt
+```
 
 ## ボットの権限
 
@@ -150,6 +255,74 @@ Optional
 /module list
 ```
 
+## ダッシュボード
+
+ダッシュボードはボットの中で動くウェブページです。Discord でログインすると、コマンドの代わりにスイッチ、メニュー、入力欄でサーバーの設定を変更できます。対象はモジュール、チャンネル、ロール、しきい値、テキスト、プレフィックス、言語です。直近のモデレーションケースの表示や、設定のエクスポートとインポートもできます。自分のコンピューターでも VPS でも同じように動作し、オンにするまでは無効です。
+
+### ダッシュボードの設定
+
+1. Developer Portal でアプリケーションを開き、OAuth2 に進んで、Client Secret を .env ファイルにコピーします。
+2. 同じページでリダイレクトアドレス http://localhost:8080/callback を追加します。
+3. settings.json でダッシュボードをオンにします。
+4. ボットを再起動し、ブラウザで http://localhost:8080 を開いて Discord でログインします。
+
+```
+DISCORD_TOKEN=your-bot-token
+DISCORD_CLIENT_SECRET=your-oauth2-client-secret
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080"
+  }
+}
+```
+
+### セキュリティ
+
+- ログインは Discord のみです（OAuth2、スコープ identify）。アクセストークンはすぐに無効化され、保存されません。
+- アクセスできるのは、サーバーの所有者と「管理者」または「サーバー管理」権限を持つメンバーだけで、そのサーバーに限ります。権限はリクエストのたびに再確認されます。
+- 開けるのは、ボットが現在接続しているサーバーだけです。ボットがオフライン、サーバーにいない、または起動中の場合、ダッシュボードはすべて拒否します。ダッシュボードはボットの中で動き、独自のデータベースやサービスは持ちません。
+- 初期設定では 127.0.0.1 だけで待ち受けるため、ネットワーク上の他の人は接続できません。公開アドレスは HTTPS の場合にのみ受け付けられ、そうでなければダッシュボードは起動しません。
+- セッションは、SameSite 付きの HttpOnly Cookie に入れたランダムなトークンを使い、HTTPS では __Host- プレフィックスも付きます。8 時間で終了し、メモリ上にだけ存在するため、再起動すると全員がログアウトされます。
+- 変更のたびに CSRF トークンと一致する Origin が必要です。Host ヘッダーは DNS リバインディング対策として検査されます。ページは外部スクリプトを読み込まず、厳格な Content Security Policy がインラインコードを遮断し、リクエストには頻度制限があり、本文は 256 KB に制限されます。
+- すべての値は設定の型に照らして検査され、Discord の ID はそのサーバーに存在する必要があります。カウンター、チケット、保存済みの項目などの内部状態は編集できません。変更はすべてサーバーのセキュリティログチャンネルに記録されます。
+- メッセージの内容は表示されません。モデレーションケースは閲覧専用です。
+
+### VPS でのダッシュボード
+
+host は 127.0.0.1 のままにして、2 つの方法から選びます。1 つ目は SSH トンネルです。何も公開せず、トンネルが動いている間、自分のコンピューターで http://localhost:8080 を開きます。
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@your-server
+```
+
+2 つ目は Caddy のようなリバースプロキシを使った HTTPS です。証明書は自動で取得されます（deploy/Caddyfile.example を参照）。その場合は public_url を https アドレスにし、Developer Portal に https://あなたのアドレス/callback をリダイレクトとして追加し、trust_proxy を true にします：
+
+```
+dashboard.example.com {
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "https://dashboard.example.com",
+    "trust_proxy": true
+  }
+}
+```
+
+エディターには、スイッチ、数値、テキスト、チャンネル、ロール、単純なリストにあたるすべての設定が表示されます。ショップの商品、ロールメニュー、フィード、タグ、チケットなど、コマンドで作るものは引き続きコマンドで行います。ページは英語とドイツ語で表示され、ブラウザーの言語に従います。Docker ではポートを 127.0.0.1 にだけ公開し（127.0.0.1:8080:8080）、コンテナ内で host を 0.0.0.0、allow_insecure_http を true にします。
+
 ## コマンド
 
 ほとんどのコマンドはスラッシュコマンドで、モデレーションコマンドはプレフィックスでも使えます。完全な一覧はコマンドリファレンスにあります： [COMMANDS.md](../COMMANDS.md).
@@ -172,7 +345,7 @@ Optional
 /cases kind:ban page:2                             # filter by type
 /cases search:john                                 # filter by part of a name
 /warnings user:@User
-/case case_id:12
+/case view case_id:12
 
 /escalation list
 /escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
@@ -347,7 +520,7 @@ Optional
 メンバーが投稿した提案をスタッフが承認または却下でき、人気のメッセージは強調表示されます。
 
 ```
-/suggestionsetup set channel:#suggestions review_role:@Staff
+/suggestion setup set channel:#suggestions review_role:@Staff
 /suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
@@ -368,11 +541,11 @@ Optional
 /xp boost role:@Booster multiplier:1.5             # 1.0 removes the boost
 /xp ignore channel:#spam                           # toggle
 
-/levelrole add level:10 role:@Active
-/levelrole add level:50 role:@Veteran
-/levelrole remove level:10
-/levelrole list
-/levelrole sync                                    # apply to everyone who already has XP
+/xp levelrole add level:10 role:@Active
+/xp levelrole add level:50 role:@Veteran
+/xp levelrole remove level:10
+/xp levelrole list
+/xp levelrole sync                                    # apply to everyone who already has XP
 
 /xp give user:@User amount:500
 /xp take user:@User amount:100
@@ -396,9 +569,9 @@ Optional
 /reactionrole remove message:<message link> emoji:<any emoji>
 /reactionrole list
 
-/notifytopic add key:events role:@Events description:Server events
-/notifytopic panel channel:#roles title:Notifications   # one button per topic
-/notifytopic remove key:events
+/notify topic add key:events role:@Events description:Server events
+/notify topic panel channel:#roles title:Notifications   # one button per topic
+/notify topic remove key:events
 /notify subscribe topic:events                     # members choose for themselves
 /notify unsubscribe topic:events
 /notify list
@@ -409,8 +582,8 @@ Optional
 メンバーが日と月を登録すると、当日にボットがロールを付与してメッセージを送ります。
 
 ```
-/birthdaysetup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
-/birthdaysetup set message:Happy birthday {user}!
+/birthday setup set enabled:True role:@Birthday channel:#birthdays timezone:Europe/Berlin
+/birthday setup set message:Happy birthday {user}!
 
 /birthday set day:14 month:3                       # members enter day and month only
 /birthday show user:@User
@@ -453,6 +626,429 @@ Optional
 /privacy delete user_id:123456789012345678 cases:True
 ```
 
+### モデレーター用ツール
+
+チャンネルの整理、ロール管理、非公開メモ。すべての操作はログに記録されます。
+
+```
+/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/slowmode seconds:10 channel:#general              # 0 turns it off
+/lockchannel channel:#general reason:Spam wave
+/unlockchannel channel:#general
+
+/role add member:@User role:@Member
+/role remove member:@User role:@Member
+
+/note user:@User text:Watch this member            # private, shown in /cases
+/tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/jailed                                            # who is in the gulag right now
+
+/case view case_id:12
+/case edit case_id:12 reason:Corrected reason
+/case delete case_id:12
+```
+
+### 情報
+
+ユーザー、サーバー、ロール、ボットの情報を確認します。
+
+```
+/userinfo user:@User
+/serverinfo
+/roleinfo role:@Moderator
+/avatar user:@User
+/help command:ban                                  # explains one command
+/ping
+/botinfo
+```
+
+### お知らせ、タグ、リマインダー
+
+ボットの名前で投稿し、独自コマンドを作り、メッセージに自動で返信し、リマインダーを設定します。
+
+```
+/say channel:#news message:Maintenance tonight
+/embed channel:#news title:Update description:New rules color:#5865F2
+
+/tag create name:rules text:Be kind to each other
+/tag show name:rules
+/tag list
+/tag info name:rules
+/tag edit name:rules text:Be kind and read the pinned message
+/tag delete name:rules
+
+/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/autoresponder list
+/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+
+/remind set duration:2h text:Stream starts
+/remind list
+/remind cancel id:1
+/afk reason:Lunch                                  # the bot tells others who mention you
+```
+
+### モデメールとBAN異議申し立て
+
+メンバーはサーバー内の非公開チャンネルでスタッフに連絡します。ボットへのダイレクトメッセージは不要です。
+
+```
+/modmail setup set category:Mod-mail staff_role:@Moderator log_channel:#modmail-log anonymous:False
+/modmail setup panel channel:#help text:Press the button to write to the staff
+/modmail setup block member:@User                   # toggles
+/modmail setup status
+
+/modmail send text:I need help with my account     # inside a mod-mail channel
+/modmail close reason:Solved
+
+/appeal setup set main_server_id:123456789012345678 staff_channel:#appeals cooldown_days:7
+/appeal setup set invite:https://discord.gg/example rejoin_invite:https://discord.gg/example
+/appeal setup status
+/appeal send text:I understand the rule now and ask for a second chance
+```
+
+### カウントチャンネル、固定メッセージ、統計
+
+カウントゲーム、チャンネルの最下部に残るメッセージ、リアルタイムの数値を表示するチャンネル。
+
+```
+/counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/counting status
+/counting set number:100
+/counting off
+
+/sticky set channel:#rules text:Read the rules before you write
+/sticky list
+/sticky remove channel:#rules
+
+/stats create template:Members: {members} category:Statistics
+/stats add channel:#info template:Boosts: {boosts}
+/stats list
+/stats refresh
+/stats remove channel:#info
+```
+
+### 既存機能の追加オプション
+
+チケット、抽選、ボイスルーム、XP、誕生日、バックアップ、ログ、状態表示への追加機能です。
+
+```
+/ticket claim
+/ticket rename name:billing-help
+/ticket list
+
+/giveaway cancel giveaway_id:3
+/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+
+/voice rename name:Study room                      # only the owner of the room
+/voice limit limit:4
+/voice lock
+/voice unlock
+/voice kick member:@User
+/voice transfer member:@User
+/voice claim                                       # if the owner left
+
+/xp channelboost channel:#chat multiplier:1.5
+/xp resetall confirm:True
+/leaderboard page:2
+
+/birthday list
+/birthday setup user member:@User day:14 month:3
+/birthday setup clear member:@User
+
+/backup info name:weekly
+/log show
+/log ignorechannel channel:#bots
+/log ignoreuser user:@Bot
+/log sent enabled:True
+
+/automod status
+/verify status
+/raid status
+/welcome show
+/starboard show
+```
+
+### その他の AutoMod ツール
+
+短縮リンクの追跡、新規メンバーのリンク制限、ゴーストピングの検出、誰も処罰せずにルールをテストできます。
+
+```
+/automod toggle rule:shortlinks enabled:True action:delete    # follow short links and judge the target
+/automod set rule:shortlinks option:resolve value:true         # false = block short links outright
+/automod set rule:shortlinks option:block_unresolved value:false
+/automod add name:shortlink_domains value:example.link
+
+/automod toggle rule:newlinks enabled:True action:delete       # new members may not post links
+/automod set rule:newlinks option:hours value:48
+/automod add name:newlinks_allow value:tenor.com
+
+/automod ghostping enabled:True notify:True max_age:120
+/automod dryrun rule:words enabled:True                        # report only, rule: all, words, caps, phishing, flood ...
+/automod test text:free nitro at bit.ly/example member:@User
+```
+
+### モデレーターの上限と権限監査
+
+モデレーターがBANやキックをしすぎたときに警告し、危険な権限を持つロールを一覧表示します。
+
+```
+/modwatch status
+/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/modwatch exclude member:@TrustedMod
+
+/permaudit run                                                  # roles with dangerous permissions and who holds them
+/permaudit watch enabled:True                                   # alarm when a role or member gets one
+/permaudit trust role:@Admin
+```
+
+### 通報と招待の追跡
+
+メンバーがメッセージをスタッフに通報し、ボットは新規メンバーがどの招待で参加したかを記録します。
+
+```
+/report setup set channel:#reports ping_role:@Moderator cooldown:60 anonymous:False
+/report setup ignorechannel channel:#staff
+/report setup status
+
+/report send message_link:https://discord.com/channels/1/2/3 reason:Spam
+# or right click a message, Apps, Report message
+
+/invites who member:@User
+/invites stats user:@User
+/invites top
+/invites setup log:True alert_joins:5 alert_minutes:60
+```
+
+### 診断とデバッグ
+
+不足している権限や壊れた設定を見つけ、エラーレポートをチャンネルで受け取り、設定をエクスポート・インポートできます。
+
+```
+/diagnose                                                       # permissions, role order, deleted channels and roles
+/debug status
+/debug errorchannel channel:#bot-errors
+/debug errortest
+/debug selftest enabled:True                                    # check at start-up
+/debug usagestats enabled:True
+/debug usage reset:False
+/debug level level:DEBUG                                        # owner of the bot only
+/debug db action:check                                          # owner of the bot only: check, vacuum, size
+
+/config export
+/config import file:guardbot-settings.json confirm:False        # first without confirm
+```
+
+### 音楽
+
+リンクと music フォルダ内のファイルをボイスチャンネルで再生します。ダウンロードは music/アーティスト/アルバム/曲 として保存されます。ffmpeg と requirements.txt のパッケージが必要です。
+
+```
+/play query:daft punk one more time                            # library first, then the web
+/play query:https://example.com/track                           # a link that yt-dlp supports
+
+/music queue page:1
+/music nowplaying
+/music skip
+/music pause
+/music resume
+/music stop
+/music volume percent:70
+/music loop mode:queue
+/music shuffle
+/music remove number:3
+/music clear
+/music seek position:1:30
+/music join
+/music leave
+
+/music library search query:discovery
+/music library list artist:Daft Punk
+/music library play query:one more time
+/music library scan                                             # after you copied files into music/
+/music library info
+/music library download url:https://example.com/track format:best
+
+/music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
+/music settings allow_links:True allow_search:True allow_playlists:True library:True
+/music settings allow_download:True download_format:best announce:True
+/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/music cleardj
+/music status
+```
+
+ロスレス：自分で追加したファイル（FLAC、WAV、ALAC）やFLACを提供するソースはそのまま再生されます。YouTubeやSoundCloudなどは非可逆音声しか提供しておらず、後からロスレスにすることはできません。Discordは音声をOpusで送信し、ボットはボイスチャンネルのビットレートを使います。責任：コンテンツのダウンロードや再生はサイトの利用規約や著作権法に違反する場合があります。ダウンロードは初期設定でオフで、モジュールも有効にするまでオフです。再生・保存される内容の責任はボットの運営者にあります。
+
+### セットアップとヘルスチェック
+
+ガイド付きアシスタントが、ボタンとメニューで重要な設定を行います：ログチャンネル、ウェルカムチャンネル、スタッフロール、ラーゲリ、AutoMod のプリセット（緩め、標準、厳しめ）、サーバーテンプレート（コミュニティ、ゲーム、サポート）、そして言語です。/health で設定済みの項目と残りの項目を確認できます。言語を変えると、既定のウェルカムメッセージ、AutoMod の通知、認証、チケット、異議申し立て、モッドメール、ロールメニューなど、メンバーに表示される文章が変わります。管理者への定型の返信は翻訳され、名前や数字を含む返信は英語のままです。
+
+```
+/setup                                                         # buttons and menus, nothing is switched off by a template
+/health                                                        # what is set up, what is open, and the self-test
+/language code:de
+```
+
+### 経済
+
+毎日の報酬、仕事、送金、ランキング、そしてロールを付与できる商品を扱うショップを備えたサーバー通貨です。economy モジュールで有効にします。コマンドはプレフィックスでも使えます（例：!economy daily）。
+
+```
+/module enable name:economy
+/economy balance member:@User                                  # same as !economy
+/economy daily
+/economy work
+/economy pay member:@User amount:50
+/economy leaderboard
+/economy shop
+/economy buy item:1
+/economy inventory
+
+/economy give member:@User amount:500                          # staff, a negative amount takes away
+/economy shopadd name:VIP price:1000 role:@VIP stock:10
+/economy shopremove item:1
+/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+```
+
+### ロールメニュー、予約メッセージ、フィード
+
+ロールメニューはボタンまたはドロップダウンでロールを付与します。予約メッセージは一度だけ、または毎時・毎日・毎週繰り返して投稿されます。フィードは YouTube の新着動画、Twitch の配信、RSS の記事を投稿します。YouTube にはチャンネル ID（UC で始まる）を使います。Twitch には .env に TWITCH_CLIENT_ID と TWITCH_CLIENT_SECRET が必要です。時刻は in 2h、18:30、または 2026-12-24 18:00 のような日付と時刻で、サーバーのタイムゾーンに従って指定します。フィードの最初のチェックでは、すでにあるものを記憶するだけです。
+
+```
+/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/rolemenu add menu:1 role:@Red label:Red
+/rolemenu remove menu:1 role:@Red
+/rolemenu delete menu:1
+/rolemenu list
+
+/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/schedule list
+/schedule remove number:1
+/schedule timezone name:Europe/Berlin
+
+/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/feed add kind:twitch target:somestreamer channel:#live
+/feed add kind:rss target:https://example.com/feed.xml channel:#news
+/feed list
+/feed check
+/feed remove number:1
+```
+
+### アクティビティ、一括操作、ケース検索
+
+アクティビティはチャンネルごとのメッセージ数と、日ごとの参加・退出数を数え、内容や名前は記録しません。一括操作は確認の後、最大25人のユーザーをBAN、キック、またはタイムアウトします。ケースはユーザー、種類、名前、理由、モデレーター、経過日数で検索でき、メモをBANに関連付けるなど、相互にリンクできます。
+
+```
+/module enable name:activity
+/activity overview days:7
+/activity channels days:30
+/activity growth days:14
+/activity reset
+
+/bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+
+/cases user:@User kind:ban text:scam moderator:@Mod days:30
+/case link case_id:12 other:15
+/case unlink case_id:12 other:15
+```
+
+### 詐欺対策・暗号資産対策
+
+典型的な MrBeast 詐欺のような偽のプレゼント企画を、テキストでも画像でも数ミリ秒で削除します。即時リストの名前は、どんな綴りでもその場で削除されます（MrBeast、Mr Beast、M R B E A S T、Mr.B3ast）。それ以外はリスト（名前、釣り文句、暗号資産、リンク、金額）の語が加点され、しきい値に達するとメッセージが削除されます。画像は OCR で読み取られ、一度詐欺と判定された画像は再度読み取らずに削除されます。画像の読み取りには tesseract が必要で、なければテキストだけが検査されます。MrBeast のサーバーは、即時リストから名前を外すか、/automod exemptchannel でチャンネルを除外できます。頼る前に /antiscam test で試してください。
+
+```
+/antiscam status
+/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/antiscam words action:add kind:instant word:mrbeast
+/antiscam words action:remove kind:crypto word:token
+/antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/antiscam testimage image:scam.png
+/antiscam forget
+/automod dryrun rule:antiscam enabled:True                     # only report, do not remove
+```
+
+### 仮参加期間、群れの検出、タイムライン、学習
+
+仮参加期間は、新しいメンバーをロールに入れます。設定した数の通常メッセージを書くか、設定した分数が過ぎるまで、リンク、招待、ファイルは短い通知とともに削除されます。レイド対策は群れも検出します。名前のパターンが同じ、プロフィール画像が同じ、または作成時刻が数分以内の新しいアカウントが複数ある場合です。タイムライン（/case timeline）は、1人のユーザーのアカウント作成、参加と招待、仮参加期間、ケース、異議申し立てを時系列でまとめます。メッセージは保存されないため含まれません。/block、/unblock、/blocklist は短いコマンドで AutoMod のブロックリストを管理します。モデレーターは、メッセージのコンテキストメニュー項目 Mark as scam、または learn_emoji で設定した絵文字のリアクションで詐欺対策モジュールに覚えさせられます。メッセージは削除され、その画像とテキストは以後すぐに削除されます。各機能は、それぞれのモジュールまたは設定でオフにできます。
+
+```
+/module enable name:probation
+/probation setup minutes:10 messages:1 block_links:True block_files:True
+/probation status
+/probation release member:@User
+/probation add member:@User
+
+/raid swarm enabled:True minimum:4 minutes:10
+/case timeline user:@User
+
+/block kind:link value:evil.example
+/blocklist
+/unblock kind:link number:1
+/antiscam set learn_emoji:X
+```
+
+### メッセージビルダーと更新
+
+メッセージビルダーは、JSON から複数の埋め込みとリンクボタンを含むメッセージを投稿します。Embed Generator などの埋め込みジェネレーターが書き出す JSON を読み取るので、そこでメッセージを作り、ボットで投稿できます。JSON は、テキスト、.json ファイル、または JSON を直接指す https リンク（たとえばリポジトリの生ファイル）で渡します。リダイレクトするリンクは拒否されます。作成されるのはリンクボタンだけで、操作が必要なボタンはスキップされます。リンクはすべて http か https である必要があり、テキスト内のメンションは通知されず、Discord の制限が適用されます。/message copy は既存のメッセージを JSON として書き出し、/message edit はボットのメッセージを変更し、/message preview は結果をあなただけに表示します。ウェブエディターの共有リンクは、形式が公開されていないため開きません。
+
+```json
+{
+  "content": "Rules were updated",
+  "embeds": [{"title": "Rules", "description": "Read them here.", "color": "#5865f2"}],
+  "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "Open rules", "url": "https://example.com/rules"}]}]
+}
+```
+
+ボットは 12 時間ごとに、update.repo（scripts/set_repo_url.py で設定）の GitHub リポジトリに新しいリリースがないか確認します。ある場合、ボットの所有者にリリースノート付きのダイレクトメッセージが届き、リリースがダウンロードされて検査されます。検査内容は、リリースの SHA-256 チェックサム、アーカイブ内の安全なパス、タグと一致するバージョンです。インストールは /debug update action:install で行うか、auto_install がオンなら自動で行われます。インストール前に、置き換えられるファイルは data/update に保存され、新しいパッケージがインストールされ、新しいコードが試験的にインポートされます。どこかで失敗すると、古いファイルが復元されます。.env、settings.json、data、music には一切手を加えません。その後ボットは自動で再起動します。Docker ではその場にはインストールされないので、イメージを更新してください。更新はリポジトリのコードを実行するため、信頼できるリポジトリだけを指定してください。enabled を false にすると無効になります。
+
+```json
+{
+  "update": {
+    "enabled": true,
+    "repo": "NAME/guardbot",
+    "check_hours": 12,
+    "auto_install": false,
+    "require_checksum": false
+  }
+}
+```
+
+```
+/message send channel:#news url:https://example.com/message.json
+/message send channel:#news file:message.json
+/message preview url:https://example.com/message.json
+/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/message copy message:https://discord.com/channels/1/2/3
+/module disable name:builder
+/debug update action:status
+/debug update action:check
+/debug update action:install
+```
+
+### 運用
+
+ボットは数秒ごとにデータを保存し、data/dbbackups にデータベースのバックアップを保持します（データ形式の変更前に1つ、毎日1つ）。音楽キュー、固定メッセージ、モデレーターのカウンターは再起動後も残ります。大規模なボットは複数のシャードで動かせます。ハートビートファイルと任意のステータスページは監視ツールの助けになります。これらのオプションは settings.json で設定します：
+
+```json
+{
+  "shard_count": null,
+  "db_backup_hours": 24,
+  "db_backup_keep": 7,
+  "health_port": 0,
+  "health_host": "127.0.0.1",
+  "tesseract": null,
+  "music_generic": true
+}
+```
+
+```
+/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/debug db action:list
+```
+
 ### 管理
 
 モジュールとコマンドのオン・オフ、プレフィックスの変更、エイリアスの設定、ロールによるコマンド制限。
@@ -488,7 +1084,7 @@ Optional
 /welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
 /booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
-/birthdaysetup set   message                         {user} {name}
+/birthday setup set   message                         {user} {name}
 /tempvoice setup     name                            {name}
 /jailsetup notice    text                            {staff}
 ```
@@ -561,15 +1157,19 @@ guardbot/
   data/                   created at runtime, holds your settings and data
 ```
 
+## 翻訳
+
+英語がこのプロジェクトの原文です。ドキュメント、ダッシュボード、ボットのメッセージのすべての翻訳は機械翻訳で作成されており、ネイティブスピーカーによる確認は受けていません。不自然な表現や誤りがありえますので、見つけたらご報告いただくか、修正をお送りください。ファイルは docs/ と guardbot/locales/ にあります。
+
 ## ロードマップ
 
-- 自分のコンピューターで動くローカルウェブダッシュボード。ホスト型サービスなしで設定を変更できます。
-- ボットメッセージの翻訳。
-- 設定のエクスポートとインポート。
+- ダッシュボードにアクティビティとモデレーションのグラフを追加。
+- すべての翻訳のネイティブスピーカーによる確認。
+- 固定の返信テキストの翻訳を増やす。
 
 ## プライバシーとセキュリティ
 
-- テレメトリーも外部サービスもありません。ボットは Discord とだけ通信します。
+- テレメトリーはありません。ボットは Discord と通信し、更新の確認のために GitHub とも通信します（個人データは送りません。update.enabled でオフにできます）。管理者が渡したリンク（フィード、音楽、JSON のリンクなど）は、要求があったときだけ開きます。
 - すべてのデータは、お使いのコンピューターの data フォルダーに保存されます。設定、XP、誕生日（日と月のみ）、モデレーション記録です。
 - ボットはメンバーからのダイレクトメッセージを無視します。
 - トークンは .env ファイルから読み込まれます。共有したり公開したりしないでください。
@@ -579,6 +1179,10 @@ guardbot/
 ## サポート
 
 バグ、アイデア、提案は Discord の @justyyin に連絡するか、GitHub で issue を作成してください。
+
+## クレジット
+
+GuardBot は Merlin Fuchs 氏の [Embed Generator](https://github.com/merlinfuchs/embed-generator)（MIT ライセンス、message.style で公開）に着想を得ています。メッセージビルダーは同じ JSON 形式を読み取るため、そこで作ったメッセージをこのボットで投稿できます。そのプロジェクトのコードは含まれていません。discord.py、aiohttp、Pillow、yt-dlp、mutagen、Tesseract の作者に感謝します。
 
 ## ライセンス
 
