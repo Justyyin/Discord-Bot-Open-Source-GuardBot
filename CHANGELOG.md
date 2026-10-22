@@ -1,24 +1,37 @@
 # Changelog
 
+## 1.5.0
+
+- Structure: `/structure channel` and `/structure category` create, clone, rename, move and sort channels and categories and copy permissions. `/structure archive` reports or archives inactive channels. `/structure temprole` gives roles for a limited time, `/structure roletemplate` saves and applies role templates (never more permissions than the person applying has). `/structure rules` posts rules with an accept button, a version number and one reminder for members who did not accept a new version.
+- Setup wizard: a new button creates missing roles, categories and channels from the templates community, gaming and support after a confirmation, and fills log, rules, welcome and staff settings only where they are empty.
+- Administration: `/admin history` lists changes of the settings with time and a guess who made them, rolls a section back, and copies sections to another server (dry run first, channel and role IDs are mapped by name). `/admin exceptions` leaves channels and roles out of AutoMod rules and Anti-Scam. `/admin dashaccess` gives roles read-only or moderator access to the dashboard.
+- Team: `/team teamstats` (cases, tickets, reports, response time, inactive moderators), `/team weekly` (weekly report, UTC), `/team duty` (sign off, tickets and pings go to others) and `/team apply` (staff applications with a form and a vote).
+- Moderation: sticky roles and mute-evasion protection (`/members stickyroles`), name moderation with dehoist, banned words and automatic renaming (`/members nickname`), a silent watch list (`/members watch`), reason templates (`/members reason`), four-eyes approval for bans, kicks, timeouts and bulk actions (`/security approval`), `/moderation case undo` including follow-up actions and batches, and expiry of warnings (`/moderation escalation expiry`).
+- Command groups: 24 top-level commands. New groups are `/structure`, `/members`, `/team` and `/engage` (economy, giveaway, poll, counting, starboard). `/team modwatch`, `/team permaudit` and `/server debug` moved into groups. Slash commands are registered again on the next start. Commands inside groups cannot be hidden by Discord, the bot still checks every call.
+- Dashboard: access levels none, viewer, mod and admin. Settings of the new features appear in the editor automatically.
+- Data: new stored data is listed in docs/PRIVACY.md. The watch list is not removed when a member deletes their own data.
+- Translations of the new fixed texts in 11 languages (machine translated). Tests: 239.
+
 ## 1.4.0
 
-- Anti-scam module: removes fake giveaways and crypto scams, such as the typical MrBeast scam, in text and in images within milliseconds. Names are recognised in any spelling (M R B E A S T, Mr.B3ast, look-alike letters, invisible characters), other words add up to a score, images are read with Tesseract OCR in a worker thread, and images judged as scam once are removed without reading them again. `/antiscam` sets the lists, the threshold and the action and tests texts and images.
-- `/setup` guided assistant with buttons and menus (log channel, welcome channel, staff roles, gulag, AutoMod presets loose, normal and strict, templates community, gaming and support, language) and `/health` for what is set up and what is open.
-- Member-facing texts in 12 languages with the server setting `language` and `/language`. Default welcome, goodbye, booster, birthday and level-up texts are translated too. Fixed replies to administrators are translated, replies with names and numbers stay in English. The economy and role menu texts are translated as well.
-- Economy (`/economy`): daily reward, work, payments, leaderboard and a shop whose items can give a role.
-- Role menus (`/rolemenu`) with buttons or a dropdown, scheduled messages (`/schedule`) and feeds for YouTube, Twitch and RSS (`/feed`).
-- Member statistics (`/activity`): busiest channels, messages per day, joins and leaves. Only numbers are stored.
-- Moderation: `/bulk ban`, `kick` and `timeout` for up to 25 users after a confirmation, a richer `/cases` search (reason, moderator, age) and `/case link` to connect cases and notes.
+- Command groups: the 99 top-level slash commands are now 20. Related commands are grouped, for example `/moderation ban`, `/security raid`, `/server log`, `/admin config`, `/post embed`. Text commands with the prefix (`!ban`) are unchanged. Permissions, aliases, module switches, the disable list and `command_names` keep working with the plain command names, so no migration is needed. Discord only applies its own "who can see this command" setting to top-level commands, so inside groups visibility is no longer hidden for members; the bot still checks every call. Slash commands are registered again on the next start.
+- Anti-scam module: removes fake giveaways and crypto scams, such as the typical MrBeast scam, in text and in images within milliseconds. Names are recognised in any spelling (M R B E A S T, Mr.B3ast, look-alike letters, invisible characters), other words add up to a score, images are read with Tesseract OCR in a worker thread, and images judged as scam once are removed without reading them again. `/security antiscam` sets the lists, the threshold and the action and tests texts and images.
+- `/admin setup` guided assistant with buttons and menus (log channel, welcome channel, staff roles, gulag, AutoMod presets loose, normal and strict, templates community, gaming and support, language) and `/server health` for what is set up and what is open.
+- Member-facing texts in 12 languages with the server setting `language` and `/admin language`. Default welcome, goodbye, booster, birthday and level-up texts are translated too. Fixed replies to administrators are translated, replies with names and numbers stay in English. The economy and role menu texts are translated as well.
+- Economy (`/engage economy`): daily reward, work, payments, leaderboard and a shop whose items can give a role.
+- Role menus (`/post rolemenu`) with buttons or a dropdown, scheduled messages (`/post schedule`) and feeds for YouTube, Twitch and RSS (`/post feed`).
+- Member statistics (`/community activity`): busiest channels, messages per day, joins and leaves. Only numbers are stored.
+- Moderation: `/moderation bulk ban`, `kick` and `timeout` for up to 25 users after a confirmation, a richer `/moderation cases` search (reason, moderator, age) and `/moderation case link` to connect cases and notes.
 - Fewer top-level commands: the setup commands of birthdays, suggestions, notifications, mod-mail, appeals, reports and level roles are now sub-commands of their features. Existing aliases, rules and permissions are moved by an automatic migration.
-- Operations: sharding (`shard_count`), versioned database migrations with an automatic backup before each one, daily database backups in `data/dbbackups` (`/debug db action:backup`), a heartbeat file with a Docker health check and an optional status page (`health_port`). The music queue, sticky messages and moderator counters survive restarts.
+- Operations: sharding (`shard_count`), versioned database migrations with an automatic backup before each one, daily database backups in `data/dbbackups` (`/server debug db action:backup`), a heartbeat file with a Docker health check and an optional status page (`health_port`). The music queue, sticky messages and moderator counters survive restarts.
 - Security: feeds and downloads use the checked resolver and check every redirect, feeds with entity definitions are refused, stored scheduled messages and feeds are validated before use, and `music_generic` can switch off the generic yt-dlp extractor. See SECURITY.md for what was reviewed and what remains.
-- Probation (`/probation`): new members get a role and may not post links, invites or files until minutes passed or they wrote normal messages. Raid protection recognises swarms of new accounts (`/raid swarm`), `/case timeline` merges everything stored about a user, `/block`, `/unblock` and `/blocklist` are own commands, and moderators teach the anti-scam module with the `Mark as scam` menu entry or an emoji.
+- Probation (`/access probation`): new members get a role and may not post links, invites or files until minutes passed or they wrote normal messages. Raid protection recognises swarms of new accounts (`/security raid swarm`), `/moderation case timeline` merges everything stored about a user, `/security block`, `/security unblock` and `/security blocklist` are own commands, and moderators teach the anti-scam module with the `Mark as scam` menu entry or an emoji.
 - Replies to administrators use the server language for fixed texts, with a fallback to English. `scripts/missing_texts.py` lists what is still untranslated, and a test checks the common texts.
 - Load tests: 1000 messages through the scan path and a bounded OCR queue.
 - Dashboard: a web page inside the bot to change the settings of a server after a Discord login (modules, channels, roles, thresholds, texts, prefix, language, cases, export and import). Off by default, listens on 127.0.0.1, needs HTTPS for public addresses, access only for server managers and only while the bot is connected to the server. Works on Linux, macOS, Windows, Docker and VPS.
 - Start scripts `start.sh` and `start.bat`, a launchd file for macOS, a Caddy example for the dashboard, and a README with installation steps for Linux, macOS and Windows in all 12 languages. The README now states that all translations are machine translated and not checked by native speakers.
-- Message builder (`/message send`, `edit`, `preview`, `copy`): posts messages with several embeds and link buttons from JSON, a file or an https link. It reads the JSON format of embed generators such as Embed Generator by Merlin Fuchs (credited in the README).
-- Updates from GitHub: the bot checks the release repository, tells the owner by direct message, downloads and verifies the release (SHA-256 file, safe archive paths, version check), and installs it with `/debug update action:install` or automatically with `update.auto_install`. Replaced files are saved first and restored when the new code does not start. `.env`, `settings.json`, `data` and `music` are never touched.
+- Message builder (`/post message send`, `edit`, `preview`, `copy`): posts messages with several embeds and link buttons from JSON, a file or an https link. It reads the JSON format of embed generators such as Embed Generator by Merlin Fuchs (credited in the README).
+- Updates from GitHub: the bot checks the release repository, tells the owner by direct message, downloads and verifies the release (SHA-256 file, safe archive paths, version check), and installs it with `/server debug update action:install` or automatically with `update.auto_install`. Replaced files are saved first and restored when the new code does not start. `.env`, `settings.json`, `data` and `music` are never touched.
 - The README, the guide and the dashboard state that the bot and the dashboard are in beta.
 - Decorative emoji were removed from the code and the dashboard.
 - Repository: GitHub Actions for tests and for releases built from a version tag with the changelog as notes, issue templates for bugs, features and translations, a pull request template and release steps in CONTRIBUTING.md.
@@ -26,26 +39,26 @@
 ## 1.3.0
 
 - AutoMod: short links are followed to their target (public addresses only), new members can be barred from posting links, ghost pings are reported, rules can run in dry-run mode, and `/automod test` shows what a text would trigger. AutoMod counts rule hits.
-- `/modwatch`: limits for bans, kicks, timeouts, warnings, gulag and purges per moderator, with alert, timeout or role removal as response.
-- `/permaudit`: lists roles with dangerous permissions and reports new grants.
-- Reports through the message menu and `/report`, with buttons for the staff. Invite tracking with `/invites`.
-- `/diagnose` and a check at start-up for missing permissions, role order, deleted channels and roles. Error reports in a channel, command statistics, database check and vacuum, log level at runtime, rotating log file.
-- `/config export` and `/config import` with validation.
+- `/team modwatch`: limits for bans, kicks, timeouts, warnings, gulag and purges per moderator, with alert, timeout or role removal as response.
+- `/team permaudit`: lists roles with dangerous permissions and reports new grants.
+- Reports through the message menu and `/report`, with buttons for the staff. Invite tracking with `/server invites`.
+- `/server diagnose` and a check at start-up for missing permissions, role order, deleted channels and roles. Error reports in a channel, command statistics, database check and vacuum, log level at runtime, rotating log file.
+- `/admin config export` and `/admin config import` with validation.
 - Music module: `/play`, queue and controls, local library `music/Artist/Album/Track`, downloads with yt-dlp, FLAC and other lossless files played unchanged. Off by default, downloads are a separate switch. Needs ffmpeg.
 - Docker image and systemd unit include ffmpeg and the music folder.
 
 ## 1.2.0
 
-- Moderator tools: `/purge`, `/slowmode`, `/lockchannel`, `/unlockchannel`, `/role add|remove`, `/note`, `/tempban`, `/jailed`, `/case view|edit|delete`.
-- Information: `/userinfo`, `/serverinfo`, `/roleinfo`, `/avatar`, `/ping`, `/botinfo`, `/help command:`.
-- Announcements and content: `/say`, `/embed`, tags, autoresponders, `/remind`, `/afk`.
+- Moderator tools: `/moderation purge`, `/moderation slowmode`, `/access lockchannel`, `/access unlockchannel`, `/moderation role add|remove`, `/moderation note`, `/moderation tempban`, `/moderation jailed`, `/moderation case view|edit|delete`.
+- Information: `/info userinfo`, `/server serverinfo`, `/server roleinfo`, `/info avatar`, `/info ping`, `/info botinfo`, `/help command:`.
+- Announcements and content: `/post say`, `/post embed`, tags, autoresponders, `/community remind`, `/community afk`.
 - Mod-mail through private server channels and ban appeals through an appeal server. The bot still reads no direct messages.
 - Counting channel, sticky messages and statistics channels.
-- Tickets: claim, rename, list. Giveaways: cancel, edit. Temporary voice: owner commands under `/voice`.
-- XP: channel multipliers, reset for everyone, leaderboard pages. Birthdays: list and admin commands. Backups: `/backup info`.
-- Logs: ignore lists for channels and users, `/log show`.
-- Status views: `/automod status`, `/verify status`, `/raid status`, `/welcome show`, `/starboard show`.
-- `/mydata` and `/privacy` also cover reminders and ban appeals.
+- Tickets: claim, rename, list. Giveaways: cancel, edit. Temporary voice: owner commands under `/community voice`.
+- XP: channel multipliers, reset for everyone, leaderboard pages. Birthdays: list and admin commands. Backups: `/server backup info`.
+- Logs: ignore lists for channels and users, `/server log show`.
+- Status views: `/automod status`, `/access verify status`, `/security raid status`, `/community welcome show`, `/engage starboard show`.
+- `/info mydata` and `/server privacy` also cover reminders and ban appeals.
 
 ## 1.1.2
 
@@ -72,7 +85,7 @@
 - Rank card as image and XP boosts per role.
 - Backups include role order, member overwrites, emojis, webhooks and member roles, and can run on a schedule.
 - Verification gate with button, captcha or math question.
-- Data tools: `/mydata`, `/privacy`, retention time and `docs/PRIVACY.md`.
+- Data tools: `/info mydata`, `/server privacy`, retention time and `docs/PRIVACY.md`.
 
 ## 1.0.0
 

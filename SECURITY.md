@@ -40,10 +40,16 @@ The update function downloads and installs code, so it deserves the most care. I
 - When the release has a `.zip.sha256` file the download must match it. Set `update.require_checksum` to `true` to refuse releases without one. Without a checksum file the integrity rests on GitHub and HTTPS alone.
 - The archive is checked before anything is written: no absolute paths, no `..`, no backslashes or drive letters, no links, limits for size and number of files. `.env`, `settings.json`, `data`, `music` and virtual environments are never written.
 - Replaced files are saved in `data/update` first. New packages are installed with pip when `requirements.txt` changed, then the new code is imported in a fresh process. If anything fails the old files are restored.
-- Installation is started only by the owner of the bot (`/debug update`) or by `update.auto_install`, which is off by default. It is never done inside a container.
+- Installation is started only by the owner of the bot (`/server debug update`) or by `update.auto_install`, which is off by default. It is never done inside a container.
 - Update and download notices go to the owner of the bot by direct message.
 
 ## Message builder
 
-`/message` reads JSON from text, a file up to 100 KB or an https link. Links that redirect are refused, private addresses are refused, and only http and https links are accepted inside the message. Unknown keys are dropped, only link buttons are created, mentions never ping, and the length limits of Discord are checked before anything is sent.
+`/post message` reads JSON from text, a file up to 100 KB or an https link. Links that redirect are refused, private addresses are refused, and only http and https links are accepted inside the message. Unknown keys are dropped, only link buttons are created, mentions never ping, and the length limits of Discord are checked before anything is sent.
 
+## Approval, history and dashboard roles
+
+- Four-eyes approval: the person who asks cannot decide the request. A second moderator needs the permission of the action itself. Requests expire after the configured minutes. Only the owner of the bot or server can bypass it, and only when `owner_bypass` is on.
+- Settings history: the name of the person is a guess from the latest commands and dashboard writes on the server and is shown as such. Rollback and copy to another server need the manage-server right on both servers, and copy starts as a dry run.
+- Dashboard roles: `viewer` can read, `mod` can change a small list of sections, everything else needs the manage-server right. The levels are checked on the server for every request, not only in the page.
+- Role templates never give a permission the applying person does not have. Commands inside groups lose Discord's own visibility setting, the bot checks permissions on every call.

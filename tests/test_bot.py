@@ -9,6 +9,7 @@ from pathlib import Path
 
 import discord
 
+from guardbot import layout
 from guardbot.core import EXTENSIONS, Bot
 from guardbot.defaults import COMMAND_MODULES, DEFAULTS, FALLBACK_PERMS, MODULES
 from guardbot.images import HAVE_PIL, captcha, new_code, rank_card
@@ -33,7 +34,7 @@ class BotTest(unittest.IsolatedAsyncioTestCase):
         self.bot.store.close()
 
     def roots(self):
-        return {c.name for c in self.bot.tree.get_commands()} | {c.name for c in self.bot.commands}
+        return {c.name for c in self.bot.tree.get_commands()} | layout.all_keys(self.bot.tree) | {c.name for c in self.bot.commands}
 
     async def test_every_module_has_a_command_mapping_and_vice_versa(self):
         self.assertTrue(set(COMMAND_MODULES.values()) <= set(MODULES))
@@ -46,6 +47,8 @@ class BotTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(FALLBACK_PERMS) - self.roots(), set())
 
     async def test_slash_payload_is_valid_and_stable(self):
+        if not self.bot.layout:
+            self.bot.arrange_commands()
         a = json.dumps([c.to_dict(self.bot.tree) for c in self.bot.tree.get_commands()], sort_keys=True, default=str)
         b = json.dumps([c.to_dict(self.bot.tree) for c in self.bot.tree.get_commands()], sort_keys=True, default=str)
         self.assertEqual(a, b)
@@ -53,12 +56,15 @@ class BotTest(unittest.IsolatedAsyncioTestCase):
             self.assertLessEqual(len(self.bot.tree.get_commands(type=kind)), 100 if kind == discord.AppCommandType.chat_input else 5, kind)
 
     async def test_command_renaming(self):
-        self.bot.apply_command_names()
-        names = self.roots()
-        self.assertIn("verwarnen", names)
-        self.assertIn("gulagsetup", names)
-        self.assertNotIn("warn", names)
+        self.bot.arrange_commands()
+        self.assertEqual(self.bot.layout["warn"], "moderation verwarnen")
+        self.assertEqual(self.bot.layout["jailsetup"], "access gulagsetup")
+        self.assertIsNotNone(self.bot.tree.get_command("moderation").get_command("verwarnen"))
+        self.assertIsNone(self.bot.tree.get_command("moderation").get_command("warn"))
+        self.assertIsNotNone(self.bot.get_command("verwarnen"))
+        self.assertIsNone(self.bot.get_command("warn"))
         self.assertEqual(self.bot.canonical["verwarnen"], "warn")
+        self.assertEqual(layout.command_key(self.bot.tree.get_command("moderation").get_command("verwarnen")), "warn")
 
     async def test_defaults_reach_every_server(self):
         g = self.bot.cfg(123)
@@ -101,13 +107,16 @@ class BotTest(unittest.IsolatedAsyncioTestCase):
     def command_table(self):
         """Map every slash command path to its parameter names."""
         table = {}
+        if not self.bot.layout:
+            self.bot.arrange_commands()
 
         def walk(cmd, prefix=""):
+            name = cmd.extras.get("gb_root") or cmd.name
             if hasattr(cmd, "commands"):
                 for sub in cmd.commands:
-                    walk(sub, prefix + cmd.name + " ")
+                    walk(sub, prefix + name + " ")
             elif hasattr(cmd, "parameters"):
-                table[prefix + cmd.name] = {p.name for p in cmd.parameters}
+                table[prefix + name] = {p.name for p in cmd.parameters}
 
         for cmd in self.bot.tree.get_commands():
             walk(cmd)

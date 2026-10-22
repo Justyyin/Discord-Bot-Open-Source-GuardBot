@@ -12,7 +12,7 @@ from guardbot import dashboard
 from guardbot.dashboard import Dashboard, SPECS, apply_change, describe
 from guardbot.defaults import DEFAULTS
 
-ADMIN, GUEST = 111, 222
+ADMIN, GUEST, VIEWER, MOD = 111, 222, 444, 555
 
 
 class Perms:
@@ -32,7 +32,10 @@ class FakeGuild:
         self.id, self.owner_id, self.unavailable, self.name, self.icon, self.member_count = gid, 999, False, "Test", None, 3
         self.channels = [SimpleNamespace(id=10, name="general", position=0), SimpleNamespace(id=11, name="logs", position=1)]
         self.roles = [SimpleNamespace(id=5, name="@everyone", position=0, is_default=lambda: True), SimpleNamespace(id=20, name="Mod", position=1, is_default=lambda: False)]
-        self.members = {ADMIN: SimpleNamespace(guild_permissions=Perms(True)), GUEST: SimpleNamespace(guild_permissions=Perms(False))}
+        self.members = {
+            ADMIN: SimpleNamespace(guild_permissions=Perms(True), roles=[]), GUEST: SimpleNamespace(guild_permissions=Perms(False), roles=[]),
+            VIEWER: SimpleNamespace(guild_permissions=Perms(False), roles=[SimpleNamespace(id=20)]), MOD: SimpleNamespace(guild_permissions=Perms(False), roles=[SimpleNamespace(id=21)]),
+        }
 
     def get_member(self, uid):
         """Look up a member."""
@@ -53,7 +56,7 @@ class FakeBot:
         self.latency = 0.05
         self.logged = []
         self.store = SimpleNamespace(cases=lambda gid: [{"id": 1, "type": "warn", "user_name": "u", "mod_name": "m", "reason": "r", "ts": 1, "active": True}])
-        self.tree = SimpleNamespace(get_commands=lambda: [SimpleNamespace(name="ban"), SimpleNamespace(name="warn"), SimpleNamespace(name="module")])
+        self.tree = SimpleNamespace(get_commands=lambda **k: [SimpleNamespace(name="ban"), SimpleNamespace(name="warn"), SimpleNamespace(name="module")])
 
     def is_ready(self):
         """Connected or not."""
@@ -74,6 +77,10 @@ class FakeBot:
     def log(self, guild, category, embed):
         """Remember log entries."""
         self.logged.append(embed.description)
+
+    def note_actor(self, gid, uid, what):
+        """Remember who changed something."""
+        self.logged.append(f"actor {uid} {what}")
 
 
 class HelperTest(unittest.TestCase):
@@ -215,6 +222,35 @@ class WebTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.client.get("/api/guild/5")).status, 403)
         r = await self.client.post("/api/guild/5/set", json={"changes": [{"path": "raid.joins", "value": 9}]}, headers={**self.origin, "X-CSRF-Token": csrf})
         self.assertEqual(r.status, 403)
+
+    async def test_viewer_and_moderator_levels(self):
+        """Roles from /admin dashaccess give read only or moderation access, never more."""
+        self.bot.config["dashboard_access"] = {"viewer_roles": [20], "mod_roles": [21]}
+        csrf = await self.login(VIEWER)
+        me = await (await self.client.get("/api/me")).json()
+        self.assertEqual([g["id"] for g in me["guilds"]], ["5"])
+        info = await (await self.client.get("/api/guild/5")).json()
+        self.assertEqual(info["level"], "viewer")
+        self.assertFalse(any(s["editable"] for s in info["sections"]))
+        headers = {**self.origin, "X-CSRF-Token": csrf}
+        self.assertEqual((await self.client.post("/api/guild/5/set", json={"changes": [{"path": "raid.joins", "value": 9}]}, headers=headers)).status, 403)
+        self.assertEqual((await self.client.get("/api/guild/5/cases")).status, 200)
+        self.assertEqual((await self.client.get("/api/guild/5/export")).status, 403)
+        self.assertEqual((await self.client.post("/api/guild/5/import", data="{}", headers=headers)).status, 403)
+        csrf = await self.login(MOD)
+        headers = {**self.origin, "X-CSRF-Token": csrf}
+        info = await (await self.client.get("/api/guild/5")).json()
+        self.assertEqual(info["level"], "mod")
+        editable = {s["key"] for s in info["sections"] if s["editable"]}
+        self.assertIn("automod", editable)
+        self.assertNotIn("modules", editable)
+        self.assertNotIn("antinuke", editable)
+        r = await self.client.post("/api/guild/5/set", json={"changes": [{"path": "raid.joins", "value": 9}, {"path": "modules.economy", "value": True}, {"path": "antinuke.action", "value": "ban"}]}, headers=headers)
+        body = await r.json()
+        self.assertEqual(body["saved"], {"raid.joins": 9})
+        self.assertEqual(set(body["errors"]), {"modules.economy", "antinuke.action"})
+        self.assertEqual(self.bot.config["raid"]["joins"], 9)
+        self.assertEqual((await self.client.get("/api/guild/5/export")).status, 403)
 
     async def test_unknown_user_and_unknown_server(self):
         """Someone who is not in the server and a server without the bot are refused."""
