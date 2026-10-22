@@ -10,6 +10,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from .. import i18n
 from ..images import HAVE_PIL, captcha, new_code
 from ..utils import bulk, emb
 
@@ -104,25 +105,25 @@ class Verify(commands.Cog):
         """Check the requirements and then verify at once or ask for a captcha or math answer."""
         guild, member = interaction.guild, interaction.user
         if not self.bot.module_on(guild.id, "verification"):
-            return await interaction.response.send_message("Verification is turned off.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Verification is turned off."), ephemeral=True)
         v = self.conf(guild.id)
         verified, _ = self.roles(guild)
         if verified and verified in member.roles:
-            return await interaction.response.send_message("You are already verified.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "You are already verified."), ephemeral=True)
         age = (discord.utils.utcnow() - member.created_at).days
         if v["min_age_days"] and age < v["min_age_days"]:
             return await interaction.response.send_message(f"Your account must be at least {v['min_age_days']} days old.", ephemeral=True)
         mode = v["mode"]
         if mode == "button":
             ok = await self.finish(member)
-            return await interaction.response.send_message("You are verified. Welcome." if ok else "I could not change your roles. Please contact a moderator.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "You are verified. Welcome.") if ok else "I could not change your roles. Please contact a moderator.", ephemeral=True)
         key = (guild.id, member.id)
         if mode == "captcha" and HAVE_PIL:
             code = new_code()
             data = captcha(code)
             self.codes[key] = [code, time.time() + 180, 0]
             return await interaction.response.send_message(
-                "Type the characters from the image.", file=discord.File(io.BytesIO(data), filename="captcha.png"), view=CodeView(self), ephemeral=True)
+                i18n.say(interaction.client, interaction.guild, "Type the characters from the image."), file=discord.File(io.BytesIO(data), filename="captcha.png"), view=CodeView(self), ephemeral=True)
         a, b = random.randint(2, 12), random.randint(2, 12)
         self.codes[key] = [str(a + b), time.time() + 180, 0]
         await interaction.response.send_message(f"What is {a} + {b}?", view=CodeView(self), ephemeral=True)
@@ -133,16 +134,16 @@ class Verify(commands.Cog):
         item = self.codes.get(key)
         if not item or item[1] < time.time():
             self.codes.pop(key, None)
-            return await interaction.response.send_message("The code expired. Press Verify again.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "The code expired. Press Verify again."), ephemeral=True)
         if answer.strip().upper() == item[0]:
             self.codes.pop(key, None)
             ok = await self.finish(interaction.user)
-            return await interaction.response.send_message("You are verified. Welcome." if ok else "I could not change your roles. Please contact a moderator.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "You are verified. Welcome.") if ok else "I could not change your roles. Please contact a moderator.", ephemeral=True)
         item[2] += 1
         if item[2] >= 3:
             self.codes.pop(key, None)
-            return await interaction.response.send_message("Too many wrong answers. Press Verify to get a new code.", ephemeral=True)
-        await interaction.response.send_message("Wrong answer. Try again with the button.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Too many wrong answers. Press Verify to get a new code."), ephemeral=True)
+        await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Wrong answer. Try again with the button."), ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -245,7 +246,7 @@ class Verify(commands.Cog):
             v["min_age_days"] = min_account_age_days
         verified, unverified = self.roles(guild)
         if not unverified.is_assignable() or not verified.is_assignable():
-            return await it.followup.send("I cannot assign the verification roles. Move my bot role above them and run the command again.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "I cannot assign the verification roles. Move my bot role above them and run the command again."))
         g["modules"]["verification"] = True
         text = {"button": "Press the button to verify and unlock the server.", "captcha": "Press the button and solve the captcha to unlock the server.", "math": "Press the button and answer a short question to unlock the server."}[v["mode"]]
         view = discord.ui.View(timeout=None)
@@ -253,7 +254,7 @@ class Verify(commands.Cog):
         try:
             await channel.send(embed=emb("Verification", text), view=view)
         except discord.HTTPException:
-            return await it.followup.send("I cannot post in that channel.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "I cannot post in that channel."))
         n, failed = await self.apply(guild)
         note = f" {failed} channels failed, check my Manage Channels permission." if failed else ""
         await it.followup.send(f"Verification is on. Mode {v['mode']}, roles {verified.mention} and {unverified.mention}. Permissions set on {n} channels.{note} New members get the unverified role and only see {channel.mention}.")
@@ -264,11 +265,11 @@ class Verify(commands.Cog):
         v = self.conf(it.guild_id)
         channel = channel or it.guild.get_channel(v["channel"] or 0)
         if not channel:
-            return await it.response.send_message("Run /verify setup first.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Run /verify setup first."), ephemeral=True)
         view = discord.ui.View(timeout=None)
         view.add_item(VerifyButton())
         await channel.send(embed=emb("Verification", "Press the button to verify and unlock the server."), view=view)
-        await it.response.send_message("Panel posted.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Panel posted."), ephemeral=True)
 
     @grp.command(name="apply", description="Apply the channel permissions again")
     async def v_apply(self, it: discord.Interaction):
@@ -277,11 +278,25 @@ class Verify(commands.Cog):
         n, failed = await self.apply(it.guild)
         await it.followup.send(f"Applied to {n} channels." + (f" {failed} failed, check my permissions." if failed else ""))
 
+    @grp.command(name="status", description="Show the verification settings")
+    async def v_status(self, it: discord.Interaction):
+        """Show the verification settings."""
+        v = self.conf(it.guild_id)
+        on = self.bot.module_on(it.guild_id, "verification")
+        text = (
+            f"Status: {'on' if on else 'off'}\nMode: {v['mode']}\n"
+            f"Channel: {('<#' + str(v['channel']) + '>') if v['channel'] else 'not set'}\n"
+            f"Verified role: {('<@&' + str(v['verified_role']) + '>') if v['verified_role'] else 'not set'}\n"
+            f"Unverified role: {('<@&' + str(v['unverified_role']) + '>') if v['unverified_role'] else 'not set'}\n"
+            f"Kick after: {v['timeout_minutes'] or 'never'} minutes\nMinimum account age: {v['min_age_days']} days\nWaiting to verify: {len(v['pending'])}"
+        )
+        await it.response.send_message(text, ephemeral=True)
+
     @grp.command(name="off", description="Turn the verification gate off")
     async def v_off(self, it: discord.Interaction):
         """Turn the verification gate off."""
         self.bot.cfg(it.guild_id)["modules"]["verification"] = False
-        await it.response.send_message("Verification is off. Existing roles and permissions stay as they are.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Verification is off. Existing roles and permissions stay as they are."), ephemeral=True)
 
     @grp.command(name="member", description="Verify a member manually")
     async def v_member(self, it: discord.Interaction, member: discord.Member):

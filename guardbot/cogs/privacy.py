@@ -9,6 +9,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from .. import i18n
 from ..utils import CREDIT
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,18 @@ class Privacy(commands.Cog):
         for c in self.bot.store.cases(gid):
             if c["user"] == uid:
                 c["user_name"] = "deleted user"
+                n += 1
+        return n
+
+    def forget(self, gid, uid):
+        """Remove reminders of a user and the name from ban appeals. Returns how many entries changed."""
+        cfg = self.bot.cfg(gid)
+        before = len(cfg["reminders"]["items"])
+        cfg["reminders"]["items"] = [i for i in cfg["reminders"]["items"] if i["user"] != int(uid)]
+        n = before - len(cfg["reminders"]["items"])
+        for item in cfg["appeals"]["items"].values():
+            if item.get("user") == int(uid) and item.get("name") != "deleted user":
+                item["name"] = "deleted user"
                 n += 1
         return n
 
@@ -87,25 +100,29 @@ class Privacy(commands.Cog):
         rec = dict(self.bot.store.users(gid).get(str(uid), {}))
         rec.pop("jail_roles", None)
         cases = [c for c in self.bot.store.cases(gid) if c["user"] == uid]
-        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases}
+        cfg = self.bot.cfg(gid)
+        reminders = [i for i in cfg["reminders"]["items"] if i["user"] == int(uid)]
+        appeals = [i for i in cfg["appeals"]["items"].values() if i.get("user") == int(uid)]
+        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases, "reminders": reminders, "ban_appeals": appeals}
 
     @md.command(name="export", description="Download the data this bot stores about you on this server")
     async def md_export(self, it: discord.Interaction):
         """Download the data this bot stores about you on this server."""
         raw = json.dumps(self.export(it.guild_id, it.user.id), indent=2, ensure_ascii=False).encode("utf-8")
-        await it.response.send_message("Here is everything stored about you on this server.", file=discord.File(io.BytesIO(raw), filename="mydata.json"), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Here is everything stored about you on this server."), file=discord.File(io.BytesIO(raw), filename="mydata.json"), ephemeral=True)
 
     @md.command(name="delete", description="Delete your XP, birthday and profile data on this server")
     @app_commands.describe(confirm="Set to true to confirm")
     async def md_delete(self, it: discord.Interaction, confirm: bool = False):
         """Delete your XP, birthday and profile data on this server."""
         if not confirm:
-            return await it.response.send_message("This removes your XP, level and birthday. Moderation cases are kept for the safety of the server. Run the command again with confirm set to true.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "This removes your XP, level and birthday. Moderation cases are kept for the safety of the server. Run the command again with confirm set to true."), ephemeral=True)
         rec = self.bot.store.users(it.guild_id).get(str(it.user.id), {})
         if rec.get("jailed"):
-            return await it.response.send_message("You cannot delete your data while you are in the gulag.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "You cannot delete your data while you are in the gulag."), ephemeral=True)
         self.bot.store.delete_user(it.guild_id, it.user.id)
-        await it.response.send_message("Your data was deleted. Your level roles stay until a moderator removes them.", ephemeral=True)
+        self.forget(it.guild_id, it.user.id)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Your data was deleted. Your level roles stay until a moderator removes them."), ephemeral=True)
 
     @pv.command(name="retention", description="Delete data of members who left after this many days (0 = keep)")
     async def pv_retention(self, it: discord.Interaction, days: app_commands.Range[int, 0, 3650]):
@@ -118,8 +135,9 @@ class Privacy(commands.Cog):
     async def pv_delete(self, it: discord.Interaction, user_id: str, cases: bool = True):
         """Delete all stored data of a user by ID."""
         if not user_id.isdigit():
-            return await it.response.send_message("Enter a numeric user ID.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Enter a numeric user ID."), ephemeral=True)
         self.bot.store.delete_user(it.guild_id, user_id)
+        self.forget(it.guild_id, user_id)
         n = self.anonymize(it.guild_id, int(user_id)) if cases else 0
         await it.response.send_message(f"Profile data deleted. {n} case names anonymized.", ephemeral=True)
 
@@ -127,7 +145,7 @@ class Privacy(commands.Cog):
     async def pv_export(self, it: discord.Interaction, user_id: str):
         """Export the stored data of a user by ID."""
         if not user_id.isdigit():
-            return await it.response.send_message("Enter a numeric user ID.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Enter a numeric user ID."), ephemeral=True)
         raw = json.dumps(self.export(it.guild_id, int(user_id)), indent=2, ensure_ascii=False).encode("utf-8")
         await it.response.send_message(file=discord.File(io.BytesIO(raw), filename=f"data-{user_id}.json"), ephemeral=True)
 

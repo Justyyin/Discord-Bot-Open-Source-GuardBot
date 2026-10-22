@@ -9,7 +9,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from ..utils import emb, parse_duration
+from .. import i18n
+from ..utils import AdminGroup, emb, parse_duration
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class PollVote(discord.ui.DynamicItem[discord.ui.Button], template=r"gb:poll:(?P
         bot = interaction.client
         p = bot.cfg(interaction.guild_id)["polls"]["items"].get(str(self.pid))
         if not p or p["closed"] or not bot.module_on(interaction.guild_id, "polls"):
-            return await interaction.response.send_message("This poll is closed.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This poll is closed."), ephemeral=True)
         uid = str(interaction.user.id)
         mine = vlist(p["votes"].get(uid, []))
         if p.get("multi"):
@@ -88,7 +89,7 @@ class GiveawayJoin(discord.ui.DynamicItem[discord.ui.Button], template=r"gb:gw:(
         bot = interaction.client
         g = bot.cfg(interaction.guild_id)["giveaways"]["items"].get(str(self.gid))
         if not g or g["ended"] or not bot.module_on(interaction.guild_id, "giveaways"):
-            return await interaction.response.send_message("This giveaway has ended.", ephemeral=True)
+            return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This giveaway has ended."), ephemeral=True)
         if g["role"] and g["role"] not in {r.id for r in interaction.user.roles}:
             return await interaction.response.send_message(f"You need the <@&{g['role']}> role to join.", ephemeral=True)
         uid = interaction.user.id
@@ -120,7 +121,7 @@ class Engage(commands.Cog):
     poll = app_commands.Group(name="poll", description="Polls", default_permissions=discord.Permissions(manage_messages=True), guild_only=True)
     gw = app_commands.Group(name="giveaway", description="Giveaways", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
     sg = app_commands.Group(name="suggestion", description="Review suggestions", guild_only=True)
-    ss = app_commands.Group(name="suggestionsetup", description="Configure suggestions", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
+    ss = AdminGroup(name="setup", description="Configure suggestions", parent=sg)
 
     def __init__(self, bot):
         """Keep the bot reference and prepare the state of this cog."""
@@ -198,10 +199,10 @@ class Engage(commands.Cog):
         """Create a poll with up to 10 options."""
         opts = [o.strip() for o in options.split(";") if o.strip()]
         if not 2 <= len(opts) <= 10:
-            return await it.response.send_message("Provide 2 to 10 options separated by ;", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Provide 2 to 10 options separated by ;"), ephemeral=True)
         secs = parse_duration(duration) if duration else None
         if duration and not secs:
-            return await it.response.send_message("Invalid duration. Examples: 30m, 2h, 1d", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Invalid duration. Examples: 30m, 2h, 1d"), ephemeral=True)
         pl = self.bot.cfg(it.guild_id)["polls"]
         pid = pl["next"]
         pl["next"] += 1
@@ -231,7 +232,7 @@ class Engage(commands.Cog):
         """Start a giveaway."""
         secs = parse_duration(duration)
         if not secs:
-            return await it.response.send_message("Invalid duration. Examples: 30m, 2h, 1d", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Invalid duration. Examples: 30m, 2h, 1d"), ephemeral=True)
         gl = self.bot.cfg(it.guild_id)["giveaways"]
         gid = gl["next"]
         gl["next"] += 1
@@ -255,9 +256,48 @@ class Engage(commands.Cog):
         await it.response.defer(ephemeral=True)
         gw = self.bot.cfg(it.guild_id)["giveaways"]["items"].get(str(giveaway_id))
         if not gw or not gw["ended"]:
-            return await it.followup.send("That giveaway has not ended.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "That giveaway has not ended."))
         await self.finish_giveaway(it.guild, giveaway_id, reroll=True)
-        await it.followup.send("New winners drawn.")
+        await it.followup.send(i18n.say(it.client, it.guild, "New winners drawn."))
+
+    @gw.command(name="cancel", description="Cancel a giveaway without drawing winners")
+    async def gw_cancel(self, it: discord.Interaction, giveaway_id: int):
+        """Cancel a giveaway without drawing winners."""
+        gw = self.bot.cfg(it.guild_id)["giveaways"]["items"].get(str(giveaway_id))
+        if not gw or gw["ended"]:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No running giveaway with that ID."), ephemeral=True)
+        gw["ended"], gw["result"] = True, []
+        msg = await self.message_of(it.guild, gw)
+        if msg:
+            try:
+                await msg.edit(embed=emb(f"Giveaway cancelled: {gw['prize']}", color=discord.Color.dark_grey()), view=None)
+            except discord.HTTPException as exc:
+                log.warning("could not update the cancelled giveaway %s: %s", giveaway_id, exc)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Giveaway cancelled."), ephemeral=True)
+
+    @gw.command(name="edit", description="Change the prize, the number of winners or the end time")
+    @app_commands.describe(giveaway_id="Giveaway ID", prize="New prize", winners="New number of winners", extend="Add time, for example 1h or 1d")
+    async def gw_edit(self, it: discord.Interaction, giveaway_id: int, prize: Optional[str] = None, winners: Optional[app_commands.Range[int, 1, 20]] = None, extend: Optional[str] = None):
+        """Change the prize, the number of winners or the end time."""
+        gw = self.bot.cfg(it.guild_id)["giveaways"]["items"].get(str(giveaway_id))
+        if not gw or gw["ended"]:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No running giveaway with that ID."), ephemeral=True)
+        if extend:
+            secs = parse_duration(extend)
+            if not secs:
+                return await it.response.send_message(i18n.say(it.client, it.guild, "Invalid duration. Examples: 30m, 2h, 1d"), ephemeral=True)
+            gw["end"] += secs
+        if prize:
+            gw["prize"] = prize
+        if winners:
+            gw["winners"] = winners
+        msg = await self.message_of(it.guild, gw)
+        if msg:
+            try:
+                await msg.edit(embed=giveaway_embed(gw))
+            except discord.HTTPException as exc:
+                log.warning("could not update giveaway %s: %s", giveaway_id, exc)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Giveaway updated."), ephemeral=True)
 
     @gw.command(name="list", description="List running giveaways")
     async def gw_list(self, it: discord.Interaction):
@@ -272,7 +312,7 @@ class Engage(commands.Cog):
         s = self.bot.cfg(ctx.guild.id)["suggestions"]
         ch = ctx.guild.get_channel(s["channel"]) if s["channel"] else None
         if not ch:
-            return await ctx.send("Suggestions are not set up yet.", ephemeral=True)
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Suggestions are not set up yet."), ephemeral=True)
         sid = s["next"]
         s["next"] += 1
         e = emb(f"Suggestion #{sid}", text[:3500], discord.Color.blurple(), ctx.author)
@@ -289,11 +329,11 @@ class Engage(commands.Cog):
         s = self.bot.cfg(it.guild_id)["suggestions"]
         allowed = it.user.guild_permissions.manage_guild or (s["review_role"] and s["review_role"] in {r.id for r in it.user.roles})
         if not allowed:
-            return await it.response.send_message("You cannot review suggestions.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "You cannot review suggestions."), ephemeral=True)
         item = s["items"].get(str(suggestion_id))
         ch = it.guild.get_channel(s["channel"]) if s["channel"] else None
         if not item or not ch:
-            return await it.response.send_message("Suggestion not found.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Suggestion not found."), ephemeral=True)
         colors = {"approved": discord.Color.green(), "denied": discord.Color.red(), "considering": discord.Color.orange(), "implemented": discord.Color.teal()}
         author = it.guild.get_member(item["author"])
         e = emb(f"Suggestion #{suggestion_id}", item["text"], colors[status], author)
@@ -304,7 +344,7 @@ class Engage(commands.Cog):
             msg = await ch.fetch_message(item["msg"])
             await msg.edit(embed=e)
         except discord.HTTPException:
-            return await it.response.send_message("The suggestion message is gone.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "The suggestion message is gone."), ephemeral=True)
         item["status"] = status
         await it.response.send_message(f"Suggestion #{suggestion_id}: {status}.", ephemeral=True)
 
@@ -316,7 +356,7 @@ class Engage(commands.Cog):
         if review_role:
             g["suggestions"]["review_role"] = review_role.id
         g["modules"]["suggestions"] = True
-        await it.response.send_message("Saved.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Saved."), ephemeral=True)
 
 
 async def setup(bot):
