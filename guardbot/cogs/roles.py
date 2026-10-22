@@ -8,7 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..utils import emb, trim
+from .. import i18n
+from ..utils import AdminGroup, emb, trim
 
 log = logging.getLogger(__name__)
 
@@ -32,11 +33,11 @@ async def toggle_topic(interaction, topic):
     """Add or remove the role of a notification topic for the user of the interaction."""
     bot = interaction.client
     if not bot.module_on(interaction.guild_id, "notify"):
-        return await interaction.response.send_message("Notifications are disabled.", ephemeral=True)
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Notifications are disabled."), ephemeral=True)
     t = bot.cfg(interaction.guild_id)["notify"]["topics"].get(topic)
     role = interaction.guild.get_role(t["role"]) if t else None
     if not role:
-        return await interaction.response.send_message("This topic no longer exists.", ephemeral=True)
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This topic no longer exists."), ephemeral=True)
     try:
         if role in interaction.user.roles:
             await interaction.user.remove_roles(role, reason="Notification topic")
@@ -69,8 +70,8 @@ class NotifyToggle(discord.ui.DynamicItem[discord.ui.Button], template=r"gb:noti
 class Roles(commands.Cog):
     """Reaction roles and notification topics."""
     rr = app_commands.Group(name="reactionrole", description="Reaction roles", default_permissions=discord.Permissions(manage_roles=True), guild_only=True)
-    nt = app_commands.Group(name="notifytopic", description="Manage notification topics", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
     nf = app_commands.Group(name="notify", description="Choose what you get notified about", guild_only=True)
+    nt = AdminGroup(name="topic", description="Manage notification topics", parent=nf)
 
     def __init__(self, bot):
         """Keep the bot reference and prepare the state of this cog."""
@@ -140,22 +141,22 @@ class Roles(commands.Cog):
         await it.response.defer(ephemeral=True)
         parsed = parse_msg(it, message, channel)
         if not parsed:
-            return await it.followup.send("Provide a message link or a message ID.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Provide a message link or a message ID."))
         cid, mid = parsed
         ch = it.guild.get_channel_or_thread(cid)
         if not ch:
-            return await it.followup.send("Channel not found.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Channel not found."))
         if not role.is_assignable():
-            return await it.followup.send("I cannot assign that role. Move my role above it.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "I cannot assign that role. Move my role above it."))
         try:
             msg = await ch.fetch_message(mid)
         except discord.HTTPException:
-            return await it.followup.send("Message not found.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Message not found."))
         pe = discord.PartialEmoji.from_str(emoji.strip())
         try:
             await msg.add_reaction(pe)
         except discord.HTTPException:
-            return await it.followup.send("I cannot use that emoji.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "I cannot use that emoji."))
         entry = self.bot.cfg(it.guild_id)["reaction_roles"].setdefault(str(mid), {"channel": cid, "mode": "normal", "map": {}})
         if mode:
             entry["mode"] = mode
@@ -168,13 +169,13 @@ class Roles(commands.Cog):
         await it.response.defer(ephemeral=True)
         parsed = parse_msg(it, message, channel)
         if not parsed:
-            return await it.followup.send("Provide a message link or a message ID.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Provide a message link or a message ID."))
         cid, mid = parsed
         g = self.bot.cfg(it.guild_id)
         entry = g["reaction_roles"].get(str(mid))
         pe = discord.PartialEmoji.from_str(emoji.strip())
         if not entry or entry["map"].pop(ekey(pe), None) is None:
-            return await it.followup.send("No such reaction role.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "No such reaction role."))
         if not entry["map"]:
             del g["reaction_roles"][str(mid)]
         ch = it.guild.get_channel_or_thread(cid)
@@ -184,7 +185,7 @@ class Roles(commands.Cog):
                 await msg.clear_reaction(pe)
             except discord.HTTPException as exc:
                 log.warning("could not clear the reaction %s on message %s: %s", pe, mid, exc)
-        await it.followup.send("Removed.")
+        await it.followup.send(i18n.say(it.client, it.guild, "Removed."))
 
     @rr.command(name="list", description="List all reaction roles")
     async def rr_list(self, it: discord.Interaction):
@@ -202,7 +203,7 @@ class Roles(commands.Cog):
         try:
             msg = await channel.send(embed=discord.Embed(title=title, description=description.replace("\\n", "\n")))
         except discord.HTTPException:
-            return await it.response.send_message("I cannot post in that channel.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "I cannot post in that channel."), ephemeral=True)
         await it.response.send_message(f"Panel posted: {msg.jump_url}\nNow use /reactionrole add with this link.", ephemeral=True)
 
     @nt.command(name="add", description="Create a notification topic with a role")
@@ -210,9 +211,9 @@ class Roles(commands.Cog):
     async def nt_add(self, it: discord.Interaction, key: str, role: discord.Role, description: str = ""):
         """Create a notification topic with a role."""
         if not re.fullmatch(r"[\w-]{1,30}", key):
-            return await it.response.send_message("Use only letters, numbers, - and _ (max 30).", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use only letters, numbers, - and _ (max 30)."), ephemeral=True)
         if not role.is_assignable():
-            return await it.response.send_message("I cannot assign that role. Move my role above it.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "I cannot assign that role. Move my role above it."), ephemeral=True)
         self.bot.cfg(it.guild_id)["notify"]["topics"][key.lower()] = {"role": role.id, "desc": description}
         await it.response.send_message(f"Topic '{key.lower()}' created.", ephemeral=True)
 
@@ -220,22 +221,22 @@ class Roles(commands.Cog):
     async def nt_remove(self, it: discord.Interaction, key: str):
         """Delete a notification topic."""
         if self.bot.cfg(it.guild_id)["notify"]["topics"].pop(key.lower(), None) is None:
-            return await it.response.send_message("No such topic.", ephemeral=True)
-        await it.response.send_message("Removed.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No such topic."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Removed."), ephemeral=True)
 
     @nt.command(name="panel", description="Post a panel with a button for every topic")
     async def nt_panel(self, it: discord.Interaction, channel: discord.TextChannel, title: str = "Notifications"):
         """Post a panel with a button for every topic."""
         topics = self.bot.cfg(it.guild_id)["notify"]["topics"]
         if not topics:
-            return await it.response.send_message("Create a topic first.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Create a topic first."), ephemeral=True)
         view = discord.ui.View(timeout=None)
         lines = []
         for key, t in list(topics.items())[:25]:
             view.add_item(NotifyToggle(key, key))
             lines.append(f"{key}: {t['desc'] or '-'}")
         await channel.send(embed=emb(title, "Press a button to turn notifications for a topic on or off.\n\n" + "\n".join(lines)), view=view)
-        await it.response.send_message("Panel posted.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Panel posted."), ephemeral=True)
 
     @nf.command(name="subscribe", description="Get notifications for a topic")
     async def nf_sub(self, it: discord.Interaction, topic: str):
@@ -243,7 +244,7 @@ class Roles(commands.Cog):
         t = self.bot.cfg(it.guild_id)["notify"]["topics"].get(topic.lower())
         role = it.guild.get_role(t["role"]) if t else None
         if not role:
-            return await it.response.send_message("No such topic. Use /notify list.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No such topic. Use /notify list."), ephemeral=True)
         await it.user.add_roles(role, reason="Notification topic")
         await it.response.send_message(f"Subscribed to {topic.lower()}.", ephemeral=True)
 
@@ -253,7 +254,7 @@ class Roles(commands.Cog):
         t = self.bot.cfg(it.guild_id)["notify"]["topics"].get(topic.lower())
         role = it.guild.get_role(t["role"]) if t else None
         if not role:
-            return await it.response.send_message("No such topic. Use /notify list.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No such topic. Use /notify list."), ephemeral=True)
         await it.user.remove_roles(role, reason="Notification topic")
         await it.response.send_message(f"Unsubscribed from {topic.lower()}.", ephemeral=True)
 

@@ -7,6 +7,7 @@ import re
 import time
 from collections import deque
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Literal, Optional
 
 import aiohttp
@@ -14,6 +15,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from .. import i18n
+from ..linkcheck import Resolver, host_of
 from ..utils import URL_RE, describe, emb, grab_files, has_image, has_video, hosts, is_image
 
 log = logging.getLogger(__name__)
@@ -37,8 +40,14 @@ LISTS = {
     "invites_allow": ("invites", "allow"),
     "doxxing": ("doxxing", "list"),
     "threats": ("threats", "list"),
+    "shortlink_domains": ("shortlinks", "domains"),
+    "newlinks_allow": ("newlinks", "allow"),
 }
-RULES = ("words", "caps", "mentions", "invites", "phishing", "pii", "doxxing", "threats")
+RULES = ("words", "caps", "mentions", "invites", "phishing", "pii", "doxxing", "threats", "shortlinks", "newlinks")
+DRY_RUN_RULES = ("all", "words", "caps", "mentions", "invites", "phishing", "pii", "doxxing", "threats", "shortlinks", "newlinks", "blocklist", "channel_rule", "flood", "antiscam")
+MAX_RESOLVES = 3
+ID_RE = re.compile(r"<@!?(\d+)>")
+ROLE_RE = re.compile(r"<@&(\d+)>")
 ACTIONS = ("log", "delete", "warn", "timeout", "jail")
 
 
@@ -109,6 +118,12 @@ class AutoMod(commands.Cog):
         """Keep the bot reference and prepare the state of this cog."""
         self.bot = bot
         self.flood = {}
+        self.resolver = Resolver()
+        self.removed = deque(maxlen=300)
+
+    async def cog_unload(self):
+        """Close the HTTP session used to follow short links."""
+        await self.resolver.close()
 
     def get_rules(self, a, channel):
         """Find the channel rule for a channel, its parent or the default rule."""
@@ -136,6 +151,49 @@ class AutoMod(commands.Cog):
                     return "blocked image"
         return None
 
+    async def check_shortlinks(self, text, a):
+        """Follow shortened links and return the reason if they lead to a listed or unverifiable target, else None."""
+        sl = a["shortlinks"]
+        if not sl["enabled"]:
+            return None
+        checked = 0
+        for url in URL_RE.findall(text):
+            host = host_of(url)
+            if not host or not any(host_match(host, d.lower()) for d in sl["domains"]):
+                continue
+            if not sl["resolve"]:
+                return f"short link {host}"
+            checked += 1
+            if checked > MAX_RESOLVES:
+                return "too many short links"
+            final = await self.resolver.final_url(url.rstrip(".,)>"))
+            if final is None:
+                if sl["block_unresolved"]:
+                    return f"short link {host} could not be verified"
+                continue
+            target = host_of(final) or ""
+            ph = a["phishing"]
+            if any(host_match(target, d.lower()) for d in ph["list"]) and not any(host_match(target, d.lower()) for d in ph["allow"]):
+                return f"short link leads to phishing domain {target}"
+            if any(x.lower() in final.lower() for x in a["blocklist"]["link"]):
+                return f"short link leads to a blocked link ({target})"
+            if ph["enabled"] and ph["lookalike"] and any(b in target for b in BRANDS) and not any(host_match(target, o) for o in OFFICIAL):
+                return f"short link leads to lookalike domain {target}"
+        return None
+
+    def check_newlinks(self, msg, found, a):
+        """Return the reason if a member who joined recently posts a link that is not allowed, else None."""
+        nl = a["newlinks"]
+        member = msg.author
+        joined = getattr(member, "joined_at", None)
+        if not nl["enabled"] or not found or joined is None:
+            return None
+        if (discord.utils.utcnow() - joined).total_seconds() >= nl["hours"] * 3600:
+            return None
+        if all(any(host_match(h, d.lower()) for d in nl["allow"]) for h in found):
+            return None
+        return f"links are not allowed in the first {nl['hours']} hours"
+
     async def scan(self, msg, a):
         """Run every enabled rule on a message and return (rule, reason, action) for the first hit."""
         text, low = msg.content, msg.content.lower()
@@ -152,6 +210,12 @@ class AutoMod(commands.Cog):
         hit = await self.check_blocklist(msg, a)
         if hit:
             return "blocklist", hit, "jail" if a["jail_on_blocklist"] else "delete"
+        hit = await self.check_shortlinks(text, a)
+        if hit:
+            return "shortlinks", hit, a["shortlinks"]["action"]
+        hit = self.check_newlinks(msg, found, a)
+        if hit:
+            return "newlinks", hit, a["newlinks"]["action"]
         rules = self.get_rules(a, msg.channel)
         if rules:
             if rules["links"] and URL_RE.search(text):
@@ -187,8 +251,15 @@ class AutoMod(commands.Cog):
             return "mentions", "mention spam", men["action"]
         return None
 
+    @staticmethod
+    def dry(a, rule):
+        """True if a rule only reports because dry-run mode is on for it or for everything."""
+        dry = a["dry_run"]
+        return "all" in dry or rule.replace(" ", "_") in dry
+
     async def remove(self, msg, reason, notify=True):
         """Delete a message, log it with its attachments and tell the author. Returns False if it could not be deleted."""
+        self.removed.append(msg.id)
         self.bot.bot_deleted.add(msg.id)
         files = await grab_files(msg)
         try:
@@ -203,7 +274,7 @@ class AutoMod(commands.Cog):
         if notify:
             try:
                 await msg.channel.send(
-                    f"{msg.author.mention} Your message was removed ({reason}).",
+                    i18n.say(self.bot, msg.guild, "{user} Your message was removed ({reason}).", user=msg.author.mention, reason=reason),
                     delete_after=6,
                     allowed_mentions=discord.AllowedMentions(users=[msg.author]),
                 )
@@ -212,7 +283,17 @@ class AutoMod(commands.Cog):
         return True
 
     async def act(self, msg, rule, reason, action):
-        """Carry out the action of a rule: log only, delete, warn, timeout or jail."""
+        """Carry out the action of a rule: log only, delete, warn, timeout or jail. Rules in dry-run mode only report."""
+        a = self.bot.cfg(msg.guild.id)["automod"]
+        a["hits"][rule] = a["hits"].get(rule, 0) + 1
+        if self.dry(a, rule):
+            e = emb(f"AutoMod dry run: {rule}", color=discord.Color.light_grey(), user=msg.author)
+            e.add_field(name="Reason", value=reason, inline=False)
+            e.add_field(name="Would have done", value=action)
+            describe(e, msg)
+            e.add_field(name="Link", value=f"[Jump]({msg.jump_url})")
+            self.bot.log(msg.guild, "security", e)
+            return
         if action == "log":
             e = emb(f"AutoMod alert: {rule}", color=discord.Color.orange(), user=msg.author)
             e.add_field(name="Reason", value=reason, inline=False)
@@ -248,6 +329,14 @@ class AutoMod(commands.Cog):
             return
         batch = [m for _, m in dq]
         dq.clear()
+        a = self.bot.cfg(msg.guild.id)["automod"]
+        a["hits"]["flood"] = a["hits"].get("flood", 0) + 1
+        if self.dry(a, "flood"):
+            e = emb("AutoMod dry run: flood", color=discord.Color.light_grey(), user=msg.author)
+            e.add_field(name="Reason", value=f"{len(batch)} messages in {f['seconds']} seconds")
+            e.add_field(name="Link", value=f"[Jump]({msg.jump_url})")
+            self.bot.log(msg.guild, "security", e)
+            return
         for i, m in enumerate(batch):
             await self.remove(m, "flood", notify=(i == len(batch) - 1))
         if f["timeout"] > 0:
@@ -281,6 +370,33 @@ class AutoMod(commands.Cog):
             await self.check_flood(msg, a["flood"])
 
     @commands.Cog.listener()
+    async def on_message_delete(self, msg):
+        """Report messages that pinged someone and were deleted shortly after."""
+        if msg.author.bot or not msg.guild or msg.id in self.removed or not self.bot.module_on(msg.guild.id, "automod"):
+            return
+        a = self.bot.cfg(msg.guild.id)["automod"]
+        g = a["ghostping"]
+        if not g["enabled"] or (discord.utils.utcnow() - msg.created_at).total_seconds() > g["max_age"]:
+            return
+        if msg.channel.id in a["exempt_channels"] or any(r.id in a["exempt_roles"] for r in getattr(msg.author, "roles", [])):
+            return
+        targets = [m for m in msg.mentions if not m.bot and m.id != msg.author.id]
+        roles = list(msg.role_mentions)
+        if not targets and not roles and not msg.mention_everyone:
+            return
+        names = [m.mention for m in targets[:10]] + [r.mention for r in roles[:5]] + (["@everyone"] if msg.mention_everyone else [])
+        e = emb("Ghost ping", color=discord.Color.orange(), user=msg.author)
+        e.add_field(name="Pinged", value=" ".join(names), inline=False)
+        e.add_field(name="Channel", value=msg.channel.mention)
+        e.add_field(name="Deleted after", value=f"{int((discord.utils.utcnow() - msg.created_at).total_seconds())} seconds")
+        self.bot.log(msg.guild, "security", e)
+        if g["notify"]:
+            try:
+                await msg.channel.send(i18n.say(self.bot, msg.guild, "{user} pinged {names} and deleted the message.", user=msg.author.mention, names=" ".join(names)), delete_after=30, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException as exc:
+                log.warning("ghost ping notice failed: %s", exc)
+
+    @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         """Runs when a message is edited."""
         if after.author.bot or not after.guild or not self.bot.module_on(after.guild.id, "automod"):
@@ -295,6 +411,28 @@ class AutoMod(commands.Cog):
     def conf(self, it):
         """Return the automod settings of the server of an interaction."""
         return self.bot.cfg(it.guild_id)["automod"]
+
+    @grp.command(name="status", description="Show which rules are on and what they do")
+    async def am_status(self, it: discord.Interaction):
+        """Show which rules are on and what they do."""
+        a = self.conf(it)
+        on = self.bot.module_on(it.guild_id, "automod")
+        lines = [f"Module: {'on' if on else 'off'}"]
+        for rule in RULES:
+            r = a[rule]
+            extra = {"caps": f", from {r.get('min_len')} letters, {r.get('percent')} percent", "mentions": f", max {r.get('max')}"}.get(rule, "")
+            size = len(r["list"]) if "list" in r else (len(r["allow"]) if "allow" in r else None)
+            lines.append(f"{rule}: {'on' if r['enabled'] else 'off'}, action {r['action']}{extra}" + (f", {size} entries" if size is not None else ""))
+        g = a["ghostping"]
+        lines.append(f"ghostping: {'on' if g['enabled'] else 'off'}, deleted within {g['max_age']}s, notice in channel {g['notify']}")
+        if a["dry_run"]:
+            lines.append("dry run: " + ", ".join(a["dry_run"]))
+        f = a["flood"]
+        lines.append(f"flood: {'on' if f['enabled'] else 'off'}, {f['count']} messages in {f['seconds']}s, timeout {f['timeout']} min")
+        b = a["blocklist"]
+        lines.append(f"blocklist: {len(b['link'])} links, {len(b['message'])} texts, {len(b['image'])} images")
+        lines.append(f"channel rules: {len(a['channels'])}, exempt roles: {len(a['exempt_roles'])}, exempt channels: {len(a['exempt_channels'])}")
+        await it.response.send_message("\n".join(lines), ephemeral=True)
 
     @grp.command(name="channel", description="Set what is removed in a channel (no channel = all other channels)")
     @app_commands.describe(channel="Channel", links="Remove links", images="Remove images", videos="Remove videos")
@@ -314,8 +452,8 @@ class AutoMod(commands.Cog):
         """Remove the channel rule."""
         a = self.conf(it)
         if a["channels"].pop(str(channel.id) if channel else "all", None) is None:
-            return await it.response.send_message("No rule found.", ephemeral=True)
-        await it.response.send_message("Rule removed.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No rule found."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Rule removed."), ephemeral=True)
 
     @grp.command(name="toggle", description="Turn a rule on or off and choose its action")
     @app_commands.describe(rule="Rule", enabled="On or off", action="What happens on a hit")
@@ -334,7 +472,7 @@ class AutoMod(commands.Cog):
         sec, key = LISTS[name]
         lst = self.conf(it)[sec][key]
         if value.lower() in (x.lower() for x in lst):
-            return await it.response.send_message("Already in the list.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Already in the list."), ephemeral=True)
         lst.append(value)
         await it.response.send_message(f"Added to {name}: {value}", ephemeral=True)
 
@@ -345,7 +483,7 @@ class AutoMod(commands.Cog):
         lst = self.conf(it)[sec][key]
         hit = next((x for x in lst if x.lower() == value.lower()), None)
         if hit is None:
-            return await it.response.send_message("Not in the list.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Not in the list."), ephemeral=True)
         lst.remove(hit)
         await it.response.send_message(f"Removed from {name}: {hit}", ephemeral=True)
 
@@ -361,7 +499,7 @@ class AutoMod(commands.Cog):
     async def am_import(self, it: discord.Interaction, name: Literal[tuple(LISTS)], file: discord.Attachment):
         """Import a list from a text file (one entry per line)."""
         if file.size > 1024 * 1024:
-            return await it.response.send_message("File too large (max 1 MB).", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "File too large (max 1 MB)."), ephemeral=True)
         sec, key = LISTS[name]
         lst = self.conf(it)[sec][key]
         have = {x.lower() for x in lst}
@@ -379,13 +517,13 @@ class AutoMod(commands.Cog):
     async def am_set(self, it: discord.Interaction, rule: Literal[RULES], option: str, value: str):
         """Change a number or option of a rule."""
         r = self.conf(it)[rule]
-        if option not in r or option in ("list", "allow", "enabled"):
-            return await it.response.send_message(f"Unknown option. Available: {', '.join(k for k in r if k not in ('list', 'allow', 'enabled'))}", ephemeral=True)
+        if option not in r or option in ("list", "allow", "enabled", "domains"):
+            return await it.response.send_message(f"Unknown option. Available: {', '.join(k for k in r if k not in ('list', 'allow', 'enabled', 'domains'))}", ephemeral=True)
         cur = r[option]
         try:
             r[option] = value.lower() in ("1", "true", "yes", "on") if isinstance(cur, bool) else type(cur)(value)
         except ValueError:
-            return await it.response.send_message("Invalid value.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Invalid value."), ephemeral=True)
         await it.response.send_message(f"{rule}.{option} = {r[option]}", ephemeral=True)
 
     @grp.command(name="exemptrole", description="Toggle a role that AutoMod ignores")
@@ -411,6 +549,49 @@ class AutoMod(commands.Cog):
                 f[k] = v
         await it.response.send_message(f"Flood: {'on' if f['enabled'] else 'off'}, {f['count']} messages in {f['seconds']}s, timeout {f['timeout']} min", ephemeral=True)
 
+    @grp.command(name="ghostping", description="Report messages that pinged someone and were deleted quickly")
+    @app_commands.describe(enabled="On or off", notify="Post a notice in the channel", max_age="Only count messages deleted within this many seconds")
+    async def am_ghost(self, it: discord.Interaction, enabled: Optional[bool] = None, notify: Optional[bool] = None, max_age: Optional[app_commands.Range[int, 5, 3600]] = None):
+        """Report messages that pinged someone and were deleted quickly."""
+        g = self.conf(it)["ghostping"]
+        for k, v in (("enabled", enabled), ("notify", notify), ("max_age", max_age)):
+            if v is not None:
+                g[k] = v
+        await it.response.send_message(f"Ghost ping: {'on' if g['enabled'] else 'off'}, notice {g['notify']}, within {g['max_age']} seconds", ephemeral=True)
+
+    @grp.command(name="dryrun", description="Let a rule only report what it would do, without deleting or punishing")
+    @app_commands.describe(rule="Rule, or all", enabled="Dry run on or off")
+    async def am_dry(self, it: discord.Interaction, rule: Literal[DRY_RUN_RULES], enabled: bool):
+        """Let a rule only report what it would do, without deleting or punishing."""
+        dry = self.conf(it)["dry_run"]
+        if enabled and rule not in dry:
+            dry.append(rule)
+        if not enabled and rule in dry:
+            dry.remove(rule)
+        await it.response.send_message(f"Dry run: {', '.join(dry) or 'off for every rule'}. Hits are posted to the security log.", ephemeral=True)
+
+    @grp.command(name="test", description="Show which rule a text would trigger, without deleting anything")
+    @app_commands.describe(text="The message text to check", member="Check as this member (default: you)")
+    async def am_test(self, it: discord.Interaction, text: app_commands.Range[str, 1, 2000], member: Optional[discord.Member] = None):
+        """Show which rule a text would trigger, without deleting anything."""
+        await it.response.defer(ephemeral=True)
+        who = member or it.user
+        a = self.conf(it)
+        fake = SimpleNamespace(
+            content=text, embeds=[], attachments=[], channel=it.channel, author=who, guild=it.guild,
+            mentions={int(i) for i in ID_RE.findall(text)}, role_mentions=set(ROLE_RE.findall(text)),
+        )
+        hit = await self.scan(fake, a)
+        lines = [f"Tested as {who.mention}. Nothing was deleted."]
+        if self.exempt(fake, a):
+            lines.append("This member is exempt (Manage Messages, an exempt role or an exempt channel), so no rule would act.")
+        if hit:
+            rule, reason, action = hit
+            lines.append(f"Rule: {rule}\nReason: {reason}\nAction: {action}" + ("\nDry run is on for this rule, it would only be reported." if self.dry(a, rule) else ""))
+        else:
+            lines.append("No rule would trigger. Flood protection and image rules need real messages and are not part of this test.")
+        await it.followup.send("\n".join(lines), allowed_mentions=discord.AllowedMentions.none())
+
     @grp.command(name="block", description="Add a link, text or image to the blocklist")
     @app_commands.describe(kind="What to block", value="Link, text or image URL", image="Upload an image")
     async def am_block(self, it: discord.Interaction, kind: Literal["link", "message", "image"], value: Optional[str] = None, image: Optional[discord.Attachment] = None):
@@ -419,17 +600,17 @@ class AutoMod(commands.Cog):
         await it.response.defer(ephemeral=True)
         if kind != "image":
             if not value:
-                return await it.followup.send("Value is missing.")
+                return await it.followup.send(i18n.say(it.client, it.guild, "Value is missing."))
             if value.lower() in (x.lower() for x in d[kind]):
-                return await it.followup.send("Already blocked.")
+                return await it.followup.send(i18n.say(it.client, it.guild, "Already blocked."))
             d[kind].append(value)
             return await it.followup.send(f"Blocked: {value}")
         if not value and not image:
-            return await it.followup.send("Upload an image or provide a URL.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Upload an image or provide a URL."))
         entry = {"label": None, "hash": None, "url": None}
         if image:
             if not is_image(image):
-                return await it.followup.send("That file is not an image.")
+                return await it.followup.send(i18n.say(it.client, it.guild, "That file is not an image."))
             entry["hash"], entry["label"] = hashlib.sha256(await image.read()).hexdigest(), image.filename
         if value:
             entry["url"], entry["label"] = value, entry["label"] or value
@@ -441,7 +622,7 @@ class AutoMod(commands.Cog):
                 except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
                     log.warning("could not download %s to hash it: %s", value, exc)
         if any((entry["hash"] and x["hash"] == entry["hash"]) or (entry["url"] and x["url"] == entry["url"]) for x in d["image"]):
-            return await it.followup.send("Already blocked.")
+            return await it.followup.send(i18n.say(it.client, it.guild, "Already blocked."))
         d["image"].append(entry)
         await it.followup.send(f"Blocked: {entry['label']}")
 
@@ -450,9 +631,9 @@ class AutoMod(commands.Cog):
         """Remove an entry from the blocklist."""
         items = self.conf(it)["blocklist"][kind]
         if not 1 <= number <= len(items):
-            return await it.response.send_message("Invalid number.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Invalid number."), ephemeral=True)
         items.pop(number - 1)
-        await it.response.send_message("Removed.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Removed."), ephemeral=True)
 
     @grp.command(name="blocklist", description="Show the blocklist")
     async def am_blocklist(self, it: discord.Interaction):

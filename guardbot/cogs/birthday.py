@@ -10,7 +10,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from ..utils import emb
+from .. import i18n
+from ..utils import AdminGroup, emb
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def next_date(month, day, today):
 class Birthday(commands.Cog):
     """Stores birthdays and congratulates on the day."""
     bd = app_commands.Group(name="birthday", description="Birthdays", guild_only=True)
-    setup_grp = app_commands.Group(name="birthdaysetup", description="Configure the birthday system", default_permissions=discord.Permissions(manage_guild=True), guild_only=True)
+    setup_grp = AdminGroup(name="setup", description="Configure the birthday system", parent=bd)
 
     def __init__(self, bot):
         """Keep the bot reference and prepare the state of this cog."""
@@ -82,7 +83,7 @@ class Birthday(commands.Cog):
                             rec["bday_last"] = iso
                             ch = guild.get_channel(b["channel"]) if b["channel"] else guild.system_channel
                             if ch:
-                                text = b["message"].replace("{user}", m.mention).replace("{name}", m.display_name)
+                                text = i18n.say(self.bot, guild, b["message"]).replace("{user}", m.mention).replace("{name}", m.display_name)
                                 await ch.send(text, allowed_mentions=discord.AllowedMentions(users=[m]))
                     except discord.HTTPException as exc:
                         log.warning("m.add_roles failed: %s", exc)
@@ -106,7 +107,7 @@ class Birthday(commands.Cog):
         try:
             date(2000, month, day)
         except ValueError:
-            return await it.response.send_message("That date does not exist.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "That date does not exist."), ephemeral=True)
         rec = self.bot.store.user(it.guild_id, it.user.id)
         rec["birthday"], rec["bday_last"] = f"{month:02d}-{day:02d}", None
         await it.response.send_message(f"Birthday saved: {day:02d}.{month:02d}.", ephemeral=True)
@@ -115,7 +116,7 @@ class Birthday(commands.Cog):
     async def bd_remove(self, it: discord.Interaction):
         """Delete your birthday."""
         self.bot.store.user(it.guild_id, it.user.id)["birthday"] = None
-        await it.response.send_message("Birthday deleted.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Birthday deleted."), ephemeral=True)
 
     @bd.command(name="show", description="Show a member's birthday")
     async def bd_show(self, it: discord.Interaction, user: Optional[discord.Member] = None):
@@ -141,6 +142,34 @@ class Birthday(commands.Cog):
         lines = [f"{d.strftime('%d.%m.')} - <@{u}> ({'today' if d == today else 'in ' + str((d - today).days) + ' days'})" for d, u in items[:10]]
         await it.response.send_message(embed=emb("Upcoming birthdays", "\n".join(lines) or "No birthdays saved."))
 
+    @bd.command(name="list", description="All saved birthdays on this server in calendar order")
+    async def bd_list(self, it: discord.Interaction):
+        """All saved birthdays on this server in calendar order."""
+        items = []
+        for uid, rec in self.bot.store.users(it.guild_id).items():
+            if rec.get("birthday") and it.guild.get_member(int(uid)):
+                items.append((rec["birthday"], uid))
+        items.sort()
+        lines = [f"{b[3:]}.{b[:2]}. <@{u}>" for b, u in items[:60]]
+        await it.response.send_message(embed=emb("Birthdays", "\n".join(lines) or "No birthdays saved."), ephemeral=True)
+
+    @setup_grp.command(name="user", description="Set the birthday of another member")
+    async def bd_admin_set(self, it: discord.Interaction, member: discord.Member, day: app_commands.Range[int, 1, 31], month: app_commands.Range[int, 1, 12]):
+        """Set the birthday of another member."""
+        try:
+            date(2000, month, day)
+        except ValueError:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "That date does not exist."), ephemeral=True)
+        rec = self.bot.store.user(it.guild_id, member.id)
+        rec["birthday"], rec["bday_last"] = f"{month:02d}-{day:02d}", None
+        await it.response.send_message(f"Birthday of {member.mention} saved: {day:02d}.{month:02d}.", ephemeral=True)
+
+    @setup_grp.command(name="clear", description="Delete the birthday of a member")
+    async def bd_admin_clear(self, it: discord.Interaction, member: discord.Member):
+        """Delete the birthday of a member."""
+        self.bot.store.user(it.guild_id, member.id)["birthday"] = None
+        await it.response.send_message(f"Birthday of {member.mention} deleted.", ephemeral=True)
+
     @setup_grp.command(name="set", description="Configure the birthday system")
     @app_commands.describe(role="Role for the birthday person (created if none exists)", channel="Channel for messages", message="Text with {user} and {name}", timezone="IANA timezone, for example Europe/Berlin")
     async def bd_setup(self, it: discord.Interaction, enabled: Optional[bool] = None, role: Optional[discord.Role] = None, channel: Optional[discord.TextChannel] = None, message: Optional[str] = None, timezone: Optional[str] = None):
@@ -153,11 +182,11 @@ class Birthday(commands.Cog):
                 ZoneInfo(timezone)
             except (ZoneInfoNotFoundError, ValueError, OSError):
                 if timezone.upper() != "UTC":
-                    return await it.followup.send("Unknown timezone. Use a name like Europe/Berlin. On Windows run: pip install tzdata")
+                    return await it.followup.send(i18n.say(it.client, it.guild, "Unknown timezone. Use a name like Europe/Berlin. On Windows run: pip install tzdata"))
             b["timezone"] = timezone
         if role:
             if not role.is_assignable():
-                return await it.followup.send("I cannot assign that role. Move my role above it.")
+                return await it.followup.send(i18n.say(it.client, it.guild, "I cannot assign that role. Move my role above it."))
             b["role"] = role.id
         if channel:
             b["channel"] = channel.id
@@ -171,7 +200,7 @@ class Birthday(commands.Cog):
                 new = await it.guild.create_role(name="Birthday", colour=discord.Colour.gold(), reason="Birthday system")
                 b["role"] = new.id
             except discord.HTTPException:
-                return await it.followup.send("I could not create the Birthday role. Give me Manage Roles or pick a role.")
+                return await it.followup.send(i18n.say(it.client, it.guild, "I could not create the Birthday role. Give me Manage Roles or pick a role."))
         await it.followup.send(f"Birthday system: {'on' if b['enabled'] else 'off'}, role {('<@&' + str(b['role']) + '>') if b['role'] else 'none'}, timezone {b['timezone']}")
 
 

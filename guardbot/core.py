@@ -10,16 +10,21 @@ import re
 import sqlite3
 import sys
 import threading
+import time
+import traceback
 from pathlib import Path
 
 import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ext.commands.hybrid import HybridAppCommand
 
-from . import __version__
+from . import __version__, i18n, migrations
+from .dashboard import Dashboard
+from .health import StatusServer, write_heartbeat
 from .defaults import COMMAND_MODULES, DEFAULTS, FALLBACK_PERMS
-from .utils import CREDIT
+from .utils import CREDIT, emb
 
 log = logging.getLogger(__name__)
 
@@ -41,12 +46,37 @@ EXTENSIONS = (
     "backup",
     "verify",
     "privacy",
+    "tools",
+    "info",
+    "tags",
+    "utility",
+    "modmail",
+    "appeals",
+    "channels",
+    "modwatch",
+    "permaudit",
+    "reports",
+    "invites",
+    "debug",
+    "setup",
+    "economy",
+    "rolemenu",
+    "schedule",
+    "feeds",
+    "activity",
+    "bulk",
+    "antiscam",
+    "probation",
+    "shortcuts",
+    "builder",
+    "updates",
+    "music",
 )
 
 
 def banner():
     """Return the start-up line with version, author and origin."""
-    return f"GuardBot {__version__}  |  {CREDIT}  |  made in Germany"
+    return f"GuardBot {__version__} (beta)  |  {CREDIT}  |  made in Germany"
 
 
 def fill(d, default):
@@ -102,6 +132,7 @@ class Store:
         self.filled = set()
         self._load()
         self._migrate()
+        migrations.run(self)
 
     def _load(self):
         """Read all rows from the database into memory."""
@@ -169,6 +200,17 @@ class Store:
         gid = str(gid)
         self.t_cases.add(gid)
         return self.case_data.setdefault(gid, [])
+
+    def delete_case(self, gid, case_id):
+        """Remove one moderation case from memory and the database. Returns False if it does not exist."""
+        gid = str(gid)
+        cases = self.case_data.get(gid, [])
+        before = len(cases)
+        self.case_data[gid] = [c for c in cases if c["id"] != case_id]
+        self.saved.pop(("k", gid, case_id), None)
+        with self.lock, self.db:
+            self.db.execute("DELETE FROM cases WHERE gid=? AND id=?", (gid, case_id))
+        return len(self.case_data[gid]) < before
 
     def delete_user(self, gid, uid):
         """Delete the record of a user from memory and the database."""
@@ -244,6 +286,62 @@ class Store:
         if any(rows.values()):
             await asyncio.to_thread(self.write, rows)
 
+    def state(self, name):
+        """Read a small piece of runtime state (counters, queues) that should survive a restart. Returns None if there is none."""
+        raw = self.get_meta(f"state:{name}")
+        try:
+            return json.loads(raw) if raw else None
+        except ValueError:
+            log.warning("state %s is damaged and was ignored", name)
+            return None
+
+    def set_state(self, name, value):
+        """Save runtime state. None removes it."""
+        key = f"state:{name}"
+        if value is None:
+            with self.lock, self.db:
+                self.db.execute("DELETE FROM meta WHERE key=?", (key,))
+        else:
+            self.set_meta(key, dumps(value))
+
+    def backup(self, label="auto", keep=0):
+        """Copy the database to data/dbbackups with SQLite's online backup. With keep > 0 only that many automatic backups stay."""
+        self.flush()
+        folder = self.dir / "dbbackups"
+        folder.mkdir(exist_ok=True)
+        dest = folder / f"guardbot-{time.strftime('%Y%m%d-%H%M%S')}-{label}.db"
+        target = sqlite3.connect(dest)
+        try:
+            with self.lock:
+                self.db.backup(target)
+        finally:
+            target.close()
+        if keep > 0:
+            old = sorted(folder.glob("guardbot-*-auto.db"))
+            for f in old[:-keep]:
+                f.unlink()
+        return dest
+
+    def integrity(self):
+        """Run the SQLite integrity check and return its messages."""
+        with self.lock:
+            return [r[0] for r in self.db.execute("PRAGMA integrity_check")]
+
+    def file_size(self):
+        """Return the size of the database file and its write-ahead log in bytes."""
+        total = 0
+        for suffix in ("", "-wal"):
+            f = self.dir / f"guardbot.db{suffix}"
+            total += f.stat().st_size if f.exists() else 0
+        return total
+
+    def vacuum(self):
+        """Save pending changes, then rebuild the database file to free unused space."""
+        self.flush()
+        with self.lock:
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self.db.execute("VACUUM")
+
     def close(self):
         """Save everything and close the database."""
         for t in (self.t_cfg, self.t_users, self.t_cases):
@@ -271,6 +369,8 @@ class Tree(app_commands.CommandTree):
         if problem:
             await interaction.response.send_message(problem, ephemeral=True)
             return False
+        if not isinstance(cmd, HybridAppCommand):
+            interaction.client.count_use(interaction.guild.id, root)
         return True
 
     async def on_error(self, interaction, error):
@@ -278,7 +378,9 @@ class Tree(app_commands.CommandTree):
         if isinstance(error, app_commands.CheckFailure):
             return
         log.error("unhandled error in a slash command", exc_info=error)
-        text = "Something went wrong."
+        where = f"/{interaction.command.qualified_name}" if interaction.command else "interaction"
+        interaction.client.report_error(interaction.guild, where, error)
+        text = i18n.say(interaction.client, interaction.guild, "Something went wrong.")
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(text, ephemeral=True)
@@ -288,8 +390,8 @@ class Tree(app_commands.CommandTree):
             log.warning("response.is_done failed: %s", exc)
 
 
-class Bot(commands.Bot):
-    """The Discord bot with storage, checks and the log queue."""
+class Bot(commands.AutoShardedBot):
+    """The Discord bot with storage, checks and the log queue. Uses shards automatically when Discord asks for them."""
     def __init__(self, settings):
         """Create the bot with the needed intents, storage and command checks."""
         intents = discord.Intents.default()
@@ -299,7 +401,9 @@ class Bot(commands.Bot):
         intents.dm_reactions = False
         intents.dm_typing = False
         intents.guild_typing = False
+        shards = settings.get("shard_count")
         super().__init__(
+            shard_count=int(shards) if shards else None,
             command_prefix=_prefix,
             intents=intents,
             tree_cls=Tree,
@@ -313,6 +417,13 @@ class Bot(commands.Bot):
         self.queue = None
         self.bot_deleted = set()
         self.canonical = {}
+        self.started = time.time()
+        self._error_sent = {}
+        self._state_seen = {}
+        self.closing = False
+        self.restart_requested = False
+        self.status_server = StatusServer(self)
+        self.dashboard = Dashboard(self)
         self.add_check(self._global_check)
 
     def cfg(self, gid):
@@ -345,12 +456,12 @@ class Bot(commands.Bot):
         root = self.canonical.get(root, root)
         g = self.cfg(guild.id)
         if root in g["disabled_commands"]:
-            return "This command is disabled on this server."
+            return i18n.say(self, guild, "This command is disabled on this server.")
         mod = COMMAND_MODULES.get(root)
         if mod and not self.module_on(guild.id, mod):
-            return f"The module '{mod}' is disabled on this server."
+            return i18n.say(self, guild, "The module '{module}' is disabled on this server.", module=mod)
         if not self.can_use(member, root):
-            return "You are not allowed to use this command."
+            return i18n.say(self, guild, "You are not allowed to use this command.")
         return None
 
     async def _global_check(self, ctx):
@@ -361,7 +472,42 @@ class Bot(commands.Bot):
         problem = self.check_command(ctx.author, ctx.guild, root)
         if problem:
             raise commands.CheckFailure(problem)
+        self.count_use(ctx.guild.id, root)
         return True
+
+    def count_use(self, gid, root):
+        """Count one use of a command, if usage statistics are on for the server."""
+        d = self.cfg(gid)["debug"]
+        if d["usage_stats"]:
+            root = self.canonical.get(root, root)
+            d["usage"][root] = d["usage"].get(root, 0) + 1
+
+    def report_error(self, guild, where, error):
+        """Count an unexpected error and post a short report to the error channel of the server, at most one every five seconds."""
+        if guild is None:
+            return
+        d = self.cfg(guild.id)["debug"]
+        d["errors"] += 1
+        channel = d["error_channel"]
+        now = time.monotonic()
+        if not channel or not self.module_on(guild.id, "debug") or self.queue is None or now - self._error_sent.get(guild.id, 0) < 5:
+            return
+        self._error_sent[guild.id] = now
+        original = getattr(error, "original", error)
+        frames = [f for f in traceback.extract_tb(original.__traceback__) if "guardbot" in f.filename][-5:]
+        e = emb("Unexpected error", color=discord.Color.red())
+        e.add_field(name="Where", value=where, inline=False)
+        e.add_field(name="Error", value=f"{type(original).__name__}: {str(original)[:300]}", inline=False)
+        if frames:
+            e.add_field(name="Trace", value="\n".join(f"{Path(f.filename).name}:{f.lineno} {f.name}" for f in frames), inline=False)
+        self.queue.put_nowait((channel, e, []))
+
+    async def on_error(self, event_method, *args, **kwargs):
+        """Log errors of event listeners and report them to the error channel."""
+        error = sys.exc_info()[1]
+        log.error("unhandled error in %s", event_method, exc_info=error)
+        guild = next((g for g in (getattr(a, "guild", None) for a in args) if g), None)
+        self.report_error(guild, event_method, error)
 
     async def get_context(self, message, *, cls=commands.Context):
         """Resolve per-server aliases before the command is looked up."""
@@ -382,13 +528,14 @@ class Bot(commands.Bot):
             return
         if isinstance(error, commands.CommandInvokeError):
             log.error("unhandled error in command %s", ctx.command, exc_info=error)
-            text = "Something went wrong."
+            self.report_error(ctx.guild, f"{ctx.prefix}{ctx.command.qualified_name if ctx.command else '?'}", error)
+            text = i18n.say(self, ctx.guild, "Something went wrong.")
         elif isinstance(error, commands.CheckFailure):
-            text = str(error) or "You are not allowed to use this command."
+            text = str(error) or i18n.say(self, ctx.guild, "You are not allowed to use this command.")
         elif isinstance(error, (commands.UserInputError, commands.BadUnionArgument)):
             text = f"Invalid input: {error}"
         else:
-            text = "Something went wrong."
+            text = i18n.say(self, ctx.guild, "Something went wrong.")
         try:
             await ctx.send(text, ephemeral=True)
         except discord.HTTPException as exc:
@@ -418,13 +565,43 @@ class Bot(commands.Bot):
             await asyncio.sleep(0.5)
 
     async def _autosave(self):
-        """Save changed data every ten seconds."""
+        """Save changed data and the runtime state of the cogs every ten seconds."""
         while True:
             await asyncio.sleep(10)
             try:
                 await self.store.aflush()
+                if not self.closing:
+                    self.save_states()
             except Exception:
                 log.exception("autosave failed")
+
+    def save_states(self):
+        """Ask every cog that has export_state() for its runtime state and save it when it changed."""
+        for name, cog in self.cogs.items():
+            export = getattr(cog, "export_state", None)
+            if export is None:
+                continue
+            state = export()
+            digest = dumps(state)
+            if self._state_seen.get(name) != digest:
+                self._state_seen[name] = digest
+                self.store.set_state(name, state or None)
+
+    async def _housekeeping(self):
+        """Write the heartbeat every 30 seconds and make the automatic database backup when it is due."""
+        directory = Path(self.settings.get("data_dir", "data"))
+        while True:
+            try:
+                write_heartbeat(directory / "heartbeat")
+                hours = float(self.settings.get("db_backup_hours", 24))
+                last = float(self.store.get_meta("last_db_backup") or 0)
+                if hours > 0 and time.time() - last >= hours * 3600:
+                    path = await asyncio.to_thread(self.store.backup, "auto", int(self.settings.get("db_backup_keep", 7)))
+                    self.store.set_meta("last_db_backup", str(int(time.time())))
+                    log.info("database backup written: %s", path.name)
+            except Exception:
+                log.exception("housekeeping failed")
+            await asyncio.sleep(30)
 
     def apply_command_names(self):
         """Rename commands as configured in settings.json."""
@@ -457,10 +634,12 @@ class Bot(commands.Bot):
         """Open the HTTP session, load all cogs and sync slash commands when they changed."""
         self.session = aiohttp.ClientSession()
         self.queue = asyncio.Queue()
-        self._jobs = [asyncio.create_task(self._log_worker()), asyncio.create_task(self._autosave())]
+        self._jobs = [asyncio.create_task(self._log_worker()), asyncio.create_task(self._autosave()), asyncio.create_task(self._housekeeping())]
         for ext in EXTENSIONS:
             await self.load_extension(f"guardbot.cogs.{ext}")
         self.apply_command_names()
+        await self.status_server.start()
+        await self.dashboard.start()
         payload = json.dumps([c.to_dict(self.tree) for c in self.tree.get_commands()], sort_keys=True, default=str)
         digest = hashlib.sha256((payload + str(self.application_id)).encode()).hexdigest()
         if self.settings.get("force_sync") or "--sync" in sys.argv or self.store.get_meta("sync_hash") != digest:
@@ -472,6 +651,10 @@ class Bot(commands.Bot):
 
     async def close(self):
         """Save the data and close the connections."""
+        self.save_states()
+        self.closing = True
+        await self.status_server.stop()
+        await self.dashboard.stop()
         self.store.close()
         if self.session:
             await self.session.close()

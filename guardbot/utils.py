@@ -3,9 +3,12 @@
 import asyncio
 import logging
 import re
+import time
+from collections import deque
 from urllib.parse import urlparse
 
 import discord
+from discord import app_commands
 
 log = logging.getLogger(__name__)
 
@@ -190,3 +193,50 @@ async def bulk(factories, limit=5):
 
     await asyncio.gather(*(run(f) for f in factories))
     return ok, failed
+
+
+async def transcript(channel, header):
+    """Return the whole history of a channel as UTF-8 text bytes, starting with a header line."""
+    lines = [f"{header} | {CREDIT}", ""]
+    async for m in channel.history(limit=None, oldest_first=True):
+        text = m.content + "".join(f"\n[attachment] {a.url}" for a in m.attachments)
+        lines.append(f"[{m.created_at:%Y-%m-%d %H:%M}] {m.author} ({m.author.id}): {text}")
+    return "\n".join(lines).encode("utf-8")
+
+
+class AdminGroup(app_commands.Group):
+    """Sub group for settings. Discord cannot hide single sub commands, so every command in it checks Manage Server itself."""
+
+    async def interaction_check(self, interaction):
+        """Allow only members with Manage Server and tell everyone else why the command did nothing."""
+        if interaction.guild and interaction.user.guild_permissions.manage_guild:
+            return True
+        await interaction.response.send_message("You need the Manage Server permission for this.", ephemeral=True)
+        return False
+
+
+def export_hits(hits, window_of, now=None):
+    """Turn {key tuple: deque of timestamps} into JSON data. Entries older than their window are dropped."""
+    now = now or time.time()
+    out = {}
+    for key, dq in hits.items():
+        fresh = [round(t, 1) for t in dq if now - t <= window_of(key)]
+        if fresh:
+            out["|".join(str(k) for k in key)] = fresh
+    return out
+
+
+def import_hits(raw, window_of, convert, now=None):
+    """Rebuild the counters from JSON data and skip entries that are too old or damaged."""
+    now = now or time.time()
+    hits = {}
+    for text, stamps in (raw or {}).items():
+        try:
+            key = convert(text.split("|"))
+            window = window_of(key)
+        except (ValueError, KeyError, TypeError):
+            continue
+        fresh = [t for t in stamps if isinstance(t, (int, float)) and now - t <= window]
+        if fresh:
+            hits[key] = deque(fresh)
+    return hits

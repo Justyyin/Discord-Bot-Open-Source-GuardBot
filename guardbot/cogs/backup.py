@@ -14,6 +14,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from .. import i18n
 from ..utils import CREDIT, bulk
 
 log = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ class Backup(commands.Cog):
         """Save roles, channels, emojis and webhooks."""
         name = name or discord.utils.utcnow().strftime("%Y-%m-%d_%H-%M")
         if not NAME_RE.fullmatch(name):
-            return await it.response.send_message("Use only letters, numbers, - and _ (max 40).", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use only letters, numbers, - and _ (max 40)."), ephemeral=True)
         await it.response.defer(ephemeral=True)
         d = await self.create(it.guild, name)
         await it.followup.send(f"Backup '{name}' saved: {len(d['roles'])} roles, {len(d['channels'])} channels, {len(d['emojis'])} emojis, {len(d['webhooks'])} webhooks, {len(d['members'])} members with roles.")
@@ -162,14 +163,33 @@ class Backup(commands.Cog):
         p = self.folder(gid) / f"{name}{EXT}"
         return p if NAME_RE.fullmatch(name) and p.exists() else None
 
+    @grp.command(name="info", description="Show what a backup contains")
+    async def b_info(self, it: discord.Interaction, name: str):
+        """Show what a backup contains."""
+        p = self.path(it.guild_id, name)
+        if not p:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Backup not found."), ephemeral=True)
+        data = json.loads(gzip.decompress(p.read_bytes()))
+        meta = data.get("meta", {})
+        channels = data.get("channels", [])
+        kinds = {}
+        for c in channels:
+            kinds[c["type"]] = kinds.get(c["type"], 0) + 1
+        text = (
+            f"Server: {meta.get('guild', '?')}\nCreated: {meta.get('created', '?')}\nFile size: {p.stat().st_size // 1024} KB\n"
+            f"Roles: {len(data.get('roles', []))}\nChannels: {len(channels)} ({', '.join(f'{v} {k}' for k, v in kinds.items())})\n"
+            f"Emojis: {len(data.get('emojis', []))}\nWebhooks: {len(data.get('webhooks', []))}\nMembers with roles: {len(data.get('members', {}))}"
+        )
+        await it.response.send_message(text, ephemeral=True)
+
     @grp.command(name="download", description="Download a backup file")
     async def b_download(self, it: discord.Interaction, name: str):
         """Download a backup file."""
         p = self.path(it.guild_id, name)
         if not p:
-            return await it.response.send_message("Backup not found.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Backup not found."), ephemeral=True)
         if p.stat().st_size > 24 * 1024 * 1024:
-            return await it.response.send_message("The file is too large for Discord. Copy it from the data/backups folder.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "The file is too large for Discord. Copy it from the data/backups folder."), ephemeral=True)
         await it.response.send_message(file=discord.File(io.BytesIO(p.read_bytes()), filename=p.name), ephemeral=True)
 
     @grp.command(name="delete", description="Delete a backup")
@@ -177,9 +197,9 @@ class Backup(commands.Cog):
         """Delete a backup."""
         p = self.path(it.guild_id, name)
         if not p:
-            return await it.response.send_message("Backup not found.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Backup not found."), ephemeral=True)
         p.unlink()
-        await it.response.send_message("Deleted.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Deleted."), ephemeral=True)
 
     @grp.command(name="restore", description="Recreate missing roles, channels, emojis and webhooks (nothing is deleted)")
     @app_commands.describe(name="Backup name", member_roles="Give members their old roles back")
@@ -187,7 +207,7 @@ class Backup(commands.Cog):
         """Recreate missing roles, channels, emojis and webhooks (nothing is deleted)."""
         p = self.path(it.guild_id, name)
         if not p:
-            return await it.response.send_message("Backup not found.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Backup not found."), ephemeral=True)
         await it.response.defer(ephemeral=True)
         data = json.loads(gzip.decompress(p.read_bytes()))
         guild = it.guild

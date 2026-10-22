@@ -10,7 +10,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..utils import CREDIT, emb
+from .. import i18n
+from ..utils import emb, transcript
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +22,10 @@ async def open_ticket(interaction, type_key):
     """Create a private ticket channel for the user and post the first message."""
     bot, guild, user = interaction.client, interaction.guild, interaction.user
     if not bot.module_on(guild.id, "tickets"):
-        return await interaction.response.send_message("Tickets are disabled.", ephemeral=True)
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Tickets are disabled."), ephemeral=True)
     t = bot.cfg(guild.id)["tickets"]
     if type_key not in t["types"]:
-        return await interaction.response.send_message("This ticket type no longer exists.", ephemeral=True)
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This ticket type no longer exists."), ephemeral=True)
     mine = [cid for cid, d in t["open"].items() if d["user"] == user.id]
     if len(mine) >= t["max_open"]:
         return await interaction.response.send_message(f"You already have an open ticket: <#{mine[0]}>", ephemeral=True)
@@ -69,17 +70,13 @@ async def close_ticket(interaction):
     t = bot.cfg(guild.id)["tickets"]
     data = t["open"].get(str(ch.id))
     if not data:
-        return await interaction.response.send_message("This is not a ticket.", ephemeral=True)
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "This is not a ticket."), ephemeral=True)
     member = interaction.user
     support = guild.get_role(t["support_role"]) if t["support_role"] else None
     if not (member.id == data["user"] or member.guild_permissions.manage_channels or (support and support in member.roles)):
-        return await interaction.response.send_message("Only the ticket owner or staff can close it.", ephemeral=True)
-    await interaction.response.send_message("Closing the ticket in 5 seconds.")
-    lines = [f"Transcript of #{ch.name} | closed by {member} | {CREDIT}", ""]
-    async for m in ch.history(limit=None, oldest_first=True):
-        text = m.content + "".join(f"\n[attachment] {a.url}" for a in m.attachments)
-        lines.append(f"[{m.created_at:%Y-%m-%d %H:%M}] {m.author} ({m.author.id}): {text}")
-    raw = "\n".join(lines).encode("utf-8")
+        return await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Only the ticket owner or staff can close it."), ephemeral=True)
+    await interaction.response.send_message(i18n.say(interaction.client, interaction.guild, "Closing the ticket in 5 seconds."))
+    raw = await transcript(ch, f"Transcript of #{ch.name} | closed by {member}")
     dest = guild.get_channel(t["log_channel"]) if t["log_channel"] else None
     e = emb("Ticket closed", color=discord.Color.orange())
     e.add_field(name="Ticket", value=ch.name)
@@ -166,26 +163,26 @@ class Tickets(commands.Cog):
             t["log_channel"] = log_channel.id
         if max_open:
             t["max_open"] = max_open
-        await it.response.send_message("Saved. Post a panel with /ticket panel.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Saved. Post a panel with /ticket panel."), ephemeral=True)
 
     @grp.command(name="panel", description="Post the ticket panel with one button per type")
     async def t_panel(self, it: discord.Interaction, channel: discord.TextChannel, title: str = "Support", description: str = "Press a button to open a ticket."):
         """Post the ticket panel with one button per type."""
         types = self.bot.cfg(it.guild_id)["tickets"]["types"]
         if not types:
-            return await it.response.send_message("Add a ticket type first.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Add a ticket type first."), ephemeral=True)
         view = discord.ui.View(timeout=None)
         for key, info in list(types.items())[:25]:
             view.add_item(TicketOpen(key, info["label"]))
         lines = "\n".join(f"{i['label']}: {i['desc']}" for i in types.values())
         await channel.send(embed=emb(title, description.replace("\\n", "\n") + "\n\n" + lines), view=view)
-        await it.response.send_message("Panel posted.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Panel posted."), ephemeral=True)
 
     @grp.command(name="addtype", description="Add or change a ticket type")
     async def t_addtype(self, it: discord.Interaction, key: str, label: str, description: str = ""):
         """Add or change a ticket type."""
         if not re.fullmatch(r"[\w-]{1,20}", key):
-            return await it.response.send_message("Use only letters, numbers, - and _ (max 20).", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use only letters, numbers, - and _ (max 20)."), ephemeral=True)
         self.bot.cfg(it.guild_id)["tickets"]["types"][key.lower()] = {"label": label[:80], "desc": description}
         await it.response.send_message(f"Type '{key.lower()}' saved. Post the panel again to show it.", ephemeral=True)
 
@@ -193,14 +190,14 @@ class Tickets(commands.Cog):
     async def t_removetype(self, it: discord.Interaction, key: str):
         """Remove a ticket type."""
         if self.bot.cfg(it.guild_id)["tickets"]["types"].pop(key.lower(), None) is None:
-            return await it.response.send_message("No such type.", ephemeral=True)
-        await it.response.send_message("Removed.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "No such type."), ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Removed."), ephemeral=True)
 
     @grp.command(name="add", description="Add a member to this ticket")
     async def t_add(self, it: discord.Interaction, member: discord.Member):
         """Add a member to this ticket."""
         if str(it.channel_id) not in self.bot.cfg(it.guild_id)["tickets"]["open"]:
-            return await it.response.send_message("Use this inside a ticket.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use this inside a ticket."), ephemeral=True)
         await it.channel.set_permissions(member, overwrite=discord.PermissionOverwrite(**PERMS))
         await it.response.send_message(f"{member.mention} added.")
 
@@ -208,9 +205,58 @@ class Tickets(commands.Cog):
     async def t_remove(self, it: discord.Interaction, member: discord.Member):
         """Remove a member from this ticket."""
         if str(it.channel_id) not in self.bot.cfg(it.guild_id)["tickets"]["open"]:
-            return await it.response.send_message("Use this inside a ticket.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use this inside a ticket."), ephemeral=True)
         await it.channel.set_permissions(member, overwrite=None)
         await it.response.send_message(f"{member.mention} removed.")
+
+    def ticket_here(self, it):
+        """Return the stored ticket data of the channel of an interaction, or None."""
+        return self.bot.cfg(it.guild_id)["tickets"]["open"].get(str(it.channel_id))
+
+    def is_staff(self, it):
+        """True if the user may handle tickets (support role or Manage Channels)."""
+        t = self.bot.cfg(it.guild_id)["tickets"]
+        support = it.guild.get_role(t["support_role"]) if t["support_role"] else None
+        return it.user.guild_permissions.manage_channels or (support is not None and support in it.user.roles)
+
+    @grp.command(name="claim", description="Take over this ticket")
+    async def t_claim(self, it: discord.Interaction):
+        """Take over this ticket."""
+        data = self.ticket_here(it)
+        if not data:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use this inside a ticket."), ephemeral=True)
+        if not self.is_staff(it):
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Only the support team can claim tickets."), ephemeral=True)
+        if data.get("claimed") and data["claimed"] != it.user.id:
+            return await it.response.send_message(f"This ticket is already claimed by <@{data['claimed']}>.", ephemeral=True)
+        data["claimed"] = it.user.id
+        await it.response.send_message(embed=emb("Ticket claimed", f"{it.user.mention} takes care of this ticket."))
+
+    @grp.command(name="rename", description="Rename this ticket channel")
+    @app_commands.describe(name="New name")
+    async def t_rename(self, it: discord.Interaction, name: str):
+        """Rename this ticket channel."""
+        if not self.ticket_here(it):
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use this inside a ticket."), ephemeral=True)
+        if not self.is_staff(it):
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Only the support team can rename tickets."), ephemeral=True)
+        clean = re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-")[:90]
+        if not clean:
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Use letters and numbers in the name."), ephemeral=True)
+        try:
+            await it.channel.edit(name=clean, reason=f"Renamed by {it.user}")
+        except discord.HTTPException as exc:
+            log.warning("renaming ticket %s failed: %s", it.channel_id, exc)
+            return await it.response.send_message(f"I could not rename the channel: {exc}", ephemeral=True)
+        await it.response.send_message(f"Renamed to {clean}.")
+
+    @grp.command(name="list", description="List all open tickets")
+    async def t_list(self, it: discord.Interaction):
+        """List all open tickets."""
+        lines = []
+        for cid, d in self.bot.cfg(it.guild_id)["tickets"]["open"].items():
+            lines.append(f"<#{cid}> {d['type']} by <@{d['user']}>" + (f", claimed by <@{d['claimed']}>" if d.get("claimed") else ""))
+        await it.response.send_message("\n".join(lines[:40]) or "No open tickets.", ephemeral=True)
 
     @grp.command(name="close", description="Close this ticket")
     async def t_close(self, it: discord.Interaction):

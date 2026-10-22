@@ -10,8 +10,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from .. import i18n
 from ..defaults import DANGEROUS, DEFAULTS
-from ..utils import audit_executor, emb, trim
+from ..utils import audit_executor, emb, export_hits, import_hits, trim
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,18 @@ class AntiNuke(commands.Cog):
         self.hits = {}
         self.warned = {}
         self.seen = deque(maxlen=500)
+
+    def window(self, key):
+        """The time span in seconds that counts for a counter."""
+        return self.bot.cfg(key[0])["antinuke"]["limits"].get(key[2], [0, 0])[1]
+
+    def export_state(self):
+        """Counters that should survive a restart."""
+        return export_hits(self.hits, self.window)
+
+    async def cog_load(self):
+        """Load the counters of the last run."""
+        self.hits = import_hits(self.bot.store.state("AntiNuke"), self.window, lambda p: (int(p[0]), int(p[1]), p[2]))
 
     def on(self, guild):
         """Return True when the anti-nuke module is turned on for this server."""
@@ -286,7 +299,7 @@ class AntiNuke(commands.Cog):
         roles = [it.guild.get_role(i) for i in rec.pop("stripped_roles", [])]
         roles = [r for r in roles if r and r.is_assignable()]
         if not roles:
-            return await it.response.send_message("Nothing to restore.", ephemeral=True)
+            return await it.response.send_message(i18n.say(it.client, it.guild, "Nothing to restore."), ephemeral=True)
         await member.add_roles(*roles, reason=f"Anti-nuke restore by {it.user}")
         await it.response.send_message(f"Restored {len(roles)} roles.", ephemeral=True)
 

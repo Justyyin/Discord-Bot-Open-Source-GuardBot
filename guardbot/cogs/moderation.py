@@ -7,15 +7,18 @@ from typing import Literal, Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
+from .. import i18n
 from ..utils import emb, fmt_duration, parse_duration, trim
+from .modwatch import CASE_KEYS
 
 log = logging.getLogger(__name__)
 
-KINDS = ("warn", "mute", "unmute", "kick", "ban", "unban", "jail", "unjail")
+KINDS = ("warn", "note", "mute", "unmute", "kick", "ban", "unban", "jail", "unjail")
 COLORS = {
     "warn": discord.Color.gold(),
+    "note": discord.Color.light_grey(),
     "mute": discord.Color.orange(),
     "unmute": discord.Color.green(),
     "kick": discord.Color.dark_orange(),
@@ -24,6 +27,39 @@ COLORS = {
     "jail": discord.Color.dark_red(),
     "unjail": discord.Color.green(),
 }
+
+
+def filter_cases(cases, uid=None, kind=None, search=None, text=None, mod=None, days=None, now=None):
+    """Select cases by user, type, part of the user name, word in the reason, moderator and age."""
+    cutoff = (now if now is not None else time.time()) - days * 86400 if days else 0
+    return [
+        c for c in cases
+        if (not uid or c["user"] == uid) and (not kind or c["type"] == kind) and (not search or search.lower() in c["user_name"].lower())
+        and (not text or text.lower() in c["reason"].lower()) and (not mod or c["mod"] == mod) and c["ts"] >= cutoff
+    ]
+
+
+def build_timeline(uid, cases, appeals, rec, joined=None, created=None, probation=None):
+    """Merge everything stored about a user into one list of (timestamp, text), oldest first. Message content is never stored, so it is not part of this."""
+    events = []
+    if created:
+        events.append((int(created), "Account created"))
+    if joined:
+        how = ""
+        if rec.get("invited_by") or rec.get("invite"):
+            how = f" with invite {rec.get('invite') or 'unknown'}" + (f" from <@{rec['invited_by']}>" if rec.get("invited_by") else "")
+        events.append((int(joined), "Joined the server" + how))
+    if probation:
+        events.append((int(probation["ts"]), f"Probation started, {probation.get('ok', 0)} normal messages so far"))
+    if rec.get("left_at"):
+        events.append((int(rec["left_at"]), "Left the server"))
+    for c in cases:
+        if c["user"] == uid:
+            events.append((c["ts"], f"Case #{c['id']} {c['type']}" + ("" if c["active"] else " (removed)") + f" by <@{c['mod']}>: {trim(c['reason'], 90)}" + (f" (linked to {', '.join('#' + str(i) for i in c['extra']['links'])})" if c["extra"].get("links") else "")))
+    for aid, a in appeals.items():
+        if a.get("user") == uid:
+            events.append((a["ts"], f"Appeal #{aid} {a['status']}: {trim(a['text'], 90)}"))
+    return sorted(events, key=lambda e: e[0])
 
 
 class Moderation(commands.Cog):
@@ -61,6 +97,9 @@ class Moderation(commands.Cog):
         e.add_field(name="Moderator", value=f"{mod.mention} ({mod.id})")
         e.add_field(name="Reason", value=trim(case["reason"]), inline=False)
         self.bot.log(guild, "moderation", e)
+        watch = self.bot.get_cog("ModWatch")
+        if watch and kind in CASE_KEYS:
+            await watch.count(guild, mod, CASE_KEYS[kind])
         return case
 
     def target_error(self, guild, mod, target):
@@ -143,7 +182,7 @@ class Moderation(commands.Cog):
             if c["id"] == case_id and c["type"] == "warn":
                 c["active"] = False
                 return await ctx.send(f"Warning #{case_id} removed.")
-        await ctx.send("No warning with that case number.", ephemeral=True)
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "No warning with that case number."), ephemeral=True)
 
     @commands.hybrid_command(name="clearwarns", description="Remove all active warnings of a user")
     async def clearwarns_cmd(self, ctx, user: discord.User):
@@ -197,7 +236,7 @@ class Moderation(commands.Cog):
         if err:
             return await ctx.send(err, ephemeral=True)
         if member:
-            await self.notify(ctx.guild, member, f"you were banned. Reason: {reason or 'No reason given'}")
+            await self.notify(ctx.guild, member, f"you were banned. Reason: {reason or 'No reason given'}.{self.appeal_hint(ctx.guild)}")
         await ctx.guild.ban(user, reason=reason)
         case = await self.add_case(ctx.guild, "ban", user, ctx.author, reason)
         await ctx.send(f"{user} was banned (case #{case['id']}).")
@@ -208,7 +247,7 @@ class Moderation(commands.Cog):
         try:
             await ctx.guild.unban(user, reason=reason)
         except discord.NotFound:
-            return await ctx.send("That user is not banned.", ephemeral=True)
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "That user is not banned."), ephemeral=True)
         case = await self.add_case(ctx.guild, "unban", user, ctx.author, reason)
         await ctx.send(f"{user} was unbanned (case #{case['id']}).")
 
@@ -216,14 +255,14 @@ class Moderation(commands.Cog):
         """Format a case as one line for lists."""
         return f"#{c['id']} {c['type']} | <@{c['user']}> ({c['user']}) | {trim(c['reason'], 70)} | <t:{c['ts']}:R>" + ("" if c["active"] else " (removed)")
 
-    @commands.hybrid_command(name="cases", description="Moderation history, filter by user, type or name")
-    @app_commands.describe(user="Member or user ID", kind="Case type", search="Part of a user name", page="Page")
-    async def cases_cmd(self, ctx, user: Optional[discord.User] = None, kind: Optional[Literal[KINDS]] = None, search: Optional[str] = None, page: int = 1):
-        """Moderation history, filter by user, type or name."""
-        items = [
-            c for c in self.bot.store.cases(ctx.guild.id)
-            if (not user or c["user"] == user.id) and (not kind or c["type"] == kind) and (not search or search.lower() in c["user_name"].lower())
-        ][::-1]
+    @commands.hybrid_command(name="cases", description="Search the moderation history")
+    @app_commands.describe(user="Member or user ID", kind="Case type", search="Part of a user name", text="Word in the reason", moderator="Moderator who handled the case", days="Only the last N days", page="Page")
+    async def cases_cmd(
+        self, ctx, user: Optional[discord.User] = None, kind: Optional[Literal[KINDS]] = None, search: Optional[str] = None, text: Optional[str] = None,
+        moderator: Optional[discord.User] = None, days: Optional[commands.Range[int, 1, 3650]] = None, page: int = 1,
+    ):
+        """Search the moderation history by user, type, name, reason, moderator and age."""
+        items = filter_cases(self.bot.store.cases(ctx.guild.id), user.id if user else None, kind, search, text, moderator.id if moderator else None, days)[::-1]
         pages = max(1, -(-len(items) // 10))
         page = min(max(page, 1), pages)
         chunk = items[(page - 1) * 10: page * 10]
@@ -237,18 +276,175 @@ class Moderation(commands.Cog):
         text = "\n".join(self.case_line(c) for c in items[:15]) or "No warnings."
         await ctx.send(embed=emb(f"Warnings of {user}", text, footer=f"{self.active_warns(ctx.guild.id, user.id)} active"), ephemeral=True)
 
-    @commands.hybrid_command(name="case", description="Show one case")
+    def find_case(self, gid, case_id):
+        """Return the stored case with this number, or None."""
+        return next((c for c in self.bot.store.cases(gid) if c["id"] == case_id), None)
+
+    @commands.hybrid_group(name="case", fallback="view", description="Show one case")
+    @app_commands.describe(case_id="Case number")
     async def case_cmd(self, ctx, case_id: int):
         """Show one case."""
-        for c in self.bot.store.cases(ctx.guild.id):
-            if c["id"] == case_id:
-                e = emb(f"Case #{c['id']} | {c['type']}", color=COLORS.get(c["type"]))
-                e.add_field(name="User", value=f"<@{c['user']}> ({c['user']})\n{c['user_name']}")
-                e.add_field(name="Moderator", value=f"<@{c['mod']}> ({c['mod']})")
-                e.add_field(name="Date", value=f"<t:{c['ts']}:F>")
-                e.add_field(name="Reason", value=trim(c["reason"]), inline=False)
-                return await ctx.send(embed=e, ephemeral=True)
-        await ctx.send("Case not found.", ephemeral=True)
+        c = self.find_case(ctx.guild.id, case_id)
+        if not c:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Case not found."), ephemeral=True)
+        e = emb(f"Case #{c['id']} | {c['type']}", color=COLORS.get(c["type"]))
+        e.add_field(name="User", value=f"<@{c['user']}> ({c['user']})\n{c['user_name']}")
+        e.add_field(name="Moderator", value=f"<@{c['mod']}> ({c['mod']})")
+        e.add_field(name="Date", value=f"<t:{c['ts']}:F>")
+        e.add_field(name="Reason", value=trim(c["reason"]), inline=False)
+        links = [self.find_case(ctx.guild.id, i) for i in c["extra"].get("links", [])]
+        if any(links):
+            e.add_field(name="Linked cases", value=trim("\n".join(self.case_line(x) for x in links if x), 1000), inline=False)
+        notes = [x for x in self.bot.store.cases(ctx.guild.id) if x["type"] == "note" and x["user"] == c["user"] and x["id"] != c["id"] and x["id"] not in c["extra"].get("links", [])][-3:]
+        if notes:
+            e.add_field(name="Latest notes on this user", value=trim("\n".join(self.case_line(x) for x in notes), 1000), inline=False)
+        await ctx.send(embed=e, ephemeral=True)
+
+    @case_cmd.command(name="timeline", description="Everything stored about a user in time order")
+    @app_commands.describe(user="Member or user ID", page="Page")
+    async def case_timeline(self, ctx, user: discord.User, page: int = 1):
+        """Everything stored about a user in time order: account, join and invite, probation, cases, appeals."""
+        gid = ctx.guild.id
+        member = ctx.guild.get_member(user.id)
+        rec = self.bot.store.user_data.get(str(gid), {}).get(str(user.id), {})
+        main = self.bot.cfg(gid)["appeals"]
+        appeals = main["items"]
+        events = build_timeline(user.id, self.bot.store.cases(gid), appeals, rec, member.joined_at.timestamp() if member and member.joined_at else None, discord.utils.snowflake_time(user.id).timestamp(), self.bot.cfg(gid)["probation"]["members"].get(str(user.id)))
+        pages = max(1, -(-len(events) // 12))
+        page = min(max(page, 1), pages)
+        chunk = events[(page - 1) * 12: page * 12]
+        e = emb(f"Timeline of {user}", "\n".join(f"<t:{ts}:f> {text}" for ts, text in chunk), footer=f"Page {page}/{pages}. The bot does not store messages, so they are not listed.")
+        await ctx.send(embed=e, ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
+
+    @case_cmd.command(name="link", description="Link two cases, for example a note to a ban")
+    @app_commands.describe(case_id="Case number", other="Case to link to it")
+    async def case_link(self, ctx, case_id: int, other: int):
+        """Link two cases to each other so both show the connection."""
+        a, b = self.find_case(ctx.guild.id, case_id), self.find_case(ctx.guild.id, other)
+        if not a or not b or a is b:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Both case numbers must exist and differ."), ephemeral=True)
+        self.bot.store.cases(ctx.guild.id)
+        for x, y in ((a, b), (b, a)):
+            links = x["extra"].setdefault("links", [])
+            if y["id"] not in links:
+                links.append(y["id"])
+        await ctx.send(f"Cases #{case_id} and #{other} are linked.", ephemeral=True)
+
+    @case_cmd.command(name="unlink", description="Remove the link between two cases")
+    @app_commands.describe(case_id="Case number", other="Linked case")
+    async def case_unlink(self, ctx, case_id: int, other: int):
+        """Remove the link between two cases."""
+        a, b = self.find_case(ctx.guild.id, case_id), self.find_case(ctx.guild.id, other)
+        if not a or not b:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Case not found."), ephemeral=True)
+        self.bot.store.cases(ctx.guild.id)
+        for x, y in ((a, b), (b, a)):
+            if y["id"] in x["extra"].get("links", []):
+                x["extra"]["links"].remove(y["id"])
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Link removed."), ephemeral=True)
+
+    @case_cmd.command(name="edit", description="Change the reason of a case")
+    @app_commands.describe(case_id="Case number", reason="New reason")
+    async def case_edit(self, ctx, case_id: int, *, reason: str):
+        """Change the reason of a case."""
+        c = self.find_case(ctx.guild.id, case_id)
+        if not c:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Case not found."), ephemeral=True)
+        old, c["reason"] = c["reason"], reason[:1000]
+        self.bot.store.cases(ctx.guild.id)
+        e = emb(f"Case #{case_id} edited", color=discord.Color.light_grey(), user=ctx.author)
+        e.add_field(name="Before", value=trim(old), inline=False)
+        e.add_field(name="After", value=trim(c["reason"]), inline=False)
+        self.bot.log(ctx.guild, "moderation", e)
+        await ctx.send(f"Case #{case_id} updated.", ephemeral=True)
+
+    @case_cmd.command(name="delete", description="Delete a case completely")
+    @app_commands.describe(case_id="Case number")
+    async def case_delete(self, ctx, case_id: int):
+        """Delete a case completely."""
+        c = self.find_case(ctx.guild.id, case_id)
+        if not c:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Case not found."), ephemeral=True)
+        self.bot.store.delete_case(ctx.guild.id, case_id)
+        e = emb(f"Case #{case_id} deleted", color=discord.Color.light_grey(), user=ctx.author)
+        e.add_field(name="Was", value=f"{c['type']} of <@{c['user']}>: {trim(c['reason'], 300)}", inline=False)
+        self.bot.log(ctx.guild, "moderation", e)
+        await ctx.send(f"Case #{case_id} deleted.", ephemeral=True)
+
+    @commands.hybrid_command(name="note", description="Add a private moderator note about a user")
+    @app_commands.describe(user="User", text="Note")
+    async def note_cmd(self, ctx, user: discord.User, *, text: str):
+        """Add a private moderator note about a user."""
+        case = await self.add_case(ctx.guild, "note", user, ctx.author, text[:1000])
+        await ctx.send(f"Note saved as case #{case['id']}. The user is not told.", ephemeral=True)
+
+    def appeal_hint(self, guild):
+        """Return a sentence with the appeal server invite if one is configured."""
+        invite = self.bot.cfg(guild.id)["appeals"]["invite"]
+        return f" You can appeal here: {invite}" if invite else ""
+
+    @commands.hybrid_command(name="tempban", description="Ban a user for a limited time")
+    @app_commands.describe(user="User", duration="For example 7d, 12h, 2w", reason="Reason")
+    async def tempban_cmd(self, ctx, user: discord.User, duration: str, *, reason: Optional[str] = None):
+        """Ban a user for a limited time."""
+        secs = parse_duration(duration)
+        if not secs:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Invalid duration. Examples: 12h, 7d, 2w"), ephemeral=True)
+        member = ctx.guild.get_member(user.id)
+        err = self.target_error(ctx.guild, ctx.author, member or user)
+        if err:
+            return await ctx.send(err, ephemeral=True)
+        if member:
+            await self.notify(ctx.guild, member, f"you were banned for {fmt_duration(secs)}. Reason: {reason or 'No reason given'}.{self.appeal_hint(ctx.guild)}")
+        try:
+            await ctx.guild.ban(user, reason=f"Tempban {fmt_duration(secs)}: {reason or 'no reason'}")
+        except discord.HTTPException as exc:
+            log.warning("tempban of %s failed: %s", user, exc)
+            return await ctx.send(f"Discord refused the ban: {exc}", ephemeral=True)
+        until = int(time.time()) + secs
+        self.bot.cfg(ctx.guild.id)["mod"]["tempbans"][str(user.id)] = until
+        case = await self.add_case(ctx.guild, "ban", user, ctx.author, reason, {"seconds": secs, "until": until})
+        await ctx.send(f"{user} was banned for {fmt_duration(secs)} (case #{case['id']}).")
+
+    @tasks.loop(seconds=60)
+    async def tempban_loop(self):
+        """Unban users whose temporary ban is over."""
+        now = int(time.time())
+        try:
+            for guild in self.bot.guilds:
+                bans = self.bot.cfg(guild.id)["mod"]["tempbans"]
+                for uid, until in list(bans.items()):
+                    if until > now:
+                        continue
+                    try:
+                        await guild.unban(discord.Object(int(uid)), reason="Temporary ban is over")
+                    except discord.NotFound:
+                        log.info("user %s was already unbanned in %s", uid, guild.id)
+                    except discord.HTTPException as exc:
+                        log.warning("could not unban %s in %s: %s", uid, guild.id, exc)
+                        continue
+                    bans.pop(uid, None)
+                    try:
+                        user = await self.bot.fetch_user(int(uid))
+                    except discord.NotFound:
+                        log.info("user %s no longer exists, no unban case written", uid)
+                        continue
+                    await self.add_case(guild, "unban", user, guild.me, "Temporary ban is over")
+        except Exception:
+            log.exception("tempban loop failed")
+
+    @tempban_loop.before_loop
+    async def _wait(self):
+        """Wait until the bot is connected before the loop starts."""
+        await self.bot.wait_until_ready()
+
+    async def cog_load(self):
+        """Start the tempban loop."""
+        self.tempban_loop.start()
+
+    async def cog_unload(self):
+        """Stop the tempban loop."""
+        self.tempban_loop.cancel()
 
     @esc.command(name="list", description="Show the escalation steps")
     async def esc_list(self, it: discord.Interaction):

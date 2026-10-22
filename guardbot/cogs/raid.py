@@ -10,6 +10,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from .. import i18n, swarm
 from ..utils import bulk, emb, trim
 
 log = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ class Raid(commands.Cog):
         self.bot = bot
         self.joins = {}
         self.until = {}
+        self.recent = {}
+        self.flagged = {}
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -58,6 +61,11 @@ class Raid(commands.Cog):
                     notes.append("server locked down")
         elif active:
             targets = [member]
+        for note, group in self.swarm_check(member, r, now):
+            notes.append(note)
+            for m in group:
+                if m not in targets:
+                    targets.append(m)
         age = (discord.utils.utcnow() - member.created_at).days
         if r["min_age"] and age < r["min_age"]:
             if member not in targets:
@@ -81,6 +89,33 @@ class Raid(commands.Cog):
             lines = [f"{m} ({m.id}), account {(discord.utils.utcnow() - m.created_at).days}d old" for m in targets[:15]]
             e.add_field(name="Members", value=trim("\n".join(lines)), inline=False)
             self.bot.log(member.guild, "security", e)
+
+    def swarm_check(self, member, r, now):
+        """Look for new accounts with the same name pattern, the same picture or a similar creation time. Returns (note, members) pairs for groups that were not reported yet."""
+        if not r.get("swarm"):
+            return []
+        gid, window = member.guild.id, r["swarm_minutes"] * 60
+        dq = self.recent.setdefault(gid, deque())
+        dq.append((now, member))
+        while dq and now - dq[0][0] > window:
+            dq.popleft()
+        by_id = {m.id: m for _, m in dq}
+        entries = [(m.id, m.name, m.avatar.key if m.avatar else None, m.created_at.timestamp()) for m in by_id.values()]
+        seen = self.flagged.setdefault(gid, {})
+        for uid in [u for u, t in seen.items() if now - t > window]:
+            del seen[uid]
+        out = []
+        for kind, key, ids in swarm.find_groups(entries, r["swarm_min"]):
+            if member.id not in ids:
+                continue
+            fresh = [i for i in ids if i not in seen]
+            if not fresh:
+                continue
+            for i in ids:
+                seen[i] = now
+            label = {"name": f"the name pattern '{key}'", "avatar": "the same profile picture", "created": "accounts created within minutes of each other"}[kind]
+            out.append((f"{len(ids)} new members share {label}", [by_id[i] for i in ids]))
+        return out
 
     async def lock(self, guild, reason, mode=None):
         """Lock the server in channel mode or role mode. Returns (changed, failed)."""
@@ -177,7 +212,7 @@ class Raid(commands.Cog):
     async def lockdown_cmd(self, ctx, mode: Optional[Literal["channels", "role"]] = None, *, reason: Optional[str] = None):
         """Lock the whole server."""
         if self.bot.cfg(ctx.guild.id)["lockdown"]["active"]:
-            return await ctx.send("The server is already locked down.", ephemeral=True)
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "The server is already locked down."), ephemeral=True)
         await ctx.defer()
         n, failed = await self.lock(ctx.guild, reason or f"Lockdown by {ctx.author}", mode)
         note = f" {failed} failed, check my permissions." if failed else ""
@@ -187,7 +222,7 @@ class Raid(commands.Cog):
     async def unlock_cmd(self, ctx):
         """End the lockdown."""
         if not self.bot.cfg(ctx.guild.id)["lockdown"]["active"]:
-            return await ctx.send("There is no active lockdown.", ephemeral=True)
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "There is no active lockdown."), ephemeral=True)
         await ctx.defer()
         n, failed = await self.unlock(ctx.guild, f"Unlocked by {ctx.author}")
         note = f" {failed} failed, check my permissions." if failed else ""
@@ -220,6 +255,32 @@ class Raid(commands.Cog):
         lst = self.bot.cfg(it.guild_id)["lockdown"]["exempt"]
         lst.remove(channel.id) if channel.id in lst else lst.append(channel.id)
         await it.response.send_message(f"{channel.mention} {'is exempt' if channel.id in lst else 'is no longer exempt'}.", ephemeral=True)
+
+    @grp.command(name="swarm", description="Detect groups of new accounts with the same name, picture or creation time")
+    @app_commands.describe(enabled="On or off", minimum="How many matching accounts make a group", minutes="Look at joins of the last N minutes")
+    async def swarm_cmd(self, it: discord.Interaction, enabled: Optional[bool] = None, minimum: Optional[app_commands.Range[int, 3, 30]] = None, minutes: Optional[app_commands.Range[int, 1, 120]] = None):
+        """Configure the swarm detection that is part of the raid protection."""
+        r = self.bot.cfg(it.guild_id)["raid"]
+        for key, value in (("swarm", enabled), ("swarm_min", minimum), ("swarm_minutes", minutes)):
+            if value is not None:
+                r[key] = value
+        note = "" if r["enabled"] else " Raid protection itself is off, switch it on with /raid setup."
+        await it.response.send_message(f"Swarm detection: {'on' if r['swarm'] else 'off'}, {r['swarm_min']} matching accounts within {r['swarm_minutes']} minutes.{note}", ephemeral=True)
+
+    @grp.command(name="status", description="Show the raid protection and lockdown state")
+    async def raid_status(self, it: discord.Interaction):
+        """Show the raid protection and lockdown state."""
+        g = self.bot.cfg(it.guild_id)
+        r, lk = g["raid"], g["lockdown"]
+        text = (
+            f"Raid protection: {'on' if r['enabled'] else 'off'}, {r['joins']} joins in {r['seconds']}s, action {r['action']}, "
+            f"min account age {r['min_age']} days, automatic lockdown {r['lockdown']}\n"
+            f"Lockdown: {('active in ' + str(lk['active_mode']) + ' mode') if lk['active'] else 'not active'}, default mode {lk['mode']}\n"
+            f"Roles locked in role mode: {' '.join('<@&' + str(i) + '>' for i in lk['lock_roles']) or 'only @everyone'}\n"
+            f"Bypass roles: {' '.join('<@&' + str(i) + '>' for i in lk['bypass_roles']) or 'none'}\n"
+            f"Exempt channels: {' '.join('<#' + str(i) + '>' for i in lk['exempt']) or 'none'}"
+        )
+        await it.response.send_message(text, ephemeral=True)
 
     @grp.command(name="setup", description="Configure raid protection")
     @app_commands.describe(joins="Joins that count as a raid", seconds="Within this many seconds", action="Response", min_age_days="Minimum account age (0 = off)", lockdown="Lock the server automatically on a raid")

@@ -8,32 +8,33 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from .. import i18n
 from ..utils import bulk, emb, fmt_duration, parse_duration
 
 log = logging.getLogger(__name__)
 
 STEPS = (
-    ("1\ufe0f\u20e3 Reset Your Password", "Change your Discord password immediately."),
-    ("2\ufe0f\u20e3 Enable 2FA", "Make sure Two-Factor Authentication is enabled on your account."),
-    ("3\ufe0f\u20e3 Check Suspicious Devices", "Go through your logged-in devices and remove anything you do not recognize."),
+    ("1. Reset Your Password", "Change your Discord password immediately."),
+    ("2. Enable 2FA", "Make sure Two-Factor Authentication is enabled on your account."),
+    ("3. Check Suspicious Devices", "Go through your logged-in devices and remove anything you do not recognize."),
     (
-        "4\ufe0f\u20e3 Remove Suspicious Authorized Apps",
-        "Go to User Settings \u2192 Authorized Apps and remove anything suspicious.\n\n"
+        "4. Remove Suspicious Authorized Apps",
+        "Go to User Settings > Authorized Apps and remove anything suspicious.\n\n"
         "Especially remove apps that say things like \"join servers for you\" or anything you do not remember authorizing.",
     ),
     (
-        "5\ufe0f\u20e3 Clear Browser Data",
+        "5. Clear Browser Data",
         "Sign out of Discord in your browsers, then clear browser cookies, cached files, and saved site data. "
         "This removes old login sessions that may still be compromised.",
     ),
-    ("6\ufe0f\u20e3 Ping Staff", "After doing all of this, ping a member who has the {staff} role in this channel."),
+    ("6. Ping Staff", "After doing all of this, ping a member who has the {staff} role in this channel."),
 )
 
 
 def notice_embed(staff_role, custom=None, until=None):
     """Build the account security notice that is posted in the gulag channel."""
     staff = f"<@&{staff_role}>" if staff_role else "@Moderator"
-    e = discord.Embed(title="\U0001F510 Account Security Required", color=discord.Color.red())
+    e = discord.Embed(title="Account Security Required", color=discord.Color.red())
     if custom:
         e.description = custom.replace("{staff}", staff)
         return e
@@ -197,6 +198,17 @@ class Jail(commands.Cog):
         ok, text = await self.release(member, ctx.author, reason)
         await ctx.send(text, ephemeral=not ok)
 
+    @commands.hybrid_command(name="jailed", description="List members who are in the gulag right now")
+    async def jailed_cmd(self, ctx):
+        """List members who are in the gulag right now."""
+        timed = self.bot.cfg(ctx.guild.id)["jail"]["timed"]
+        lines = []
+        for uid, rec in self.bot.store.users(ctx.guild.id).items():
+            if rec.get("jailed"):
+                until = timed.get(uid)
+                lines.append(f"<@{uid}> ({uid})" + (f", released <t:{until}:R>" if until else ", no time limit"))
+        await ctx.send(embed=emb("In the gulag", "\n".join(lines[:40]) or "Nobody is in the gulag.", discord.Color.dark_red()), ephemeral=True)
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Runs when a member joins."""
@@ -222,7 +234,11 @@ class Jail(commands.Cog):
     async def js_setup(self, it: discord.Interaction, role: Optional[discord.Role] = None, channel: Optional[discord.TextChannel] = None, staff_role: Optional[discord.Role] = None):
         """Create or select the gulag role, channel and staff role."""
         await it.response.defer(ephemeral=True)
-        guild, j = it.guild, self.bot.cfg(it.guild_id)["jail"]
+        await it.followup.send(await self.build(it.guild, role, channel, staff_role))
+
+    async def build(self, guild, role=None, channel=None, staff_role=None):
+        """Create what is missing of the gulag, apply the permissions and return a status text."""
+        j = self.bot.cfg(guild.id)["jail"]
         if role:
             j["role"] = role.id
         if channel:
@@ -237,12 +253,12 @@ class Jail(commands.Cog):
                 ch = await guild.create_text_channel("gulag", reason="Gulag setup")
                 j["channel"] = ch.id
         except discord.HTTPException as exc:
-            return await it.followup.send(f"Setup failed: {exc}")
+            return f"Setup failed: {exc}"
         if not guild.get_role(j["role"]).is_assignable():
-            return await it.followup.send("I cannot assign the gulag role. Move my bot role above it and run the command again.")
+            return "I cannot assign the gulag role. Move my bot role above it and run the command again."
         n, failed = await self.apply_overwrites(guild)
         note = f" {failed} channels failed, check my Manage Channels permission." if failed else ""
-        await it.followup.send(f"Gulag ready: role <@&{j['role']}>, channel <#{j['channel']}>. Permissions applied to {n} channels.{note}")
+        return f"Gulag ready: role <@&{j['role']}>, channel <#{j['channel']}>. Permissions applied to {n} channels.{note}"
 
     @grp.command(name="apply", description="Apply the gulag permissions to all channels again")
     async def js_apply(self, it: discord.Interaction):
@@ -255,7 +271,7 @@ class Jail(commands.Cog):
     async def js_notice(self, it: discord.Interaction, text: Optional[str] = None):
         """Set a custom notice text (empty = default security steps)."""
         self.bot.cfg(it.guild_id)["jail"]["notice"] = text.replace("\\n", "\n") if text else None
-        await it.response.send_message("Notice updated.", ephemeral=True)
+        await it.response.send_message(i18n.say(it.client, it.guild, "Notice updated."), ephemeral=True)
 
     @grp.command(name="preview", description="Preview the notice")
     async def js_preview(self, it: discord.Interaction):

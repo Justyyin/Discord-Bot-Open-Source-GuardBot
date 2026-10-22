@@ -3,5 +3,33 @@
   "data_dir": "data",
   "force_sync": false,
   "purge_on_guild_leave": false,
-  "command_names": {}
+  "command_names": {},
+  "log_level": "INFO",
+  "log_file": true,
+  "music_dir": "music",
+  "music_max_gb": 20,
+  "music_max_mb": 300,
+  "ffmpeg": "ffmpeg",
+  "shard_count": null,
+  "db_backup_hours": 24,
+  "db_backup_keep": 7,
+  "health_port": 0,
+  "health_host": "127.0.0.1",
+  "music_generic": true,
+  "tesseract": null,
+  "dashboard": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 8080,
+    "public_url": "http://localhost:8080",
+    "allow_insecure_http": false,
+    "trust_proxy": false
+  },
+  "update": {
+    "enabled": true,
+    "repo": "",
+    "check_hours": 12,
+    "auto_install": false,
+    "require_checksum": false
+  }
 }

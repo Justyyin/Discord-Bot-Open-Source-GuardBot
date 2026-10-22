@@ -69,12 +69,34 @@ class Logs(commands.Cog):
         self.bot.cfg(it.guild_id)["log_options"]["sent"] = enabled
         await it.response.send_message(f"Logging of sent messages: {'on' if enabled else 'off'}", ephemeral=True)
 
-    @grp.command(name="show", description="Show the log channels")
+    @grp.command(name="show", description="Show the log channels and ignore lists")
     async def log_show(self, it: discord.Interaction):
-        """Show the log channels."""
-        lc = self.bot.cfg(it.guild_id)["log"]
-        lines = [f"{k}: {('<#' + str(v) + '>') if v else 'main'}" for k, v in lc.items()]
+        """Show the log channels and ignore lists."""
+        g = self.bot.cfg(it.guild_id)
+        lines = [f"{k}: {('<#' + str(v) + '>') if v else 'main'}" for k, v in g["log"].items()]
+        lo = g["log_options"]
+        lines.append("ignored channels: " + (" ".join(f"<#{c}>" for c in lo["ignore_channels"]) or "none"))
+        lines.append("ignored users: " + (" ".join(f"<@{u}>" for u in lo["ignore_users"]) or "none"))
         await it.response.send_message("\n".join(lines), ephemeral=True)
+
+    @grp.command(name="ignorechannel", description="Toggle a channel that is not logged (message and voice events)")
+    async def log_ignore_channel(self, it: discord.Interaction, channel: discord.abc.GuildChannel):
+        """Toggle a channel that is not logged."""
+        lst = self.bot.cfg(it.guild_id)["log_options"]["ignore_channels"]
+        lst.remove(channel.id) if channel.id in lst else lst.append(channel.id)
+        await it.response.send_message(f"{channel.mention} is {'ignored' if channel.id in lst else 'logged again'}.", ephemeral=True)
+
+    @grp.command(name="ignoreuser", description="Toggle a user whose messages and voice activity are not logged")
+    async def log_ignore_user(self, it: discord.Interaction, user: discord.User):
+        """Toggle a user who is not logged."""
+        lst = self.bot.cfg(it.guild_id)["log_options"]["ignore_users"]
+        lst.remove(user.id) if user.id in lst else lst.append(user.id)
+        await it.response.send_message(f"{user.mention} is {'ignored' if user.id in lst else 'logged again'}.", ephemeral=True)
+
+    def ignored(self, guild, channel_id=None, user_id=None):
+        """True if the channel or the user is on the ignore list."""
+        lo = self.bot.cfg(guild.id)["log_options"]
+        return channel_id in lo["ignore_channels"] or user_id in lo["ignore_users"]
 
     @commands.Cog.listener()
     async def on_message(self, msg):
@@ -82,6 +104,8 @@ class Logs(commands.Cog):
         if msg.author.bot or not self.ok(msg.guild):
             return
         if not self.bot.cfg(msg.guild.id)["log_options"]["sent"] or self.bot.is_log_channel(msg.guild, msg.channel.id):
+            return
+        if self.ignored(msg.guild, msg.channel.id, msg.author.id):
             return
         e = emb("Message sent", color=discord.Color.green(), user=msg.author)
         describe(e, msg)
@@ -93,7 +117,7 @@ class Logs(commands.Cog):
         """Runs when a message is edited."""
         if after.author.bot or not self.ok(after.guild) or before.content == after.content:
             return
-        if self.bot.is_log_channel(after.guild, after.channel.id):
+        if self.bot.is_log_channel(after.guild, after.channel.id) or self.ignored(after.guild, after.channel.id, after.author.id):
             return
         e = emb("Message edited", color=discord.Color.blue(), user=after.author)
         e.add_field(name="Before", value=trim(before.content), inline=False)
@@ -111,7 +135,7 @@ class Logs(commands.Cog):
             self.bot.bot_deleted.discard(p.message_id)
             return
         guild = self.bot.get_guild(p.guild_id)
-        if not self.ok(guild) or self.bot.is_log_channel(guild, p.channel_id):
+        if not self.ok(guild) or self.bot.is_log_channel(guild, p.channel_id) or self.ignored(guild, p.channel_id):
             return
         m = p.cached_message
         if m is None:
@@ -119,7 +143,7 @@ class Logs(commands.Cog):
             e.add_field(name="Channel", value=f"<#{p.channel_id}>")
             self.bot.log(guild, "messages", e)
             return
-        if m.author.bot:
+        if m.author.bot or self.ignored(guild, user_id=m.author.id):
             return
         e = emb("Message deleted", color=discord.Color.orange(), user=m.author)
         describe(e, m)
@@ -190,6 +214,9 @@ class Logs(commands.Cog):
     async def on_voice_state_update(self, m, before, after):
         """Runs when a member joins, leaves or moves between voice channels."""
         if not self.ok(m.guild) or before.channel == after.channel:
+            return
+        channel = after.channel or before.channel
+        if self.ignored(m.guild, channel.id, m.id):
             return
         if before.channel is None:
             title, info = "Voice join", after.channel.mention
