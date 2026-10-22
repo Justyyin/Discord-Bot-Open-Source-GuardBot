@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 Nutze diese Befehle auf deinem Server und ersetze die Channel-Namen durch deine eigenen.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 Alle Funktionen sind in der Befehlsreferenz beschrieben: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## Optional: Bilder lesen und Sprachen
 
-Damit das Anti-Scam-Modul Text in Bildern liest, installiere tesseract auf dem Rechner, auf dem der Bot läuft (das Docker-Image enthält es schon). Prüfe dann mit /antiscam status, ob es bereit ist. Die Sprache der Nachrichten, die Mitglieder sehen, stellst du mit /language ein.
+Damit das Anti-Scam-Modul Text in Bildern liest, installiere tesseract auf dem Rechner, auf dem der Bot läuft (das Docker-Image enthält es schon). Prüfe dann mit /security antiscam status, ob es bereit ist. Die Sprache der Nachrichten, die Mitglieder sehen, stellst du mit /admin language ein.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## Dashboard
@@ -233,7 +233,7 @@ dashboard.example.com {
 - Der Bot bricht mit einem Fehler zu Privileged Intents ab: Aktiviere im Developer Portal Server Members Intent und Message Content Intent.
 - Improper token: Kopiere den Token erneut und achte darauf, dass in .env genau DISCORD_TOKEN=token steht, ohne Leerzeichen oder Anführungszeichen.
 - I cannot assign that role: Schiebe die Rolle des Bots über die Rolle, die er verwalten soll.
-- Es wird nichts geloggt: Lege mit /log set einen Channel fest und prüfe, ob der Bot dort Nachrichten senden, Links einbetten und Dateien anhängen darf.
+- Es wird nichts geloggt: Lege mit /server log set einen Channel fest und prüfe, ob der Bot dort Nachrichten senden, Links einbetten und Dateien anhängen darf.
 - Unknown timezone: Führe pip install tzdata aus und starte den Bot neu.
 - Etwas schlägt ohne erkennbaren Grund fehl: Fehler und Warnungen werden in die Konsole geschrieben. Auf einem VPS liest du sie mit journalctl -u guardbot -f.
 

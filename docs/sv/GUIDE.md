@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 Använd dessa kommandon på din server och byt ut kanalnamnen mot dina egna.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 Alla funktioner beskrivs i kommandoreferensen: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## Valfritt: läsa bilder och språk
 
-För att anti-bedrägerimodulen ska läsa text i bilder, installera tesseract på datorn som kör boten (Docker-avbilden innehåller det redan). Kontrollera sedan med /antiscam status att det är redo. Välj språk för de meddelanden medlemmarna ser med /language.
+För att anti-bedrägerimodulen ska läsa text i bilder, installera tesseract på datorn som kör boten (Docker-avbilden innehåller det redan). Kontrollera sedan med /security antiscam status att det är redo. Välj språk för de meddelanden medlemmarna ser med /admin language.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## Kontrollpanel
@@ -233,7 +233,7 @@ dashboard.example.com {
 - Boten stoppar med ett fel om privilegierade intents: aktivera Server Members Intent och Message Content Intent i Developer Portal.
 - Improper token: kopiera token igen och kontrollera att .env innehåller exakt DISCORD_TOKEN=token, utan mellanslag eller citattecken.
 - I cannot assign that role: flytta botens roll ovanför rollen den ska hantera.
-- Inget loggas: ange en kanal med /log set och kontrollera att boten kan skicka meddelanden, bädda in länkar och bifoga filer där.
+- Inget loggas: ange en kanal med /server log set och kontrollera att boten kan skicka meddelanden, bädda in länkar och bifoga filer där.
 - Unknown timezone: kör pip install tzdata och starta om boten.
 - Något misslyckas utan synlig orsak: fel och varningar skrivs till konsolen. På en VPS läser du dem med journalctl -u guardbot -f.
 

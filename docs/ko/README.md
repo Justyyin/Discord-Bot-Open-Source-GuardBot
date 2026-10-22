@@ -27,11 +27,13 @@
   - [업데이트](#업데이트)
 - [봇 권한](#봇-권한)
 - [Discord에서의 첫 단계](#discord에서의-첫-단계)
+  - [구조, 멤버, 팀](#구조-멤버-팀)
 - [대시보드](#대시보드)
   - [대시보드 설정](#대시보드-설정)
   - [보안](#보안-1)
   - [VPS에서 대시보드 사용](#vps에서-대시보드-사용)
 - [명령어](#명령어)
+  - [명령어 그룹](#명령어-그룹)
   - [관리](#관리-1)
   - [굴라그(감금)](#굴라그감금)
   - [자동 관리](#자동-관리)
@@ -93,7 +95,7 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 - 자동 관리: 단어 필터, 대문자 필터, 멘션 도배, 초대 링크, 피싱 도메인, 개인정보, 신상 공개, 협박. 모든 목록을 편집할 수 있습니다.
 - 짧은 시간에 몰리는 입장을 감지하는 Anti-Raid와 모든 채널을 잠그는 서버 락다운.
 - Anti-Nuke: 대량 삭제와 대량 차단의 한도, 자동 대응, 서버 소유자에게 보내는 다이렉트 메시지.
-- 굴라그 채널: 사기 링크나 이미지를 올린 멤버는 계정 보안 안내가 있는 단 하나의 채널로 이동합니다. 관리자는 /jail과 /unjail도 사용할 수 있습니다.
+- 굴라그 채널: 사기 링크나 이미지를 올린 멤버는 계정 보안 안내가 있는 단 하나의 채널로 이동합니다. 관리자는 /moderation jail과 /moderation unjail도 사용할 수 있습니다.
 - 버튼 또는 캡차 인증과, 제때 인증하지 않은 멤버의 자동 제거.
 - Anti-Nuke는 권한 부여, 새 웹훅, 추가된 봇, 서버 이름 변경도 감시합니다.
 - 사기 방지: 가짜 경품과 암호화폐 사기를 텍스트와 이미지에서 몇 밀리초 안에 삭제하며, 어떤 철자의 MrBeast 사기도 포함합니다.
@@ -117,32 +119,32 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 - 채팅과 음성의 XP 및 1~100 레벨, 레벨 역할, 생일.
 - 스타보드와 임시 음성 채널.
 - 기간이 있는 감금, 복수 선택 투표, 이미지 형태의 랭크 카드, 역할별 XP 부스트.
-- 상점이 있는 경제, 버튼 또는 드롭다운 역할 메뉴, 예약 메시지, YouTube·Twitch·RSS 피드, 활동 통계, 안내형 /setup. 멤버에게 보이는 메시지는 12개 언어로 제공됩니다.
+- 상점이 있는 경제, 버튼 또는 드롭다운 역할 메뉴, 예약 메시지, YouTube·Twitch·RSS 피드, 활동 통계, 안내형 /admin setup. 멤버에게 보이는 메시지는 12개 언어로 제공됩니다.
 
 ### 수습 기간, 무리 탐지, 타임라인, 학습
 
-수습 기간은 새 멤버를 하나의 역할에 넣습니다. 설정한 수의 일반 메시지를 쓰거나 설정한 분이 지나기 전까지 링크, 초대, 파일은 짧은 안내와 함께 삭제됩니다. 레이드 방어는 무리도 알아봅니다. 이름 패턴이 같거나, 프로필 사진이 같거나, 몇 분 안에 만들어진 새 계정이 여럿인 경우입니다. 타임라인(/case timeline)은 한 사용자의 계정 생성, 가입과 초대, 수습 기간, 케이스, 이의 신청을 시간순으로 모아 보여 줍니다. 메시지는 저장되지 않으므로 포함되지 않습니다. /block, /unblock, /blocklist는 짧은 명령어로 AutoMod 차단 목록을 관리합니다. 운영진은 메시지의 컨텍스트 메뉴 항목 Mark as scam 또는 learn_emoji로 정한 이모지 반응으로 사기 방지 모듈을 학습시킬 수 있습니다. 메시지는 삭제되고, 그 이미지와 텍스트는 이후 즉시 삭제됩니다. 각 기능은 해당 모듈이나 설정에서 끌 수 있습니다.
+수습 기간은 새 멤버를 하나의 역할에 넣습니다. 설정한 수의 일반 메시지를 쓰거나 설정한 분이 지나기 전까지 링크, 초대, 파일은 짧은 안내와 함께 삭제됩니다. 레이드 방어는 무리도 알아봅니다. 이름 패턴이 같거나, 프로필 사진이 같거나, 몇 분 안에 만들어진 새 계정이 여럿인 경우입니다. 타임라인(/moderation case timeline)은 한 사용자의 계정 생성, 가입과 초대, 수습 기간, 케이스, 이의 신청을 시간순으로 모아 보여 줍니다. 메시지는 저장되지 않으므로 포함되지 않습니다. /security block, /security unblock, /security blocklist는 짧은 명령어로 AutoMod 차단 목록을 관리합니다. 운영진은 메시지의 컨텍스트 메뉴 항목 Mark as scam 또는 learn_emoji로 정한 이모지 반응으로 사기 방지 모듈을 학습시킬 수 있습니다. 메시지는 삭제되고, 그 이미지와 텍스트는 이후 즉시 삭제됩니다. 각 기능은 해당 모듈이나 설정에서 끌 수 있습니다.
 
 ```
-/module enable name:probation
-/probation setup minutes:10 messages:1 block_links:True block_files:True
-/probation status
-/probation release member:@User
-/probation add member:@User
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
 
-/raid swarm enabled:True minimum:4 minutes:10
-/case timeline user:@User
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
 
-/block kind:link value:evil.example
-/blocklist
-/unblock kind:link number:1
-/antiscam set learn_emoji:X
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
 ```
 - 대시보드: Discord로 로그인한 뒤 브라우저에서 각 서버의 설정을 바꿉니다. 서버를 관리하는 멤버만, 봇이 연결되어 있는 동안에만 사용할 수 있습니다.
 
 ### 메시지 빌더와 업데이트
 
-메시지 빌더는 JSON으로 여러 임베드와 링크 버튼이 있는 메시지를 게시합니다. Embed Generator 같은 임베드 생성기가 내보내는 JSON을 읽으므로, 그곳에서 메시지를 디자인하고 봇으로 게시할 수 있습니다. JSON은 텍스트, .json 파일, 또는 JSON을 바로 가리키는 https 링크(예: 저장소의 원본 파일)로 전달하세요. 리디렉션되는 링크는 거부됩니다. 링크 버튼만 만들어지고, 상호작용이 필요한 버튼은 건너뜁니다. 모든 링크는 http 또는 https여야 하고, 텍스트의 멘션은 알림을 보내지 않으며, Discord의 제한이 적용됩니다. /message copy는 기존 메시지를 JSON으로 내보내고, /message edit는 봇의 메시지를 수정하며, /message preview는 결과를 나에게만 보여 줍니다. 웹 편집기의 공유 링크는 형식이 공개되어 있지 않으므로 열지 않습니다.
+메시지 빌더는 JSON으로 여러 임베드와 링크 버튼이 있는 메시지를 게시합니다. Embed Generator 같은 임베드 생성기가 내보내는 JSON을 읽으므로, 그곳에서 메시지를 디자인하고 봇으로 게시할 수 있습니다. JSON은 텍스트, .json 파일, 또는 JSON을 바로 가리키는 https 링크(예: 저장소의 원본 파일)로 전달하세요. 리디렉션되는 링크는 거부됩니다. 링크 버튼만 만들어지고, 상호작용이 필요한 버튼은 건너뜁니다. 모든 링크는 http 또는 https여야 하고, 텍스트의 멘션은 알림을 보내지 않으며, Discord의 제한이 적용됩니다. /post message copy는 기존 메시지를 JSON으로 내보내고, /post message edit는 봇의 메시지를 수정하며, /post message preview는 결과를 나에게만 보여 줍니다. 웹 편집기의 공유 링크는 형식이 공개되어 있지 않으므로 열지 않습니다.
 
 ```json
 {
@@ -152,7 +154,7 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 }
 ```
 
-봇은 12시간마다 update.repo(scripts/set_repo_url.py로 설정)의 GitHub 저장소에 더 새로운 릴리스가 있는지 확인합니다. 있으면 봇 소유자에게 릴리스 노트가 담긴 개인 메시지가 가고, 릴리스를 내려받아 검사합니다. 검사 항목은 릴리스의 SHA-256 체크섬, 압축 파일 안의 안전한 경로, 태그와 일치하는 버전입니다. 설치는 /debug update action:install로 하거나, auto_install이 켜져 있으면 자동으로 이루어집니다. 설치 전에 교체될 파일이 data/update에 저장되고, 새 패키지가 설치되며, 새 코드를 시험 삼아 불러옵니다. 어느 단계든 실패하면 이전 파일이 복원됩니다. .env, settings.json, data, music은 절대 건드리지 않습니다. 이후 봇이 스스로 다시 시작합니다. Docker에서는 제자리 설치를 하지 않으니 이미지를 업데이트하세요. 업데이트는 저장소의 코드를 실행하므로 신뢰하는 저장소만 지정하세요. enabled를 false로 하면 끌 수 있습니다.
+봇은 12시간마다 update.repo(scripts/set_repo_url.py로 설정)의 GitHub 저장소에 더 새로운 릴리스가 있는지 확인합니다. 있으면 봇 소유자에게 릴리스 노트가 담긴 개인 메시지가 가고, 릴리스를 내려받아 검사합니다. 검사 항목은 릴리스의 SHA-256 체크섬, 압축 파일 안의 안전한 경로, 태그와 일치하는 버전입니다. 설치는 /server debug update action:install로 하거나, auto_install이 켜져 있으면 자동으로 이루어집니다. 설치 전에 교체될 파일이 data/update에 저장되고, 새 패키지가 설치되며, 새 코드를 시험 삼아 불러옵니다. 어느 단계든 실패하면 이전 파일이 복원됩니다. .env, settings.json, data, music은 절대 건드리지 않습니다. 이후 봇이 스스로 다시 시작합니다. Docker에서는 제자리 설치를 하지 않으니 이미지를 업데이트하세요. 업데이트는 저장소의 코드를 실행하므로 신뢰하는 저장소만 지정하세요. enabled를 false로 하면 끌 수 있습니다.
 
 ```json
 {
@@ -167,15 +169,15 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 ```
 
 ```
-/message send channel:#news url:https://example.com/message.json
-/message send channel:#news file:message.json
-/message preview url:https://example.com/message.json
-/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/message copy message:https://discord.com/channels/1/2/3
-/module disable name:builder
-/debug update action:status
-/debug update action:check
-/debug update action:install
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
 ```
 
 ### 운영
@@ -299,19 +301,99 @@ Optional
 무난한 초기 설정입니다. 서버에서 다음 명령어를 실행하고 채널과 역할을 내 것으로 바꾸세요:
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
+
+### 구조, 멤버, 팀
+
+버전 1.5에는 서버를 구성하고 정돈된 상태로 유지하는 명령, 돌아온 멤버의 복원, 관리팀 운영을 위한 명령이 추가되었습니다. 각 기능에는 모듈 스위치(`/admin module`), 자체 설정, 대시보드의 자리가 있습니다.
+
+```
+/structure channel create name:news kind:text category:Info private:False
+/structure channel clone channel:#news name:news-2
+/structure channel rename channel:#news name:announcements
+/structure channel move channel:#news category:Info position:1
+/structure channel sort category:Info
+/structure channel copyperms source:#news target:#rules whole_category:False
+/structure category create name:Events private:False
+/structure category clone category:Events name:Events 2
+/structure category sort
+/structure category sync category:Events
+/structure archive setup action:report days:60 report_channel:#staff interval_hours:24
+/structure archive ignore channel:#news
+/structure archive scan action:report
+/structure temprole give member:@User role:@Event duration:7d reason:Contest
+/structure temprole list
+/structure roletemplate save name:mod role:@Moderator
+/structure roletemplate apply name:mod role_name:Trial Mod
+/structure rules setup channel:#rules role:@Member remind:True remind_hours:24
+/structure rules add text:Be kind to each other.
+/structure rules post new_version:True
+/structure rules status
+
+/members stickyroles setup roles:True days:30 punishments:True dangerous:False
+/members stickyroles status
+/members stickyroles forget user:@User
+/members nickname setup dehoist:True usernames:True rename_to:Renamed notify:True
+/members nickname word word:badword
+/members nickname check name:!!hoisted
+/members nickname scan
+/members watch setup channel:#staff ping_role:@Moderator repeat:False
+/members watch add user:@User reason:Suspicious
+/members watch list
+/members reason add name:spam action:mute text:Spam duration:1h
+/members reason use name:spam user:@User
+
+/security approval setup channel:#staff role:@Moderator ban:True bulk:True minutes:30 owner_bypass:True
+/security approval list
+/security approval cancel request_id:3
+/moderation case undo case_id:12 reason:Mistake follow:True batch:False
+/moderation escalation expiry days:90
+
+/admin history list
+/admin history show number:5
+/admin history rollback number:5 section:welcome
+/admin history keep count:200
+/admin history copy source:123456789012345678 sections:welcome,tickets dry_run:True
+/admin exceptions add rule:invites channel:#media role:@Artist
+/admin exceptions list
+/admin dashaccess add role:@Helper level:viewer
+/admin dashaccess list
+
+/team teamstats overview days:30
+/team teamstats member user:@User
+/team teamstats inactive days:14
+/team weekly setup channel:#staff day:Monday hour:9
+/team weekly now days:7
+/team duty away duration:3d reason:Holiday
+/team duty back
+/team duty route feature:tickets enabled:True
+/team duty roster role:@Moderator
+/team apply setup channel:#applications staff_role:@Moderator accept_role:@Trial votes:3 open:True cooldown_days:30
+/team apply question action:add text:Why do you want to join?
+/team apply start
+/team apply list
+/team apply decide number:4 decision:accept
+```
+
+- `/structure` 로 채널과 카테고리를 만들고, 복제하고, 이름을 바꾸고, 정렬하며 다른 채널의 권한을 복사할 수 있습니다. 비활성 채널은 보고되거나 보관용 카테고리로 이동됩니다(`/structure archive`). 역할은 기간을 정해 부여하고 템플릿으로 저장할 수 있으며, 템플릿은 적용하는 사람에게 없는 권한을 부여하지 않습니다.
+- `/structure rules` 는 동의 버튼과 버전 번호가 있는 규칙을 게시합니다. `post new_version:True` 이후 새 버전에 동의하지 않은 멤버는 다이렉트 메시지로 한 번 알림을 받습니다.
+- `/members stickyroles` 는 멤버가 돌아오면 역할을 돌려주고 타임아웃이나 뮤트를 복원합니다. `/members nickname` 은 목록 맨 위로 올라가려는 문자를 제거하고, 닉네임과 사용자 이름의 금지어를 검사하며, 위반자의 이름을 바꿉니다. 관찰 목록은 조용히 동작하며, 목록에 있는 사용자가 첫 메시지를 보내면 팀에 알림이 갑니다.
+- 4인 승인(`/security approval`)은 차단, 추방, 타임아웃, 일괄 작업을 두 번째 관리자가 동의한 뒤에만 실행합니다. `/moderation case undo` 는 케이스와 그로 인한 후속 조치(예: 뮤트와 이어진 차단)까지 취소합니다. 경고는 일정 일수 후 만료되도록 할 수 있습니다(`/moderation escalation expiry`).
+- `/admin history` 는 누가 언제 어떤 설정을 바꿨는지 보여 주고 섹션을 되돌립니다. 사람의 이름은 서버의 최근 명령과 대시보드 변경에서 추정한 값입니다. `/admin history copy` 는 봇으로 관리할 수 있는 다른 서버로 섹션을 복사하며, 처음에는 시험 실행으로 시작합니다. `/admin exceptions` 는 채널과 역할을 AutoMod 규칙과 스캠 방지에서 제외합니다. `/admin dashaccess` 는 역할에 대시보드 읽기 전용 또는 관리자 접근을 줍니다.
+- `/team` 은 관리자별 작업(케이스, 티켓, 신고, 응답 시간, 비활성 멤버)을 보여 주고, 주간 보고서(요일과 시각은 UTC)를 게시하며, `/team duty away` 로 부재를 알리면 티켓과 멘션이 다른 사람에게 넘어가고, 양식과 팀 투표로 스태프 지원을 운영합니다.
+- Discord는 그룹 안의 명령을 특정 멤버에게서 숨길 수 없습니다. 봇은 여전히 모든 호출을 확인합니다. 팀 통계 수치는 업데이트한 날부터 집계되며 그 이전의 작업은 포함되지 않습니다.
 
 ## 대시보드
 
@@ -385,31 +467,53 @@ dashboard.example.com {
 
 대부분의 명령어는 슬래시 명령어이며, 관리 명령어는 접두사로도 사용할 수 있습니다. 전체 목록은 명령어 참조에 있습니다: [COMMANDS.md](../COMMANDS.md).
 
+<!-- groups -->
+### 명령어 그룹
+
+슬래시 명령어 슬롯을 아끼기 위해(Discord는 봇당 최상위 명령어를 100개까지 허용합니다) 관련 명령어를 그룹으로 묶었습니다. 그룹을 먼저, 그다음 명령어를 입력합니다. 예: `/moderation ban`. 접두사를 쓰는 텍스트 명령어(예: `!ban`)는 그대로입니다. 권한, 별칭, 모듈 스위치는 계속 단순한 명령어 이름을 사용합니다.
+
+| 그룹 | 포함 |
+| --- | --- |
+| `/moderation` | `warn`, `unwarn`, `warnings`, `clearwarns`, `note`, `mute`, `unmute`, `kick`, `ban`, `unban`, `tempban`, `jail`, `unjail`, `jailed`, `role`, `case`, `cases`, `bulk`, `escalation`, `purge`, `slowmode` |
+| `/security` | `antinuke`, `antiscam`, `raid`, `block`, `unblock`, `blocklist`, `approval` |
+| `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
+| `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
+| `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
+| `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
+| `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
+| `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
+| `/post` | `say`, `embed`, `message`, `sticky`, `schedule`, `feed`, `reactionrole`, `rolemenu` |
+| | `/help`, `/play`, `/automod`, `/music`, `/xp`, `/modmail`, `/appeal`, `/report`, `/suggestion`, `/birthday`, `/notify` |
+
 ### 관리
 
 경고, 뮤트, 추방, 차단은 슬래시 명령어와 접두사로 모두 사용할 수 있습니다(예: `!warn @User spam`). 모든 조치는 번호가 붙은 기록을 만듭니다.
 
 ```
-/warn member:@User reason:Spam                    # also: !warn @User Spam
-/unwarn case_id:12                                 # remove one warning
-/clearwarns user:@User                             # remove all active warnings
-/mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
-/unmute member:@User
-/kick member:@User reason:Advertising
-/ban user:@User reason:Raid                        # user can also be an ID
-/unban user:123456789012345678
+/moderation warn member:@User reason:Spam                    # also: !warn @User Spam
+/moderation unwarn case_id:12                                 # remove one warning
+/moderation clearwarns user:@User                             # remove all active warnings
+/moderation mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
+/moderation unmute member:@User
+/moderation kick member:@User reason:Advertising
+/moderation ban user:@User reason:Raid                        # user can also be an ID
+/moderation unban user:123456789012345678
 
-/cases user:@User                                  # history, filter by mention or ID
-/cases kind:ban page:2                             # filter by type
-/cases search:john                                 # filter by part of a name
-/warnings user:@User
-/case view case_id:12
+/moderation cases user:@User                                  # history, filter by mention or ID
+/moderation cases kind:ban page:2                             # filter by type
+/moderation cases search:john                                 # filter by part of a name
+/moderation warnings user:@User
+/moderation case view case_id:12
 
-/escalation list
-/escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
-/escalation set warns:5 action:kick
-/escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
-/escalation remove warns:5
+/moderation escalation list
+/moderation escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
+/moderation escalation set warns:5 action:kick
+/moderation escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
+/moderation escalation remove warns:5
 ```
 
 ### 굴라그(감금)
@@ -417,14 +521,14 @@ dashboard.example.com {
 계정이 탈취된 멤버는 보안 안내가 있는 단 하나의 채널로 이동합니다. 풀려날 때 예전 역할이 복원됩니다.
 
 ```
-/jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
-/jailsetup apply                                   # apply the channel permissions again
-/jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
-/jailsetup preview
+/access jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
+/access jailsetup apply                                   # apply the channel permissions again
+/access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
+/access jailsetup preview
 
-/jail member:@User reason:Hacked account           # also: !jail @User Hacked account
-/jail member:@User duration:2h                     # released automatically after 2 hours
-/unjail member:@User reason:Account secured
+/moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
+/moderation jail member:@User duration:2h                     # released automatically after 2 hours
+/moderation unjail member:@User reason:Account secured
 ```
 
 ### 자동 관리
@@ -468,18 +572,18 @@ dashboard.example.com {
 짧은 시간에 몰리는 입장을 감지하고 서버를 잠글 수 있습니다. channels 모드는 모든 채널을 수정하고, role 모드는 즉시 적용됩니다.
 
 ```
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
 # 5 joins within 10 seconds count as a raid, accounts younger than 3 days are punished,
 # actions: alert, timeout, kick
 
-/lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
-/lockdown mode:channels reason:Raid                # thorough, edits every channel
-/unlock
+/access lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
+/access lockdown mode:channels reason:Raid                # thorough, edits every channel
+/access unlock
 
-/lockdownconfig mode mode:role                     # default mode
-/lockdownconfig lockrole role:@Member              # extra role locked in role mode
-/lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
-/lockdownconfig exempt channel:#announcements
+/access lockdownconfig mode mode:role                     # default mode
+/access lockdownconfig lockrole role:@Member              # extra role locked in role mode
+/access lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
+/access lockdownconfig exempt channel:#announcements
 ```
 
 ### Anti-Nuke
@@ -487,16 +591,16 @@ dashboard.example.com {
 감사 로그를 감시하고 누군가 서버를 파괴하면 대응합니다. 서버 소유자에게 다이렉트 메시지가 갑니다.
 
 ```
-/antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
-/antinuke limit kind:channel_delete count:3 seconds:10
+/security antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
+/security antinuke limit kind:channel_delete count:3 seconds:10
 # kinds: channel_delete, role_delete, channel_create, ban, kick,
 #        role_perm, role_grant, webhook_create, bot_add, guild_update
-/antinuke whitelist user:@TrustedAdmin             # toggle, never checked
-/antinuke staffrole role:@Moderator                # toggle, shown in alerts
-/antinuke servername name:MyServer                 # extra name for the nuke talk detection
-/antinuke newbots kick:True                        # kick bots added by untrusted users
-/antinuke restore member:@User                     # give back roles that were removed
-/antinuke status
+/security antinuke whitelist user:@TrustedAdmin             # toggle, never checked
+/security antinuke staffrole role:@Moderator                # toggle, shown in alerts
+/security antinuke servername name:MyServer                 # extra name for the nuke talk detection
+/security antinuke newbots kick:True                        # kick bots added by untrusted users
+/security antinuke restore member:@User                     # give back roles that were removed
+/security antinuke status
 ```
 
 ### 인증
@@ -504,13 +608,13 @@ dashboard.example.com {
 새 멤버는 버튼을 누르거나 캡차를 풀기 전까지 인증 채널만 볼 수 있습니다.
 
 ```
-/verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
+/access verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
 # modes: button, captcha (image), math; roles are created if you do not pass them
-/verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
-/verify panel channel:#verify                      # post the button again
-/verify apply                                      # apply the channel permissions again
-/verify member member:@User                        # verify someone manually
-/verify off
+/access verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
+/access verify panel channel:#verify                      # post the button again
+/access verify apply                                      # apply the channel permissions again
+/access verify member member:@User                        # verify someone manually
+/access verify off
 ```
 
 ### 로그
@@ -518,13 +622,13 @@ dashboard.example.com {
 카테고리마다 채널을 고르거나, 모든 것을 하나의 메인 채널에 기록합니다.
 
 ```
-/log set category:main channel:#logs               # fallback for every category
-/log set category:messages channel:#log-messages
-/log set category:moderation channel:#log-moderation
-/log set category:security channel:#log-security
+/server log set category:main channel:#logs               # fallback for every category
+/server log set category:messages channel:#log-messages
+/server log set category:moderation channel:#log-moderation
+/server log set category:security channel:#log-security
 # categories: main, messages, members, voice, server, moderation, security
-/log sent enabled:False                            # stop logging every sent message
-/log show
+/server log sent enabled:False                            # stop logging every sent message
+/server log show
 ```
 
 ### 환영, 작별, 부스터
@@ -532,14 +636,14 @@ dashboard.example.com {
 메시지, 자동 역할, 서버 부스터 보상.
 
 ```
-/welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
-/welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
-/welcome autorole role:@Member                     # toggle, given to every new member
-/welcome botrole role:@Bots                        # toggle, given to every new bot
-/welcome test
+/community welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
+/community welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
+/community welcome autorole role:@Member                     # toggle, given to every new member
+/community welcome botrole role:@Bots                        # toggle, given to every new bot
+/community welcome test
 
-/booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
-/booster role role:@Booster                        # toggle
+/community booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
+/community booster role role:@Booster                        # toggle
 ```
 
 ### 티켓
@@ -547,15 +651,15 @@ dashboard.example.com {
 멤버가 버튼으로 비공개 채널을 엽니다. 티켓을 닫으면 대화 기록이 전송됩니다.
 
 ```
-/ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
-/ticket addtype key:report label:Report description:Report a member
-/ticket removetype key:report
-/ticket panel channel:#support title:Support description:Press a button to open a ticket
+/support ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
+/support ticket addtype key:report label:Report description:Report a member
+/support ticket removetype key:report
+/support ticket panel channel:#support title:Support description:Press a button to open a ticket
 
 # inside a ticket
-/ticket add member:@User
-/ticket remove member:@User
-/ticket close
+/support ticket add member:@User
+/support ticket remove member:@User
+/support ticket close
 ```
 
 ### 투표와 경품 추첨
@@ -563,14 +667,14 @@ dashboard.example.com {
 투표와 참여는 버튼으로 합니다. 기간은 30m, 2h, 1d 같은 값을 받습니다.
 
 ```
-/poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
-/poll end poll_id:3
-/poll list
+/engage poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
+/engage poll end poll_id:3
+/engage poll list
 
-/giveaway start prize:Nitro duration:2d winners:2 role:@Member
-/giveaway end giveaway_id:1
-/giveaway reroll giveaway_id:1
-/giveaway list
+/engage giveaway start prize:Nitro duration:2d winners:2 role:@Member
+/engage giveaway end giveaway_id:1
+/engage giveaway reroll giveaway_id:1
+/engage giveaway list
 ```
 
 ### 건의와 스타보드
@@ -579,12 +683,12 @@ dashboard.example.com {
 
 ```
 /suggestion setup set channel:#suggestions review_role:@Staff
-/suggest text:Add a music channel                  # also: !suggest Add a music channel
+/support suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
 
-/starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
-/starboard ignore channel:#spam
+/engage starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
+/engage starboard ignore channel:#spam
 ```
 
 ### XP와 레벨
@@ -610,9 +714,9 @@ dashboard.example.com {
 /xp setlevel user:@User level:20
 /xp reset user:@User
 
-/rank                                              # also: !rank, shows a rank card image
-/rank user:@User
-/leaderboard
+/info rank                                              # also: !rank, shows a rank card image
+/info rank user:@User
+/info leaderboard
 ```
 
 ### 반응 역할과 알림
@@ -620,12 +724,12 @@ dashboard.example.com {
 원하는 이모지 반응으로 역할을 주고, 멤버가 알림 주제를 직접 고르게 합니다.
 
 ```
-/reactionrole panel channel:#roles title:Pick your roles description:React below
-/reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
-/reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
+/post reactionrole panel channel:#roles title:Pick your roles description:React below
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
 # mode unique: only one role of that message at a time
-/reactionrole remove message:<message link> emoji:<any emoji>
-/reactionrole list
+/post reactionrole remove message:<message link> emoji:<any emoji>
+/post reactionrole list
 
 /notify topic add key:events role:@Events description:Server events
 /notify topic panel channel:#roles title:Notifications   # one button per topic
@@ -654,7 +758,7 @@ dashboard.example.com {
 허브 채널에 들어가면 방이 만들어지고, 비면 사라집니다.
 
 ```
-/tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
+/community tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
 # joining the hub creates a room for the member, empty rooms are deleted
 ```
 
@@ -663,12 +767,12 @@ dashboard.example.com {
 백업에는 역할, 채널, 이모지, 웹훅, 멤버 역할이 들어 있습니다. 복원은 부족한 것만 추가합니다.
 
 ```
-/backup create name:before-update
-/backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
-/backup list
-/backup download name:before-update
-/backup restore name:before-update member_roles:True   # only adds what is missing
-/backup delete name:before-update
+/server backup create name:before-update
+/server backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
+/server backup list
+/server backup download name:before-update
+/server backup restore name:before-update member_roles:True   # only adds what is missing
+/server backup delete name:before-update
 ```
 
 ### 데이터와 개인정보
@@ -676,12 +780,12 @@ dashboard.example.com {
 멤버는 자신의 데이터를 내보내고 삭제할 수 있습니다. 관리자는 보관 기간을 정합니다.
 
 ```
-/mydata export                                     # members download their own data
-/mydata delete confirm:True                        # members delete their XP and birthday
+/info mydata export                                     # members download their own data
+/info mydata delete confirm:True                        # members delete their XP and birthday
 
-/privacy retention days:90                         # delete data of members who left after 90 days
-/privacy export user_id:123456789012345678
-/privacy delete user_id:123456789012345678 cases:True
+/server privacy retention days:90                         # delete data of members who left after 90 days
+/server privacy export user_id:123456789012345678
+/server privacy delete user_id:123456789012345678 cases:True
 ```
 
 ### 관리자 도구
@@ -689,21 +793,21 @@ dashboard.example.com {
 채널 정리, 역할 관리, 비공개 메모. 모든 작업은 로그에 기록됩니다.
 
 ```
-/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
-/slowmode seconds:10 channel:#general              # 0 turns it off
-/lockchannel channel:#general reason:Spam wave
-/unlockchannel channel:#general
+/moderation purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/moderation slowmode seconds:10 channel:#general              # 0 turns it off
+/access lockchannel channel:#general reason:Spam wave
+/access unlockchannel channel:#general
 
-/role add member:@User role:@Member
-/role remove member:@User role:@Member
+/moderation role add member:@User role:@Member
+/moderation role remove member:@User role:@Member
 
-/note user:@User text:Watch this member            # private, shown in /cases
-/tempban user:@User duration:7d reason:Spam        # unbanned automatically
-/jailed                                            # who is in the gulag right now
+/moderation note user:@User text:Watch this member            # private, shown in /moderation cases
+/moderation tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/moderation jailed                                            # who is in the gulag right now
 
-/case view case_id:12
-/case edit case_id:12 reason:Corrected reason
-/case delete case_id:12
+/moderation case view case_id:12
+/moderation case edit case_id:12 reason:Corrected reason
+/moderation case delete case_id:12
 ```
 
 ### 정보
@@ -711,13 +815,13 @@ dashboard.example.com {
 사용자, 서버, 역할, 봇에 대한 정보를 조회합니다.
 
 ```
-/userinfo user:@User
-/serverinfo
-/roleinfo role:@Moderator
-/avatar user:@User
+/info userinfo user:@User
+/server serverinfo
+/server roleinfo role:@Moderator
+/info avatar user:@User
 /help command:ban                                  # explains one command
-/ping
-/botinfo
+/info ping
+/info botinfo
 ```
 
 ### 공지, 태그, 알림
@@ -725,24 +829,24 @@ dashboard.example.com {
 봇 이름으로 글을 쓰고, 사용자 지정 명령어를 만들고, 메시지에 자동으로 답하고, 알림을 설정합니다.
 
 ```
-/say channel:#news message:Maintenance tonight
-/embed channel:#news title:Update description:New rules color:#5865F2
+/post say channel:#news message:Maintenance tonight
+/post embed channel:#news title:Update description:New rules color:#5865F2
 
-/tag create name:rules text:Be kind to each other
-/tag show name:rules
-/tag list
-/tag info name:rules
-/tag edit name:rules text:Be kind and read the pinned message
-/tag delete name:rules
+/support tag create name:rules text:Be kind to each other
+/support tag show name:rules
+/support tag list
+/support tag info name:rules
+/support tag edit name:rules text:Be kind and read the pinned message
+/support tag delete name:rules
 
-/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
-/autoresponder list
-/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+/support autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/support autoresponder list
+/support autoresponder remove id:1                         # mode: contains, word, exact, startswith
 
-/remind set duration:2h text:Stream starts
-/remind list
-/remind cancel id:1
-/afk reason:Lunch                                  # the bot tells others who mention you
+/community remind set duration:2h text:Stream starts
+/community remind list
+/community remind cancel id:1
+/community afk reason:Lunch                                  # the bot tells others who mention you
 ```
 
 ### 모드메일과 차단 이의 신청
@@ -769,20 +873,20 @@ dashboard.example.com {
 카운팅 게임, 채널 맨 아래에 남는 메시지, 실시간 숫자를 보여 주는 채널.
 
 ```
-/counting setup channel:#counting reset_on_fail:True delete_wrong:True
-/counting status
-/counting set number:100
-/counting off
+/engage counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/engage counting status
+/engage counting set number:100
+/engage counting off
 
-/sticky set channel:#rules text:Read the rules before you write
-/sticky list
-/sticky remove channel:#rules
+/post sticky set channel:#rules text:Read the rules before you write
+/post sticky list
+/post sticky remove channel:#rules
 
-/stats create template:Members: {members} category:Statistics
-/stats add channel:#info template:Boosts: {boosts}
-/stats list
-/stats refresh
-/stats remove channel:#info
+/server stats create template:Members: {members} category:Statistics
+/server stats add channel:#info template:Boosts: {boosts}
+/server stats list
+/server stats refresh
+/server stats remove channel:#info
 ```
 
 ### 기존 기능의 추가 옵션
@@ -790,40 +894,40 @@ dashboard.example.com {
 티켓, 추첨, 음성 방, XP, 생일, 백업, 로그, 상태 보기에 대한 추가 기능입니다.
 
 ```
-/ticket claim
-/ticket rename name:billing-help
-/ticket list
+/support ticket claim
+/support ticket rename name:billing-help
+/support ticket list
 
-/giveaway cancel giveaway_id:3
-/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+/engage giveaway cancel giveaway_id:3
+/engage giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
 
-/voice rename name:Study room                      # only the owner of the room
-/voice limit limit:4
-/voice lock
-/voice unlock
-/voice kick member:@User
-/voice transfer member:@User
-/voice claim                                       # if the owner left
+/community voice rename name:Study room                      # only the owner of the room
+/community voice limit limit:4
+/community voice lock
+/community voice unlock
+/community voice kick member:@User
+/community voice transfer member:@User
+/community voice claim                                       # if the owner left
 
 /xp channelboost channel:#chat multiplier:1.5
 /xp resetall confirm:True
-/leaderboard page:2
+/info leaderboard page:2
 
 /birthday list
 /birthday setup user member:@User day:14 month:3
 /birthday setup clear member:@User
 
-/backup info name:weekly
-/log show
-/log ignorechannel channel:#bots
-/log ignoreuser user:@Bot
-/log sent enabled:True
+/server backup info name:weekly
+/server log show
+/server log ignorechannel channel:#bots
+/server log ignoreuser user:@Bot
+/server log sent enabled:True
 
 /automod status
-/verify status
-/raid status
-/welcome show
-/starboard show
+/access verify status
+/security raid status
+/community welcome show
+/engage starboard show
 ```
 
 ### 추가 AutoMod 도구
@@ -850,14 +954,14 @@ dashboard.example.com {
 관리자가 너무 많이 차단하거나 추방하면 경고하고, 위험한 권한을 가진 역할을 보여 줍니다.
 
 ```
-/modwatch status
-/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
-/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
-/modwatch exclude member:@TrustedMod
+/team modwatch status
+/team modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/team modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/team modwatch exclude member:@TrustedMod
 
-/permaudit run                                                  # roles with dangerous permissions and who holds them
-/permaudit watch enabled:True                                   # alarm when a role or member gets one
-/permaudit trust role:@Admin
+/team permaudit run                                                  # roles with dangerous permissions and who holds them
+/team permaudit watch enabled:True                                   # alarm when a role or member gets one
+/team permaudit trust role:@Admin
 ```
 
 ### 신고와 초대 추적
@@ -872,10 +976,10 @@ dashboard.example.com {
 /report send message_link:https://discord.com/channels/1/2/3 reason:Spam
 # or right click a message, Apps, Report message
 
-/invites who member:@User
-/invites stats user:@User
-/invites top
-/invites setup log:True alert_joins:5 alert_minutes:60
+/server invites who member:@User
+/server invites stats user:@User
+/server invites top
+/server invites setup log:True alert_joins:5 alert_minutes:60
 ```
 
 ### 진단과 디버깅
@@ -883,18 +987,18 @@ dashboard.example.com {
 누락된 권한과 잘못된 설정을 찾고, 오류 보고를 채널에서 받고, 설정을 내보내거나 가져올 수 있습니다.
 
 ```
-/diagnose                                                       # permissions, role order, deleted channels and roles
-/debug status
-/debug errorchannel channel:#bot-errors
-/debug errortest
-/debug selftest enabled:True                                    # check at start-up
-/debug usagestats enabled:True
-/debug usage reset:False
-/debug level level:DEBUG                                        # owner of the bot only
-/debug db action:check                                          # owner of the bot only: check, vacuum, size
+/server diagnose                                                       # permissions, role order, deleted channels and roles
+/server debug status
+/server debug errorchannel channel:#bot-errors
+/server debug errortest
+/server debug selftest enabled:True                                    # check at start-up
+/server debug usagestats enabled:True
+/server debug usage reset:False
+/server debug level level:DEBUG                                        # owner of the bot only
+/server debug db action:check                                          # owner of the bot only: check, vacuum, size
 
-/config export
-/config import file:guardbot-settings.json confirm:False        # first without confirm
+/admin config export
+/admin config import file:guardbot-settings.json confirm:False        # first without confirm
 ```
 
 ### 음악
@@ -930,7 +1034,7 @@ dashboard.example.com {
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
-/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/admin config set path:music.allowed_hosts value:bandcamp.com,archive.org
 /music cleardj
 /music status
 ```
@@ -939,12 +1043,12 @@ dashboard.example.com {
 
 ### 설정과 상태 점검
 
-안내형 도우미가 버튼과 메뉴로 가장 중요한 것을 설정합니다: 로그 채널, 환영 채널, 운영진 역할, 굴라그, AutoMod 프리셋(느슨함, 보통, 엄격), 서버 템플릿(커뮤니티, 게임, 지원), 그리고 언어. /health는 무엇이 설정되었고 무엇이 남았는지 보여 줍니다. 언어를 바꾸면 기본 환영 메시지, AutoMod 알림, 인증, 티켓, 이의 신청, 모드메일, 역할 메뉴 등 멤버에게 보이는 문구가 바뀝니다. 관리자에게 보내는 고정 답변은 번역되어 있고, 이름과 숫자가 들어가는 답변은 영어로 유지됩니다.
+안내형 도우미가 버튼과 메뉴로 가장 중요한 것을 설정합니다: 로그 채널, 환영 채널, 운영진 역할, 굴라그, AutoMod 프리셋(느슨함, 보통, 엄격), 서버 템플릿(커뮤니티, 게임, 지원), 그리고 언어. /server health는 무엇이 설정되었고 무엇이 남았는지 보여 줍니다. 언어를 바꾸면 기본 환영 메시지, AutoMod 알림, 인증, 티켓, 이의 신청, 모드메일, 역할 메뉴 등 멤버에게 보이는 문구가 바뀝니다. 관리자에게 보내는 고정 답변은 번역되어 있고, 이름과 숫자가 들어가는 답변은 영어로 유지됩니다.
 
 ```
-/setup                                                         # buttons and menus, nothing is switched off by a template
-/health                                                        # what is set up, what is open, and the self-test
-/language code:de
+/admin setup                                                         # buttons and menus, nothing is switched off by a template
+/server health                                                        # what is set up, what is open, and the self-test
+/admin language code:de
 ```
 
 ### 경제
@@ -952,20 +1056,20 @@ dashboard.example.com {
 일일 보상, 일하기, 송금, 순위표, 그리고 역할을 줄 수 있는 상점을 갖춘 서버 화폐입니다. economy 모듈로 켭니다. 명령어는 접두사로도 사용할 수 있습니다(예: !economy daily).
 
 ```
-/module enable name:economy
-/economy balance member:@User                                  # same as !economy
-/economy daily
-/economy work
-/economy pay member:@User amount:50
-/economy leaderboard
-/economy shop
-/economy buy item:1
-/economy inventory
+/admin module enable name:economy
+/engage economy balance member:@User                                  # same as !economy
+/engage economy daily
+/engage economy work
+/engage economy pay member:@User amount:50
+/engage economy leaderboard
+/engage economy shop
+/engage economy buy item:1
+/engage economy inventory
 
-/economy give member:@User amount:500                          # staff, a negative amount takes away
-/economy shopadd name:VIP price:1000 role:@VIP stock:10
-/economy shopremove item:1
-/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+/engage economy give member:@User amount:500                          # staff, a negative amount takes away
+/engage economy shopadd name:VIP price:1000 role:@VIP stock:10
+/engage economy shopremove item:1
+/engage economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
 ```
 
 ### 역할 메뉴, 예약 메시지, 피드
@@ -973,24 +1077,24 @@ dashboard.example.com {
 역할 메뉴는 버튼이나 드롭다운으로 역할을 줍니다. 예약 메시지는 한 번 게시되거나 매시간, 매일, 매주 반복됩니다. 피드는 YouTube 새 영상, Twitch 방송, RSS 항목을 게시합니다. YouTube는 채널 ID(UC로 시작)를 사용합니다. Twitch는 .env에 TWITCH_CLIENT_ID와 TWITCH_CLIENT_SECRET이 필요합니다. 시간은 in 2h, 18:30 또는 2026-12-24 18:00 같은 날짜와 시간으로, 서버의 시간대 기준으로 입력합니다. 피드의 첫 확인은 이미 있는 항목을 기억만 합니다.
 
 ```
-/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
-/rolemenu add menu:1 role:@Red label:Red
-/rolemenu remove menu:1 role:@Red
-/rolemenu delete menu:1
-/rolemenu list
+/post rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/post rolemenu add menu:1 role:@Red label:Red
+/post rolemenu remove menu:1 role:@Red
+/post rolemenu delete menu:1
+/post rolemenu list
 
-/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
-/schedule add channel:#news when:in 2h text:Restart soon repeat:none
-/schedule list
-/schedule remove number:1
-/schedule timezone name:Europe/Berlin
+/post schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/post schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/post schedule list
+/post schedule remove number:1
+/post schedule timezone name:Europe/Berlin
 
-/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
-/feed add kind:twitch target:somestreamer channel:#live
-/feed add kind:rss target:https://example.com/feed.xml channel:#news
-/feed list
-/feed check
-/feed remove number:1
+/post feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/post feed add kind:twitch target:somestreamer channel:#live
+/post feed add kind:rss target:https://example.com/feed.xml channel:#news
+/post feed list
+/post feed check
+/post feed remove number:1
 ```
 
 ### 활동, 일괄 작업, 케이스 검색
@@ -998,33 +1102,33 @@ dashboard.example.com {
 활동은 채널별 메시지 수와 일별 입장·퇴장 수를 세며, 내용이나 이름은 절대 저장하지 않습니다. 일괄 작업은 확인 후 최대 25명의 사용자를 차단, 추방 또는 타임아웃합니다. 케이스는 사용자, 유형, 이름, 사유, 관리자, 기간으로 검색할 수 있고, 메모를 차단 기록에 연결하는 것처럼 서로 연결할 수 있습니다.
 
 ```
-/module enable name:activity
-/activity overview days:7
-/activity channels days:30
-/activity growth days:14
-/activity reset
+/admin module enable name:activity
+/community activity overview days:7
+/community activity channels days:30
+/community activity growth days:14
+/community activity reset
 
-/bulk ban users:123456789012345678 223456789012345678 reason:Raid
-/bulk kick users:123456789012345678 223456789012345678 reason:Spam
-/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+/moderation bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/moderation bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/moderation bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
 
-/cases user:@User kind:ban text:scam moderator:@Mod days:30
-/case link case_id:12 other:15
-/case unlink case_id:12 other:15
+/moderation cases user:@User kind:ban text:scam moderator:@Mod days:30
+/moderation case link case_id:12 other:15
+/moderation case unlink case_id:12 other:15
 ```
 
 ### 사기 방지 및 암호화폐 방지
 
-전형적인 MrBeast 사기 같은 가짜 경품 행사를 텍스트와 이미지에서 몇 밀리초 안에 삭제합니다. 즉시 목록의 이름은 어떤 철자로 쓰여도 바로 삭제됩니다(MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). 그 외에는 목록(이름, 미끼, 암호화폐, 링크, 금액)의 단어가 점수로 합산되어 기준에 도달하면 메시지가 삭제됩니다. 이미지는 OCR로 읽으며, 한 번 사기로 판정된 이미지는 다시 읽지 않고 삭제합니다. 이미지를 읽으려면 tesseract가 필요하며, 없으면 텍스트만 검사합니다. MrBeast 관련 서버는 즉시 목록에서 이름을 빼거나 /automod exemptchannel로 채널을 제외할 수 있습니다. 의지하기 전에 /antiscam test로 먼저 시험해 보세요.
+전형적인 MrBeast 사기 같은 가짜 경품 행사를 텍스트와 이미지에서 몇 밀리초 안에 삭제합니다. 즉시 목록의 이름은 어떤 철자로 쓰여도 바로 삭제됩니다(MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). 그 외에는 목록(이름, 미끼, 암호화폐, 링크, 금액)의 단어가 점수로 합산되어 기준에 도달하면 메시지가 삭제됩니다. 이미지는 OCR로 읽으며, 한 번 사기로 판정된 이미지는 다시 읽지 않고 삭제합니다. 이미지를 읽으려면 tesseract가 필요하며, 없으면 텍스트만 검사합니다. MrBeast 관련 서버는 즉시 목록에서 이름을 빼거나 /automod exemptchannel로 채널을 제외할 수 있습니다. 의지하기 전에 /security antiscam test로 먼저 시험해 보세요.
 
 ```
-/antiscam status
-/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
-/antiscam words action:add kind:instant word:mrbeast
-/antiscam words action:remove kind:crypto word:token
-/antiscam test text:MrBeast is giving away 1000 BTC, claim now
-/antiscam testimage image:scam.png
-/antiscam forget
+/security antiscam status
+/security antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/security antiscam words action:add kind:instant word:mrbeast
+/security antiscam words action:remove kind:crypto word:token
+/security antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/security antiscam testimage image:scam.png
+/security antiscam forget
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
@@ -1045,8 +1149,8 @@ dashboard.example.com {
 ```
 
 ```
-/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
-/debug db action:list
+/server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/server debug db action:list
 ```
 
 ### 운영
@@ -1054,26 +1158,26 @@ dashboard.example.com {
 모듈과 명령어를 켜고 끄고, 접두사를 바꾸고, 별칭을 정하고, 명령어를 역할로 제한합니다.
 
 ```
-/module list
-/module disable name:starboard
-/module enable name:tickets
-/command disable name:ban                          # single commands
-/command enable name:ban
-/command list
+/admin module list
+/admin module disable name:starboard
+/admin module enable name:tickets
+/admin command disable name:ban                          # single commands
+/admin command enable name:ban
+/admin command list
 
-/prefix new_prefix:?                               # text commands now start with ?
-/alias add alias:w command:warn                    # ?w @User Spam
-/alias remove alias:w
-/alias list
+/admin prefix new_prefix:?                               # text commands now start with ?
+/admin alias add alias:w command:warn                    # ?w @User Spam
+/admin alias remove alias:w
+/admin alias list
 
-/perms allow command:ban target:@HeadModerator     # only this role may use /ban
-/perms deny command:warn target:@Trainee
-/perms reset command:ban
-/perms show
+/admin perms allow command:ban target:@HeadModerator     # only this role may use /moderation ban
+/admin perms deny command:warn target:@Trainee
+/admin perms reset command:ban
+/admin perms show
 
-/settings
+/admin settings
 /help
-/about
+/info about
 ```
 
 ## 메시지 자리표시자
@@ -1081,17 +1185,17 @@ dashboard.example.com {
 설정한 텍스트 안에서 다음 자리표시자가 치환됩니다:
 
 ```
-/welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
-/booster set         message                         {user} {name} {server} {count}
+/community welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
+/community booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
 /birthday setup set   message                         {user} {name}
-/tempvoice setup     name                            {name}
-/jailsetup notice    text                            {staff}
+/community tempvoice setup     name                            {name}
+/access jailsetup notice    text                            {staff}
 ```
 
 ## 설정
 
-전역 옵션은 settings.json에서 설정합니다. 나머지는 /module, /command, /perms, /alias, /config 같은 명령어로 서버별로 설정합니다.
+전역 옵션은 settings.json에서 설정합니다. 나머지는 /admin module, /admin command, /admin perms, /admin alias, /admin config 같은 명령어로 서버별로 설정합니다.
 
 명령어 이름을 바꾸려면 command_names에 추가하고 봇을 다시 시작하세요:
 
@@ -1108,21 +1212,21 @@ dashboard.example.com {
 }
 ```
 
-모든 설정은 /config로 읽고 바꿀 수 있습니다. 가장 자주 쓰는 경로는 다음과 같습니다:
+모든 설정은 /admin config로 읽고 바꿀 수 있습니다. 가장 자주 쓰는 경로는 다음과 같습니다:
 
 ```
-/config get path:automod.caps.percent
-/config set path:automod.caps.percent value:80
-/config set path:mod.dm_user value:false             # no direct message on punishments
-/config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
-/config set path:mod.default_mute_minutes value:120
-/config set path:automod.mentions.max value:5
-/config set path:automod.phishing.lookalike value:true
-/config set path:raid.joins value:8
-/config set path:xp.cooldown value:45
-/config set path:tickets.max_open value:2
-/config set path:privacy.retention_days value:90
-/config reset section:welcome                        # back to the defaults of one section
+/admin config get path:automod.caps.percent
+/admin config set path:automod.caps.percent value:80
+/admin config set path:mod.dm_user value:false             # no direct message on punishments
+/admin config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
+/admin config set path:mod.default_mute_minutes value:120
+/admin config set path:automod.mentions.max value:5
+/admin config set path:automod.phishing.lookalike value:true
+/admin config set path:raid.joins value:8
+/admin config set path:xp.cooldown value:45
+/admin config set path:tickets.max_open value:2
+/admin config set path:privacy.retention_days value:90
+/admin config reset section:welcome                        # back to the defaults of one section
 ```
 
 ## 데이터와 저장 위치
@@ -1173,7 +1277,7 @@ guardbot/
 - 모든 데이터는 내 컴퓨터의 data 폴더에 저장됩니다. 설정, XP, 생일(일과 월만), 관리 기록입니다.
 - 봇은 멤버가 보내는 다이렉트 메시지를 무시합니다.
 - 토큰은 .env 파일에서 읽습니다. 절대 공유하거나 업로드하지 마세요.
-- 멤버는 /mydata로 자신의 데이터를 내보내고 삭제할 수 있습니다. 관리자는 떠난 멤버의 데이터를 얼마나 보관할지 정할 수 있습니다.
+- 멤버는 /info mydata로 자신의 데이터를 내보내고 삭제할 수 있습니다. 관리자는 떠난 멤버의 데이터를 얼마나 보관할지 정할 수 있습니다.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## 지원

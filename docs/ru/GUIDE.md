@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 Используйте эти команды на своём сервере и замените названия каналов своими.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 Все функции описаны в справочнике команд: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## Необязательно: чтение изображений и языки
 
-Чтобы модуль защиты от мошенничества читал текст на изображениях, установите tesseract на компьютер, где работает бот (в образе Docker он уже есть). Затем проверьте командой /antiscam status, что он готов. Язык сообщений, которые видят участники, выбирается командой /language.
+Чтобы модуль защиты от мошенничества читал текст на изображениях, установите tesseract на компьютер, где работает бот (в образе Docker он уже есть). Затем проверьте командой /security antiscam status, что он готов. Язык сообщений, которые видят участники, выбирается командой /admin language.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## Панель управления
@@ -233,7 +233,7 @@ dashboard.example.com {
 - Бот останавливается с ошибкой привилегированных интентов: включите Server Members Intent и Message Content Intent в Developer Portal.
 - Improper token: скопируйте токен заново и убедитесь, что в .env записано ровно DISCORD_TOKEN=токен, без пробелов и кавычек.
 - I cannot assign that role: поместите роль бота выше роли, которой он должен управлять.
-- Ничего не журналируется: задайте канал командой /log set и убедитесь, что бот может в нём отправлять сообщения, встраивать ссылки и прикреплять файлы.
+- Ничего не журналируется: задайте канал командой /server log set и убедитесь, что бот может в нём отправлять сообщения, встраивать ссылки и прикреплять файлы.
 - Unknown timezone: выполните pip install tzdata и перезапустите бота.
 - Что-то не работает без видимой причины: ошибки и предупреждения выводятся в консоль. На VPS читайте их командой journalctl -u guardbot -f.
 

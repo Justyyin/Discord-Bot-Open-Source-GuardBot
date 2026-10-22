@@ -25,11 +25,13 @@
   - [更新](#更新)
 - [ボットの権限](#ボットの権限)
 - [Discord での最初の手順](#discord-での最初の手順)
+  - [構成、メンバー、チーム](#構成メンバーチーム)
 - [ダッシュボード](#ダッシュボード)
   - [ダッシュボードの設定](#ダッシュボードの設定)
   - [セキュリティ](#セキュリティ-1)
   - [VPS でのダッシュボード](#vps-でのダッシュボード)
 - [コマンド](#コマンド)
+  - [コマンドグループ](#コマンドグループ)
   - [モデレーション](#モデレーション-1)
   - [グラグ（ジェイル）](#グラグジェイル)
   - [自動モデレーション](#自動モデレーション)
@@ -93,7 +95,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - 自動モデレーション：単語フィルター、大文字フィルター、メンションスパム、招待リンク、フィッシングドメイン、個人情報、ドキシング、脅迫。すべてのリストを編集できます。
 - 短時間の大量参加を検知するレイド対策と、全チャンネルのサーバーロックダウン。
 - Anti-Nuke：大量削除や大量 BAN の上限、自動対応、サーバーオーナーへのダイレクトメッセージ。
-- グラグチャンネル：詐欺リンクや画像を投稿したメンバーは、アカウント保護の手順が書かれた専用チャンネルだけに移されます。モデレーターは /jail と /unjail も使えます。
+- グラグチャンネル：詐欺リンクや画像を投稿したメンバーは、アカウント保護の手順が書かれた専用チャンネルだけに移されます。モデレーターは /moderation jail と /moderation unjail も使えます。
 - ボタンまたはキャプチャによる認証と、期限内に認証しないメンバーの自動削除。
 - Anti-Nuke は、権限の付与、新しい Webhook、追加されたボット、サーバー名の変更も監視します。
 - 詐欺対策：偽のプレゼント企画や暗号資産詐欺を、テキストでも画像でも数ミリ秒で削除します。どんな綴りの MrBeast 詐欺にも対応します。
@@ -117,7 +119,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - チャットとボイスの XP とレベル 1〜100、レベルロール、誕生日。
 - スターボードと一時ボイスチャンネル。
 - 期限付きジェイル、複数選択の投票、画像のランクカード、ロールごとの XP ブースト。
-- ショップ付きの経済、ボタンまたはドロップダウンのロールメニュー、予約メッセージ、YouTube・Twitch・RSS フィード、アクティビティ統計、ガイド付きの /setup。メンバー向けメッセージは12言語に対応します。
+- ショップ付きの経済、ボタンまたはドロップダウンのロールメニュー、予約メッセージ、YouTube・Twitch・RSS フィード、アクティビティ統計、ガイド付きの /admin setup。メンバー向けメッセージは12言語に対応します。
 
 ### 管理
 
@@ -241,19 +243,99 @@ Optional
 無理のない初期設定です。サーバーで次のコマンドを実行し、チャンネルとロールを自分のものに置き換えてください：
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
+
+### 構成、メンバー、チーム
+
+バージョン1.5では、サーバーを組み立てて整理し続けるためのコマンド、戻ってきたメンバーの復元、モデレーションチームの運営が加わりました。各機能にはモジュールのスイッチ(`/admin module`)、専用の設定、ダッシュボード上の場所があります。
+
+```
+/structure channel create name:news kind:text category:Info private:False
+/structure channel clone channel:#news name:news-2
+/structure channel rename channel:#news name:announcements
+/structure channel move channel:#news category:Info position:1
+/structure channel sort category:Info
+/structure channel copyperms source:#news target:#rules whole_category:False
+/structure category create name:Events private:False
+/structure category clone category:Events name:Events 2
+/structure category sort
+/structure category sync category:Events
+/structure archive setup action:report days:60 report_channel:#staff interval_hours:24
+/structure archive ignore channel:#news
+/structure archive scan action:report
+/structure temprole give member:@User role:@Event duration:7d reason:Contest
+/structure temprole list
+/structure roletemplate save name:mod role:@Moderator
+/structure roletemplate apply name:mod role_name:Trial Mod
+/structure rules setup channel:#rules role:@Member remind:True remind_hours:24
+/structure rules add text:Be kind to each other.
+/structure rules post new_version:True
+/structure rules status
+
+/members stickyroles setup roles:True days:30 punishments:True dangerous:False
+/members stickyroles status
+/members stickyroles forget user:@User
+/members nickname setup dehoist:True usernames:True rename_to:Renamed notify:True
+/members nickname word word:badword
+/members nickname check name:!!hoisted
+/members nickname scan
+/members watch setup channel:#staff ping_role:@Moderator repeat:False
+/members watch add user:@User reason:Suspicious
+/members watch list
+/members reason add name:spam action:mute text:Spam duration:1h
+/members reason use name:spam user:@User
+
+/security approval setup channel:#staff role:@Moderator ban:True bulk:True minutes:30 owner_bypass:True
+/security approval list
+/security approval cancel request_id:3
+/moderation case undo case_id:12 reason:Mistake follow:True batch:False
+/moderation escalation expiry days:90
+
+/admin history list
+/admin history show number:5
+/admin history rollback number:5 section:welcome
+/admin history keep count:200
+/admin history copy source:123456789012345678 sections:welcome,tickets dry_run:True
+/admin exceptions add rule:invites channel:#media role:@Artist
+/admin exceptions list
+/admin dashaccess add role:@Helper level:viewer
+/admin dashaccess list
+
+/team teamstats overview days:30
+/team teamstats member user:@User
+/team teamstats inactive days:14
+/team weekly setup channel:#staff day:Monday hour:9
+/team weekly now days:7
+/team duty away duration:3d reason:Holiday
+/team duty back
+/team duty route feature:tickets enabled:True
+/team duty roster role:@Moderator
+/team apply setup channel:#applications staff_role:@Moderator accept_role:@Trial votes:3 open:True cooldown_days:30
+/team apply question action:add text:Why do you want to join?
+/team apply start
+/team apply list
+/team apply decide number:4 decision:accept
+```
+
+- `/structure` でチャンネルとカテゴリの作成、複製、名前変更、並べ替え、別チャンネルの権限のコピーができます。非アクティブなチャンネルは報告されるか、アーカイブ用カテゴリに移されます(`/structure archive`)。ロールは期限付きで付与でき、テンプレートとして保存できます。テンプレートは、適用する人が持たない権限を付与しません。
+- `/structure rules` は同意ボタンとバージョン番号付きでルールを投稿します。`post new_version:True` の後、新しい版に同意していないメンバーにはダイレクトメッセージで一度だけリマインドが届きます。
+- `/members stickyroles` はメンバーが戻ったときにロールを返し、タイムアウトやミュートを復元します。`/members nickname` はリストの先頭に来るための文字を取り除き、ニックネームとユーザー名の禁止語を確認し、違反者の名前を変更します。監視リストは静かに動作し、リストのユーザーが最初に発言したときにチームへ通知されます。
+- 4つの目による承認(`/security approval`)では、BAN、キック、タイムアウト、一括操作は2人目のモデレーターが同意して初めて実行されます。`/moderation case undo` はケースを取り消し、それが引き起こした操作(例えばミュートとその後のBAN)も取り消します。警告は一定日数で失効させられます(`/moderation escalation expiry`)。
+- `/admin history` は誰がいつどの設定を変えたかを表示し、セクションを元に戻します。人物名は、サーバー上の直近のコマンドとダッシュボードの変更からの推測です。`/admin history copy` はボットで管理できる別のサーバーへセクションをコピーし、最初は試行のみです。`/admin exceptions` はチャンネルとロールを AutoMod のルールとアンチスキャムの対象外にします。`/admin dashaccess` はロールに閲覧のみまたはモデレーターのダッシュボード権限を与えます。
+- `/team` は各モデレーターの作業(ケース、チケット、報告、応答時間、非アクティブなメンバー)を表示し、週次レポート(曜日と時刻はUTC)を投稿し、`/team duty away` で不在を届け出るとチケットやメンションが他の人に回り、フォームとチーム投票でスタッフ応募を運営します。
+- Discord はグループ内のコマンドを特定のメンバーから隠せません。ボットは引き続きすべての呼び出しを確認します。チーム統計の数字は更新した日から数えられ、それ以前の操作は含まれません。
 
 ## ダッシュボード
 
@@ -327,31 +409,53 @@ dashboard.example.com {
 
 ほとんどのコマンドはスラッシュコマンドで、モデレーションコマンドはプレフィックスでも使えます。完全な一覧はコマンドリファレンスにあります： [COMMANDS.md](../COMMANDS.md).
 
+<!-- groups -->
+### コマンドグループ
+
+スラッシュコマンドの枠を節約するため(Discord ではボット 1 つにつき最上位コマンドは 100 個まで)、関連するコマンドをグループにまとめています。先にグループ、次にコマンドを入力します。例: `/moderation ban`。プレフィックス付きのテキストコマンド(例: `!ban`)は変わりません。権限、エイリアス、モジュールのスイッチは引き続き単純なコマンド名を使います。
+
+| グループ | 含まれるもの |
+| --- | --- |
+| `/moderation` | `warn`, `unwarn`, `warnings`, `clearwarns`, `note`, `mute`, `unmute`, `kick`, `ban`, `unban`, `tempban`, `jail`, `unjail`, `jailed`, `role`, `case`, `cases`, `bulk`, `escalation`, `purge`, `slowmode` |
+| `/security` | `antinuke`, `antiscam`, `raid`, `block`, `unblock`, `blocklist`, `approval` |
+| `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
+| `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
+| `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
+| `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
+| `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
+| `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
+| `/post` | `say`, `embed`, `message`, `sticky`, `schedule`, `feed`, `reactionrole`, `rolemenu` |
+| | `/help`, `/play`, `/automod`, `/music`, `/xp`, `/modmail`, `/appeal`, `/report`, `/suggestion`, `/birthday`, `/notify` |
+
 ### モデレーション
 
 警告、ミュート、キック、BAN はスラッシュコマンドでもプレフィックスでも使えます（例：`!warn @User spam`）。すべての操作で番号付きのケースが作られます。
 
 ```
-/warn member:@User reason:Spam                    # also: !warn @User Spam
-/unwarn case_id:12                                 # remove one warning
-/clearwarns user:@User                             # remove all active warnings
-/mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
-/unmute member:@User
-/kick member:@User reason:Advertising
-/ban user:@User reason:Raid                        # user can also be an ID
-/unban user:123456789012345678
+/moderation warn member:@User reason:Spam                    # also: !warn @User Spam
+/moderation unwarn case_id:12                                 # remove one warning
+/moderation clearwarns user:@User                             # remove all active warnings
+/moderation mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
+/moderation unmute member:@User
+/moderation kick member:@User reason:Advertising
+/moderation ban user:@User reason:Raid                        # user can also be an ID
+/moderation unban user:123456789012345678
 
-/cases user:@User                                  # history, filter by mention or ID
-/cases kind:ban page:2                             # filter by type
-/cases search:john                                 # filter by part of a name
-/warnings user:@User
-/case view case_id:12
+/moderation cases user:@User                                  # history, filter by mention or ID
+/moderation cases kind:ban page:2                             # filter by type
+/moderation cases search:john                                 # filter by part of a name
+/moderation warnings user:@User
+/moderation case view case_id:12
 
-/escalation list
-/escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
-/escalation set warns:5 action:kick
-/escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
-/escalation remove warns:5
+/moderation escalation list
+/moderation escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
+/moderation escalation set warns:5 action:kick
+/moderation escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
+/moderation escalation remove warns:5
 ```
 
 ### グラグ（ジェイル）
@@ -359,14 +463,14 @@ dashboard.example.com {
 アカウントが乗っ取られたメンバーは、セキュリティ手順が書かれた専用チャンネルに移されます。解放時には元のロールが戻ります。
 
 ```
-/jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
-/jailsetup apply                                   # apply the channel permissions again
-/jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
-/jailsetup preview
+/access jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
+/access jailsetup apply                                   # apply the channel permissions again
+/access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
+/access jailsetup preview
 
-/jail member:@User reason:Hacked account           # also: !jail @User Hacked account
-/jail member:@User duration:2h                     # released automatically after 2 hours
-/unjail member:@User reason:Account secured
+/moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
+/moderation jail member:@User duration:2h                     # released automatically after 2 hours
+/moderation unjail member:@User reason:Account secured
 ```
 
 ### 自動モデレーション
@@ -410,18 +514,18 @@ dashboard.example.com {
 短時間の大量参加を検知し、サーバーをロックできます。channels モードは全チャンネルを変更し、role モードは即座に効きます。
 
 ```
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
 # 5 joins within 10 seconds count as a raid, accounts younger than 3 days are punished,
 # actions: alert, timeout, kick
 
-/lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
-/lockdown mode:channels reason:Raid                # thorough, edits every channel
-/unlock
+/access lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
+/access lockdown mode:channels reason:Raid                # thorough, edits every channel
+/access unlock
 
-/lockdownconfig mode mode:role                     # default mode
-/lockdownconfig lockrole role:@Member              # extra role locked in role mode
-/lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
-/lockdownconfig exempt channel:#announcements
+/access lockdownconfig mode mode:role                     # default mode
+/access lockdownconfig lockrole role:@Member              # extra role locked in role mode
+/access lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
+/access lockdownconfig exempt channel:#announcements
 ```
 
 ### Anti-Nuke
@@ -429,16 +533,16 @@ dashboard.example.com {
 監査ログを監視し、誰かがサーバーを破壊したときに対応します。サーバーオーナーにダイレクトメッセージが届きます。
 
 ```
-/antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
-/antinuke limit kind:channel_delete count:3 seconds:10
+/security antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
+/security antinuke limit kind:channel_delete count:3 seconds:10
 # kinds: channel_delete, role_delete, channel_create, ban, kick,
 #        role_perm, role_grant, webhook_create, bot_add, guild_update
-/antinuke whitelist user:@TrustedAdmin             # toggle, never checked
-/antinuke staffrole role:@Moderator                # toggle, shown in alerts
-/antinuke servername name:MyServer                 # extra name for the nuke talk detection
-/antinuke newbots kick:True                        # kick bots added by untrusted users
-/antinuke restore member:@User                     # give back roles that were removed
-/antinuke status
+/security antinuke whitelist user:@TrustedAdmin             # toggle, never checked
+/security antinuke staffrole role:@Moderator                # toggle, shown in alerts
+/security antinuke servername name:MyServer                 # extra name for the nuke talk detection
+/security antinuke newbots kick:True                        # kick bots added by untrusted users
+/security antinuke restore member:@User                     # give back roles that were removed
+/security antinuke status
 ```
 
 ### 認証
@@ -446,13 +550,13 @@ dashboard.example.com {
 新しいメンバーは、ボタンを押すかキャプチャを解くまで認証チャンネルしか見えません。
 
 ```
-/verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
+/access verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
 # modes: button, captcha (image), math; roles are created if you do not pass them
-/verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
-/verify panel channel:#verify                      # post the button again
-/verify apply                                      # apply the channel permissions again
-/verify member member:@User                        # verify someone manually
-/verify off
+/access verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
+/access verify panel channel:#verify                      # post the button again
+/access verify apply                                      # apply the channel permissions again
+/access verify member member:@User                        # verify someone manually
+/access verify off
 ```
 
 ### ログ
@@ -460,13 +564,13 @@ dashboard.example.com {
 カテゴリごとにチャンネルを選ぶか、すべてをまとめて 1 つのメインチャンネルに記録します。
 
 ```
-/log set category:main channel:#logs               # fallback for every category
-/log set category:messages channel:#log-messages
-/log set category:moderation channel:#log-moderation
-/log set category:security channel:#log-security
+/server log set category:main channel:#logs               # fallback for every category
+/server log set category:messages channel:#log-messages
+/server log set category:moderation channel:#log-moderation
+/server log set category:security channel:#log-security
 # categories: main, messages, members, voice, server, moderation, security
-/log sent enabled:False                            # stop logging every sent message
-/log show
+/server log sent enabled:False                            # stop logging every sent message
+/server log show
 ```
 
 ### ようこそ・さようならとブースター
@@ -474,14 +578,14 @@ dashboard.example.com {
 メッセージ、自動ロール、サーバーブースター向けの特典。
 
 ```
-/welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
-/welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
-/welcome autorole role:@Member                     # toggle, given to every new member
-/welcome botrole role:@Bots                        # toggle, given to every new bot
-/welcome test
+/community welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
+/community welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
+/community welcome autorole role:@Member                     # toggle, given to every new member
+/community welcome botrole role:@Bots                        # toggle, given to every new bot
+/community welcome test
 
-/booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
-/booster role role:@Booster                        # toggle
+/community booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
+/community booster role role:@Booster                        # toggle
 ```
 
 ### チケット
@@ -489,15 +593,15 @@ dashboard.example.com {
 メンバーはボタンで非公開チャンネルを開きます。閉じるとトランスクリプトが送信されます。
 
 ```
-/ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
-/ticket addtype key:report label:Report description:Report a member
-/ticket removetype key:report
-/ticket panel channel:#support title:Support description:Press a button to open a ticket
+/support ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
+/support ticket addtype key:report label:Report description:Report a member
+/support ticket removetype key:report
+/support ticket panel channel:#support title:Support description:Press a button to open a ticket
 
 # inside a ticket
-/ticket add member:@User
-/ticket remove member:@User
-/ticket close
+/support ticket add member:@User
+/support ticket remove member:@User
+/support ticket close
 ```
 
 ### 投票とプレゼント企画
@@ -505,14 +609,14 @@ dashboard.example.com {
 投票や参加はボタンで行います。期間は 30m、2h、1d のように指定できます。
 
 ```
-/poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
-/poll end poll_id:3
-/poll list
+/engage poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
+/engage poll end poll_id:3
+/engage poll list
 
-/giveaway start prize:Nitro duration:2d winners:2 role:@Member
-/giveaway end giveaway_id:1
-/giveaway reroll giveaway_id:1
-/giveaway list
+/engage giveaway start prize:Nitro duration:2d winners:2 role:@Member
+/engage giveaway end giveaway_id:1
+/engage giveaway reroll giveaway_id:1
+/engage giveaway list
 ```
 
 ### 提案とスターボード
@@ -521,12 +625,12 @@ dashboard.example.com {
 
 ```
 /suggestion setup set channel:#suggestions review_role:@Staff
-/suggest text:Add a music channel                  # also: !suggest Add a music channel
+/support suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
 
-/starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
-/starboard ignore channel:#spam
+/engage starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
+/engage starboard ignore channel:#spam
 ```
 
 ### XP とレベル
@@ -552,9 +656,9 @@ dashboard.example.com {
 /xp setlevel user:@User level:20
 /xp reset user:@User
 
-/rank                                              # also: !rank, shows a rank card image
-/rank user:@User
-/leaderboard
+/info rank                                              # also: !rank, shows a rank card image
+/info rank user:@User
+/info leaderboard
 ```
 
 ### リアクションロールと通知
@@ -562,12 +666,12 @@ dashboard.example.com {
 好きな絵文字のリアクションでロールを付与し、メンバーが通知トピックを自分で選べます。
 
 ```
-/reactionrole panel channel:#roles title:Pick your roles description:React below
-/reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
-/reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
+/post reactionrole panel channel:#roles title:Pick your roles description:React below
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
 # mode unique: only one role of that message at a time
-/reactionrole remove message:<message link> emoji:<any emoji>
-/reactionrole list
+/post reactionrole remove message:<message link> emoji:<any emoji>
+/post reactionrole list
 
 /notify topic add key:events role:@Events description:Server events
 /notify topic panel channel:#roles title:Notifications   # one button per topic
@@ -596,7 +700,7 @@ dashboard.example.com {
 ハブチャンネルに入るとルームが作られ、空になると消えます。
 
 ```
-/tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
+/community tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
 # joining the hub creates a room for the member, empty rooms are deleted
 ```
 
@@ -605,12 +709,12 @@ dashboard.example.com {
 バックアップにはロール、チャンネル、絵文字、Webhook、メンバーのロールが含まれます。復元は足りないものだけを追加します。
 
 ```
-/backup create name:before-update
-/backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
-/backup list
-/backup download name:before-update
-/backup restore name:before-update member_roles:True   # only adds what is missing
-/backup delete name:before-update
+/server backup create name:before-update
+/server backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
+/server backup list
+/server backup download name:before-update
+/server backup restore name:before-update member_roles:True   # only adds what is missing
+/server backup delete name:before-update
 ```
 
 ### データとプライバシー
@@ -618,12 +722,12 @@ dashboard.example.com {
 メンバーは自分のデータをエクスポートおよび削除できます。管理者は保存期間を管理します。
 
 ```
-/mydata export                                     # members download their own data
-/mydata delete confirm:True                        # members delete their XP and birthday
+/info mydata export                                     # members download their own data
+/info mydata delete confirm:True                        # members delete their XP and birthday
 
-/privacy retention days:90                         # delete data of members who left after 90 days
-/privacy export user_id:123456789012345678
-/privacy delete user_id:123456789012345678 cases:True
+/server privacy retention days:90                         # delete data of members who left after 90 days
+/server privacy export user_id:123456789012345678
+/server privacy delete user_id:123456789012345678 cases:True
 ```
 
 ### モデレーター用ツール
@@ -631,21 +735,21 @@ dashboard.example.com {
 チャンネルの整理、ロール管理、非公開メモ。すべての操作はログに記録されます。
 
 ```
-/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
-/slowmode seconds:10 channel:#general              # 0 turns it off
-/lockchannel channel:#general reason:Spam wave
-/unlockchannel channel:#general
+/moderation purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/moderation slowmode seconds:10 channel:#general              # 0 turns it off
+/access lockchannel channel:#general reason:Spam wave
+/access unlockchannel channel:#general
 
-/role add member:@User role:@Member
-/role remove member:@User role:@Member
+/moderation role add member:@User role:@Member
+/moderation role remove member:@User role:@Member
 
-/note user:@User text:Watch this member            # private, shown in /cases
-/tempban user:@User duration:7d reason:Spam        # unbanned automatically
-/jailed                                            # who is in the gulag right now
+/moderation note user:@User text:Watch this member            # private, shown in /moderation cases
+/moderation tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/moderation jailed                                            # who is in the gulag right now
 
-/case view case_id:12
-/case edit case_id:12 reason:Corrected reason
-/case delete case_id:12
+/moderation case view case_id:12
+/moderation case edit case_id:12 reason:Corrected reason
+/moderation case delete case_id:12
 ```
 
 ### 情報
@@ -653,13 +757,13 @@ dashboard.example.com {
 ユーザー、サーバー、ロール、ボットの情報を確認します。
 
 ```
-/userinfo user:@User
-/serverinfo
-/roleinfo role:@Moderator
-/avatar user:@User
+/info userinfo user:@User
+/server serverinfo
+/server roleinfo role:@Moderator
+/info avatar user:@User
 /help command:ban                                  # explains one command
-/ping
-/botinfo
+/info ping
+/info botinfo
 ```
 
 ### お知らせ、タグ、リマインダー
@@ -667,24 +771,24 @@ dashboard.example.com {
 ボットの名前で投稿し、独自コマンドを作り、メッセージに自動で返信し、リマインダーを設定します。
 
 ```
-/say channel:#news message:Maintenance tonight
-/embed channel:#news title:Update description:New rules color:#5865F2
+/post say channel:#news message:Maintenance tonight
+/post embed channel:#news title:Update description:New rules color:#5865F2
 
-/tag create name:rules text:Be kind to each other
-/tag show name:rules
-/tag list
-/tag info name:rules
-/tag edit name:rules text:Be kind and read the pinned message
-/tag delete name:rules
+/support tag create name:rules text:Be kind to each other
+/support tag show name:rules
+/support tag list
+/support tag info name:rules
+/support tag edit name:rules text:Be kind and read the pinned message
+/support tag delete name:rules
 
-/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
-/autoresponder list
-/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+/support autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/support autoresponder list
+/support autoresponder remove id:1                         # mode: contains, word, exact, startswith
 
-/remind set duration:2h text:Stream starts
-/remind list
-/remind cancel id:1
-/afk reason:Lunch                                  # the bot tells others who mention you
+/community remind set duration:2h text:Stream starts
+/community remind list
+/community remind cancel id:1
+/community afk reason:Lunch                                  # the bot tells others who mention you
 ```
 
 ### モデメールとBAN異議申し立て
@@ -711,20 +815,20 @@ dashboard.example.com {
 カウントゲーム、チャンネルの最下部に残るメッセージ、リアルタイムの数値を表示するチャンネル。
 
 ```
-/counting setup channel:#counting reset_on_fail:True delete_wrong:True
-/counting status
-/counting set number:100
-/counting off
+/engage counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/engage counting status
+/engage counting set number:100
+/engage counting off
 
-/sticky set channel:#rules text:Read the rules before you write
-/sticky list
-/sticky remove channel:#rules
+/post sticky set channel:#rules text:Read the rules before you write
+/post sticky list
+/post sticky remove channel:#rules
 
-/stats create template:Members: {members} category:Statistics
-/stats add channel:#info template:Boosts: {boosts}
-/stats list
-/stats refresh
-/stats remove channel:#info
+/server stats create template:Members: {members} category:Statistics
+/server stats add channel:#info template:Boosts: {boosts}
+/server stats list
+/server stats refresh
+/server stats remove channel:#info
 ```
 
 ### 既存機能の追加オプション
@@ -732,40 +836,40 @@ dashboard.example.com {
 チケット、抽選、ボイスルーム、XP、誕生日、バックアップ、ログ、状態表示への追加機能です。
 
 ```
-/ticket claim
-/ticket rename name:billing-help
-/ticket list
+/support ticket claim
+/support ticket rename name:billing-help
+/support ticket list
 
-/giveaway cancel giveaway_id:3
-/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+/engage giveaway cancel giveaway_id:3
+/engage giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
 
-/voice rename name:Study room                      # only the owner of the room
-/voice limit limit:4
-/voice lock
-/voice unlock
-/voice kick member:@User
-/voice transfer member:@User
-/voice claim                                       # if the owner left
+/community voice rename name:Study room                      # only the owner of the room
+/community voice limit limit:4
+/community voice lock
+/community voice unlock
+/community voice kick member:@User
+/community voice transfer member:@User
+/community voice claim                                       # if the owner left
 
 /xp channelboost channel:#chat multiplier:1.5
 /xp resetall confirm:True
-/leaderboard page:2
+/info leaderboard page:2
 
 /birthday list
 /birthday setup user member:@User day:14 month:3
 /birthday setup clear member:@User
 
-/backup info name:weekly
-/log show
-/log ignorechannel channel:#bots
-/log ignoreuser user:@Bot
-/log sent enabled:True
+/server backup info name:weekly
+/server log show
+/server log ignorechannel channel:#bots
+/server log ignoreuser user:@Bot
+/server log sent enabled:True
 
 /automod status
-/verify status
-/raid status
-/welcome show
-/starboard show
+/access verify status
+/security raid status
+/community welcome show
+/engage starboard show
 ```
 
 ### その他の AutoMod ツール
@@ -792,14 +896,14 @@ dashboard.example.com {
 モデレーターがBANやキックをしすぎたときに警告し、危険な権限を持つロールを一覧表示します。
 
 ```
-/modwatch status
-/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
-/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
-/modwatch exclude member:@TrustedMod
+/team modwatch status
+/team modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/team modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/team modwatch exclude member:@TrustedMod
 
-/permaudit run                                                  # roles with dangerous permissions and who holds them
-/permaudit watch enabled:True                                   # alarm when a role or member gets one
-/permaudit trust role:@Admin
+/team permaudit run                                                  # roles with dangerous permissions and who holds them
+/team permaudit watch enabled:True                                   # alarm when a role or member gets one
+/team permaudit trust role:@Admin
 ```
 
 ### 通報と招待の追跡
@@ -814,10 +918,10 @@ dashboard.example.com {
 /report send message_link:https://discord.com/channels/1/2/3 reason:Spam
 # or right click a message, Apps, Report message
 
-/invites who member:@User
-/invites stats user:@User
-/invites top
-/invites setup log:True alert_joins:5 alert_minutes:60
+/server invites who member:@User
+/server invites stats user:@User
+/server invites top
+/server invites setup log:True alert_joins:5 alert_minutes:60
 ```
 
 ### 診断とデバッグ
@@ -825,18 +929,18 @@ dashboard.example.com {
 不足している権限や壊れた設定を見つけ、エラーレポートをチャンネルで受け取り、設定をエクスポート・インポートできます。
 
 ```
-/diagnose                                                       # permissions, role order, deleted channels and roles
-/debug status
-/debug errorchannel channel:#bot-errors
-/debug errortest
-/debug selftest enabled:True                                    # check at start-up
-/debug usagestats enabled:True
-/debug usage reset:False
-/debug level level:DEBUG                                        # owner of the bot only
-/debug db action:check                                          # owner of the bot only: check, vacuum, size
+/server diagnose                                                       # permissions, role order, deleted channels and roles
+/server debug status
+/server debug errorchannel channel:#bot-errors
+/server debug errortest
+/server debug selftest enabled:True                                    # check at start-up
+/server debug usagestats enabled:True
+/server debug usage reset:False
+/server debug level level:DEBUG                                        # owner of the bot only
+/server debug db action:check                                          # owner of the bot only: check, vacuum, size
 
-/config export
-/config import file:guardbot-settings.json confirm:False        # first without confirm
+/admin config export
+/admin config import file:guardbot-settings.json confirm:False        # first without confirm
 ```
 
 ### 音楽
@@ -872,7 +976,7 @@ dashboard.example.com {
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
-/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/admin config set path:music.allowed_hosts value:bandcamp.com,archive.org
 /music cleardj
 /music status
 ```
@@ -881,12 +985,12 @@ dashboard.example.com {
 
 ### セットアップとヘルスチェック
 
-ガイド付きアシスタントが、ボタンとメニューで重要な設定を行います：ログチャンネル、ウェルカムチャンネル、スタッフロール、ラーゲリ、AutoMod のプリセット（緩め、標準、厳しめ）、サーバーテンプレート（コミュニティ、ゲーム、サポート）、そして言語です。/health で設定済みの項目と残りの項目を確認できます。言語を変えると、既定のウェルカムメッセージ、AutoMod の通知、認証、チケット、異議申し立て、モッドメール、ロールメニューなど、メンバーに表示される文章が変わります。管理者への定型の返信は翻訳され、名前や数字を含む返信は英語のままです。
+ガイド付きアシスタントが、ボタンとメニューで重要な設定を行います：ログチャンネル、ウェルカムチャンネル、スタッフロール、ラーゲリ、AutoMod のプリセット（緩め、標準、厳しめ）、サーバーテンプレート（コミュニティ、ゲーム、サポート）、そして言語です。/server health で設定済みの項目と残りの項目を確認できます。言語を変えると、既定のウェルカムメッセージ、AutoMod の通知、認証、チケット、異議申し立て、モッドメール、ロールメニューなど、メンバーに表示される文章が変わります。管理者への定型の返信は翻訳され、名前や数字を含む返信は英語のままです。
 
 ```
-/setup                                                         # buttons and menus, nothing is switched off by a template
-/health                                                        # what is set up, what is open, and the self-test
-/language code:de
+/admin setup                                                         # buttons and menus, nothing is switched off by a template
+/server health                                                        # what is set up, what is open, and the self-test
+/admin language code:de
 ```
 
 ### 経済
@@ -894,20 +998,20 @@ dashboard.example.com {
 毎日の報酬、仕事、送金、ランキング、そしてロールを付与できる商品を扱うショップを備えたサーバー通貨です。economy モジュールで有効にします。コマンドはプレフィックスでも使えます（例：!economy daily）。
 
 ```
-/module enable name:economy
-/economy balance member:@User                                  # same as !economy
-/economy daily
-/economy work
-/economy pay member:@User amount:50
-/economy leaderboard
-/economy shop
-/economy buy item:1
-/economy inventory
+/admin module enable name:economy
+/engage economy balance member:@User                                  # same as !economy
+/engage economy daily
+/engage economy work
+/engage economy pay member:@User amount:50
+/engage economy leaderboard
+/engage economy shop
+/engage economy buy item:1
+/engage economy inventory
 
-/economy give member:@User amount:500                          # staff, a negative amount takes away
-/economy shopadd name:VIP price:1000 role:@VIP stock:10
-/economy shopremove item:1
-/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+/engage economy give member:@User amount:500                          # staff, a negative amount takes away
+/engage economy shopadd name:VIP price:1000 role:@VIP stock:10
+/engage economy shopremove item:1
+/engage economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
 ```
 
 ### ロールメニュー、予約メッセージ、フィード
@@ -915,24 +1019,24 @@ dashboard.example.com {
 ロールメニューはボタンまたはドロップダウンでロールを付与します。予約メッセージは一度だけ、または毎時・毎日・毎週繰り返して投稿されます。フィードは YouTube の新着動画、Twitch の配信、RSS の記事を投稿します。YouTube にはチャンネル ID（UC で始まる）を使います。Twitch には .env に TWITCH_CLIENT_ID と TWITCH_CLIENT_SECRET が必要です。時刻は in 2h、18:30、または 2026-12-24 18:00 のような日付と時刻で、サーバーのタイムゾーンに従って指定します。フィードの最初のチェックでは、すでにあるものを記憶するだけです。
 
 ```
-/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
-/rolemenu add menu:1 role:@Red label:Red
-/rolemenu remove menu:1 role:@Red
-/rolemenu delete menu:1
-/rolemenu list
+/post rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/post rolemenu add menu:1 role:@Red label:Red
+/post rolemenu remove menu:1 role:@Red
+/post rolemenu delete menu:1
+/post rolemenu list
 
-/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
-/schedule add channel:#news when:in 2h text:Restart soon repeat:none
-/schedule list
-/schedule remove number:1
-/schedule timezone name:Europe/Berlin
+/post schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/post schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/post schedule list
+/post schedule remove number:1
+/post schedule timezone name:Europe/Berlin
 
-/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
-/feed add kind:twitch target:somestreamer channel:#live
-/feed add kind:rss target:https://example.com/feed.xml channel:#news
-/feed list
-/feed check
-/feed remove number:1
+/post feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/post feed add kind:twitch target:somestreamer channel:#live
+/post feed add kind:rss target:https://example.com/feed.xml channel:#news
+/post feed list
+/post feed check
+/post feed remove number:1
 ```
 
 ### アクティビティ、一括操作、ケース検索
@@ -940,59 +1044,59 @@ dashboard.example.com {
 アクティビティはチャンネルごとのメッセージ数と、日ごとの参加・退出数を数え、内容や名前は記録しません。一括操作は確認の後、最大25人のユーザーをBAN、キック、またはタイムアウトします。ケースはユーザー、種類、名前、理由、モデレーター、経過日数で検索でき、メモをBANに関連付けるなど、相互にリンクできます。
 
 ```
-/module enable name:activity
-/activity overview days:7
-/activity channels days:30
-/activity growth days:14
-/activity reset
+/admin module enable name:activity
+/community activity overview days:7
+/community activity channels days:30
+/community activity growth days:14
+/community activity reset
 
-/bulk ban users:123456789012345678 223456789012345678 reason:Raid
-/bulk kick users:123456789012345678 223456789012345678 reason:Spam
-/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+/moderation bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/moderation bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/moderation bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
 
-/cases user:@User kind:ban text:scam moderator:@Mod days:30
-/case link case_id:12 other:15
-/case unlink case_id:12 other:15
+/moderation cases user:@User kind:ban text:scam moderator:@Mod days:30
+/moderation case link case_id:12 other:15
+/moderation case unlink case_id:12 other:15
 ```
 
 ### 詐欺対策・暗号資産対策
 
-典型的な MrBeast 詐欺のような偽のプレゼント企画を、テキストでも画像でも数ミリ秒で削除します。即時リストの名前は、どんな綴りでもその場で削除されます（MrBeast、Mr Beast、M R B E A S T、Mr.B3ast）。それ以外はリスト（名前、釣り文句、暗号資産、リンク、金額）の語が加点され、しきい値に達するとメッセージが削除されます。画像は OCR で読み取られ、一度詐欺と判定された画像は再度読み取らずに削除されます。画像の読み取りには tesseract が必要で、なければテキストだけが検査されます。MrBeast のサーバーは、即時リストから名前を外すか、/automod exemptchannel でチャンネルを除外できます。頼る前に /antiscam test で試してください。
+典型的な MrBeast 詐欺のような偽のプレゼント企画を、テキストでも画像でも数ミリ秒で削除します。即時リストの名前は、どんな綴りでもその場で削除されます（MrBeast、Mr Beast、M R B E A S T、Mr.B3ast）。それ以外はリスト（名前、釣り文句、暗号資産、リンク、金額）の語が加点され、しきい値に達するとメッセージが削除されます。画像は OCR で読み取られ、一度詐欺と判定された画像は再度読み取らずに削除されます。画像の読み取りには tesseract が必要で、なければテキストだけが検査されます。MrBeast のサーバーは、即時リストから名前を外すか、/automod exemptchannel でチャンネルを除外できます。頼る前に /security antiscam test で試してください。
 
 ```
-/antiscam status
-/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
-/antiscam words action:add kind:instant word:mrbeast
-/antiscam words action:remove kind:crypto word:token
-/antiscam test text:MrBeast is giving away 1000 BTC, claim now
-/antiscam testimage image:scam.png
-/antiscam forget
+/security antiscam status
+/security antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/security antiscam words action:add kind:instant word:mrbeast
+/security antiscam words action:remove kind:crypto word:token
+/security antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/security antiscam testimage image:scam.png
+/security antiscam forget
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
 ### 仮参加期間、群れの検出、タイムライン、学習
 
-仮参加期間は、新しいメンバーをロールに入れます。設定した数の通常メッセージを書くか、設定した分数が過ぎるまで、リンク、招待、ファイルは短い通知とともに削除されます。レイド対策は群れも検出します。名前のパターンが同じ、プロフィール画像が同じ、または作成時刻が数分以内の新しいアカウントが複数ある場合です。タイムライン（/case timeline）は、1人のユーザーのアカウント作成、参加と招待、仮参加期間、ケース、異議申し立てを時系列でまとめます。メッセージは保存されないため含まれません。/block、/unblock、/blocklist は短いコマンドで AutoMod のブロックリストを管理します。モデレーターは、メッセージのコンテキストメニュー項目 Mark as scam、または learn_emoji で設定した絵文字のリアクションで詐欺対策モジュールに覚えさせられます。メッセージは削除され、その画像とテキストは以後すぐに削除されます。各機能は、それぞれのモジュールまたは設定でオフにできます。
+仮参加期間は、新しいメンバーをロールに入れます。設定した数の通常メッセージを書くか、設定した分数が過ぎるまで、リンク、招待、ファイルは短い通知とともに削除されます。レイド対策は群れも検出します。名前のパターンが同じ、プロフィール画像が同じ、または作成時刻が数分以内の新しいアカウントが複数ある場合です。タイムライン（/moderation case timeline）は、1人のユーザーのアカウント作成、参加と招待、仮参加期間、ケース、異議申し立てを時系列でまとめます。メッセージは保存されないため含まれません。/security block、/security unblock、/security blocklist は短いコマンドで AutoMod のブロックリストを管理します。モデレーターは、メッセージのコンテキストメニュー項目 Mark as scam、または learn_emoji で設定した絵文字のリアクションで詐欺対策モジュールに覚えさせられます。メッセージは削除され、その画像とテキストは以後すぐに削除されます。各機能は、それぞれのモジュールまたは設定でオフにできます。
 
 ```
-/module enable name:probation
-/probation setup minutes:10 messages:1 block_links:True block_files:True
-/probation status
-/probation release member:@User
-/probation add member:@User
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
 
-/raid swarm enabled:True minimum:4 minutes:10
-/case timeline user:@User
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
 
-/block kind:link value:evil.example
-/blocklist
-/unblock kind:link number:1
-/antiscam set learn_emoji:X
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
 ```
 
 ### メッセージビルダーと更新
 
-メッセージビルダーは、JSON から複数の埋め込みとリンクボタンを含むメッセージを投稿します。Embed Generator などの埋め込みジェネレーターが書き出す JSON を読み取るので、そこでメッセージを作り、ボットで投稿できます。JSON は、テキスト、.json ファイル、または JSON を直接指す https リンク（たとえばリポジトリの生ファイル）で渡します。リダイレクトするリンクは拒否されます。作成されるのはリンクボタンだけで、操作が必要なボタンはスキップされます。リンクはすべて http か https である必要があり、テキスト内のメンションは通知されず、Discord の制限が適用されます。/message copy は既存のメッセージを JSON として書き出し、/message edit はボットのメッセージを変更し、/message preview は結果をあなただけに表示します。ウェブエディターの共有リンクは、形式が公開されていないため開きません。
+メッセージビルダーは、JSON から複数の埋め込みとリンクボタンを含むメッセージを投稿します。Embed Generator などの埋め込みジェネレーターが書き出す JSON を読み取るので、そこでメッセージを作り、ボットで投稿できます。JSON は、テキスト、.json ファイル、または JSON を直接指す https リンク（たとえばリポジトリの生ファイル）で渡します。リダイレクトするリンクは拒否されます。作成されるのはリンクボタンだけで、操作が必要なボタンはスキップされます。リンクはすべて http か https である必要があり、テキスト内のメンションは通知されず、Discord の制限が適用されます。/post message copy は既存のメッセージを JSON として書き出し、/post message edit はボットのメッセージを変更し、/post message preview は結果をあなただけに表示します。ウェブエディターの共有リンクは、形式が公開されていないため開きません。
 
 ```json
 {
@@ -1002,7 +1106,7 @@ dashboard.example.com {
 }
 ```
 
-ボットは 12 時間ごとに、update.repo（scripts/set_repo_url.py で設定）の GitHub リポジトリに新しいリリースがないか確認します。ある場合、ボットの所有者にリリースノート付きのダイレクトメッセージが届き、リリースがダウンロードされて検査されます。検査内容は、リリースの SHA-256 チェックサム、アーカイブ内の安全なパス、タグと一致するバージョンです。インストールは /debug update action:install で行うか、auto_install がオンなら自動で行われます。インストール前に、置き換えられるファイルは data/update に保存され、新しいパッケージがインストールされ、新しいコードが試験的にインポートされます。どこかで失敗すると、古いファイルが復元されます。.env、settings.json、data、music には一切手を加えません。その後ボットは自動で再起動します。Docker ではその場にはインストールされないので、イメージを更新してください。更新はリポジトリのコードを実行するため、信頼できるリポジトリだけを指定してください。enabled を false にすると無効になります。
+ボットは 12 時間ごとに、update.repo（scripts/set_repo_url.py で設定）の GitHub リポジトリに新しいリリースがないか確認します。ある場合、ボットの所有者にリリースノート付きのダイレクトメッセージが届き、リリースがダウンロードされて検査されます。検査内容は、リリースの SHA-256 チェックサム、アーカイブ内の安全なパス、タグと一致するバージョンです。インストールは /server debug update action:install で行うか、auto_install がオンなら自動で行われます。インストール前に、置き換えられるファイルは data/update に保存され、新しいパッケージがインストールされ、新しいコードが試験的にインポートされます。どこかで失敗すると、古いファイルが復元されます。.env、settings.json、data、music には一切手を加えません。その後ボットは自動で再起動します。Docker ではその場にはインストールされないので、イメージを更新してください。更新はリポジトリのコードを実行するため、信頼できるリポジトリだけを指定してください。enabled を false にすると無効になります。
 
 ```json
 {
@@ -1017,15 +1121,15 @@ dashboard.example.com {
 ```
 
 ```
-/message send channel:#news url:https://example.com/message.json
-/message send channel:#news file:message.json
-/message preview url:https://example.com/message.json
-/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/message copy message:https://discord.com/channels/1/2/3
-/module disable name:builder
-/debug update action:status
-/debug update action:check
-/debug update action:install
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
 ```
 
 ### 運用
@@ -1045,8 +1149,8 @@ dashboard.example.com {
 ```
 
 ```
-/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
-/debug db action:list
+/server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/server debug db action:list
 ```
 
 ### 管理
@@ -1054,26 +1158,26 @@ dashboard.example.com {
 モジュールとコマンドのオン・オフ、プレフィックスの変更、エイリアスの設定、ロールによるコマンド制限。
 
 ```
-/module list
-/module disable name:starboard
-/module enable name:tickets
-/command disable name:ban                          # single commands
-/command enable name:ban
-/command list
+/admin module list
+/admin module disable name:starboard
+/admin module enable name:tickets
+/admin command disable name:ban                          # single commands
+/admin command enable name:ban
+/admin command list
 
-/prefix new_prefix:?                               # text commands now start with ?
-/alias add alias:w command:warn                    # ?w @User Spam
-/alias remove alias:w
-/alias list
+/admin prefix new_prefix:?                               # text commands now start with ?
+/admin alias add alias:w command:warn                    # ?w @User Spam
+/admin alias remove alias:w
+/admin alias list
 
-/perms allow command:ban target:@HeadModerator     # only this role may use /ban
-/perms deny command:warn target:@Trainee
-/perms reset command:ban
-/perms show
+/admin perms allow command:ban target:@HeadModerator     # only this role may use /moderation ban
+/admin perms deny command:warn target:@Trainee
+/admin perms reset command:ban
+/admin perms show
 
-/settings
+/admin settings
 /help
-/about
+/info about
 ```
 
 ## メッセージのプレースホルダー
@@ -1081,17 +1185,17 @@ dashboard.example.com {
 設定したテキストの中で、次のプレースホルダーが置き換えられます：
 
 ```
-/welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
-/booster set         message                         {user} {name} {server} {count}
+/community welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
+/community booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
 /birthday setup set   message                         {user} {name}
-/tempvoice setup     name                            {name}
-/jailsetup notice    text                            {staff}
+/community tempvoice setup     name                            {name}
+/access jailsetup notice    text                            {staff}
 ```
 
 ## 設定
 
-全体の設定は settings.json で行います。それ以外はサーバーごとに /module、/command、/perms、/alias、/config などのコマンドで設定します。
+全体の設定は settings.json で行います。それ以外はサーバーごとに /admin module、/admin command、/admin perms、/admin alias、/admin config などのコマンドで設定します。
 
 コマンド名を変えるには、command_names に追加してボットを再起動します。
 
@@ -1108,21 +1212,21 @@ dashboard.example.com {
 }
 ```
 
-すべての設定は /config で読み取りと変更ができます。よく使うパスは次のとおりです：
+すべての設定は /admin config で読み取りと変更ができます。よく使うパスは次のとおりです：
 
 ```
-/config get path:automod.caps.percent
-/config set path:automod.caps.percent value:80
-/config set path:mod.dm_user value:false             # no direct message on punishments
-/config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
-/config set path:mod.default_mute_minutes value:120
-/config set path:automod.mentions.max value:5
-/config set path:automod.phishing.lookalike value:true
-/config set path:raid.joins value:8
-/config set path:xp.cooldown value:45
-/config set path:tickets.max_open value:2
-/config set path:privacy.retention_days value:90
-/config reset section:welcome                        # back to the defaults of one section
+/admin config get path:automod.caps.percent
+/admin config set path:automod.caps.percent value:80
+/admin config set path:mod.dm_user value:false             # no direct message on punishments
+/admin config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
+/admin config set path:mod.default_mute_minutes value:120
+/admin config set path:automod.mentions.max value:5
+/admin config set path:automod.phishing.lookalike value:true
+/admin config set path:raid.joins value:8
+/admin config set path:xp.cooldown value:45
+/admin config set path:tickets.max_open value:2
+/admin config set path:privacy.retention_days value:90
+/admin config reset section:welcome                        # back to the defaults of one section
 ```
 
 ## データと保存場所
@@ -1173,7 +1277,7 @@ guardbot/
 - すべてのデータは、お使いのコンピューターの data フォルダーに保存されます。設定、XP、誕生日（日と月のみ）、モデレーション記録です。
 - ボットはメンバーからのダイレクトメッセージを無視します。
 - トークンは .env ファイルから読み込まれます。共有したり公開したりしないでください。
-- メンバーは /mydata で自分のデータをエクスポートおよび削除できます。管理者は、退出したメンバーのデータを保持する期間を設定できます。
+- メンバーは /info mydata で自分のデータをエクスポートおよび削除できます。管理者は、退出したメンバーのデータを保持する期間を設定できます。
 - [PRIVACY.md](../PRIVACY.md)
 
 ## サポート

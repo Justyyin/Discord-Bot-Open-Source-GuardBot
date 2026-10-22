@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 サーバーで次のコマンドを使い、チャンネル名を自分のものに置き換えてください。
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 すべての機能はコマンドリファレンスで説明しています： [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## 任意：画像の読み取りと言語
 
-詐欺対策モジュールに画像内の文字を読ませるには、ボットを動かすコンピューターに tesseract をインストールします（Docker イメージには含まれています）。その後 /antiscam status で準備できているか確認します。メンバーに表示されるメッセージの言語は /language で選びます。
+詐欺対策モジュールに画像内の文字を読ませるには、ボットを動かすコンピューターに tesseract をインストールします（Docker イメージには含まれています）。その後 /security antiscam status で準備できているか確認します。メンバーに表示されるメッセージの言語は /admin language で選びます。
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## ダッシュボード
@@ -233,7 +233,7 @@ dashboard.example.com {
 - 特権 Intent のエラーでボットが停止する：Developer Portal で Server Members Intent と Message Content Intent をオンにしてください。
 - Improper token：トークンをもう一度コピーし、.env の内容が DISCORD_TOKEN=トークン だけで、空白や引用符がないことを確認してください。
 - I cannot assign that role：ボットのロールを、管理させたいロールより上に移動してください。
-- 何も記録されない：/log set でチャンネルを設定し、ボットがそのチャンネルでメッセージ送信、リンク埋め込み、ファイル添付をできるか確認してください。
+- 何も記録されない：/server log set でチャンネルを設定し、ボットがそのチャンネルでメッセージ送信、リンク埋め込み、ファイル添付をできるか確認してください。
 - Unknown timezone：pip install tzdata を実行してボットを再起動してください。
 - 原因が分からないまま失敗する場合：エラーと警告はコンソールに出力されます。VPS では journalctl -u guardbot -f で確認できます。
 

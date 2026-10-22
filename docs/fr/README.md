@@ -25,11 +25,13 @@ Bot Discord auto-hébergé pour la modération, la sécurité et la communauté.
   - [Mise à jour](#mise-à-jour)
 - [Permissions du bot](#permissions-du-bot)
 - [Premiers pas sur Discord](#premiers-pas-sur-discord)
+  - [Structure, membres et équipe](#structure-membres-et-équipe)
 - [Tableau de bord](#tableau-de-bord)
   - [Configurer le tableau de bord](#configurer-le-tableau-de-bord)
   - [Sécurité](#sécurité-1)
   - [Tableau de bord sur un VPS](#tableau-de-bord-sur-un-vps)
 - [Commandes](#commandes)
+  - [Groupes de commandes](#groupes-de-commandes)
   - [Modération](#modération-1)
   - [Goulag (jail)](#goulag-jail)
   - [Modération automatique](#modération-automatique)
@@ -93,7 +95,7 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 - Modération automatique : filtre de mots, filtre de majuscules, spam de mentions, liens d'invitation, domaines de phishing, données personnelles, doxxing et menaces. Toutes les listes sont modifiables.
 - Anti-raid avec détection des vagues d'arrivées et verrouillage de tout le serveur.
 - Anti-nuke : limites pour les suppressions et bannissements en masse, réaction automatique et message privé au propriétaire du serveur.
-- Salon goulag : les membres qui publient des liens ou images d'arnaque sont déplacés dans un seul salon avec les étapes pour sécuriser leur compte. Les modérateurs peuvent aussi utiliser /jail et /unjail.
+- Salon goulag : les membres qui publient des liens ou images d'arnaque sont déplacés dans un seul salon avec les étapes pour sécuriser leur compte. Les modérateurs peuvent aussi utiliser /moderation jail et /moderation unjail.
 - Vérification par bouton ou captcha, avec retrait automatique des membres qui ne se vérifient pas à temps.
 - L'anti-nuke surveille aussi l'attribution de permissions, les nouveaux webhooks, les bots ajoutés et les changements de nom du serveur.
 - Anti-arnaque : les faux concours et les arnaques crypto sont supprimés dans le texte et les images en quelques millisecondes, y compris l'arnaque MrBeast sous toutes ses orthographes.
@@ -117,7 +119,7 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 - XP et niveaux de 1 à 100 pour le chat et le vocal, rôles de niveau et anniversaires.
 - Starboard et salons vocaux temporaires.
 - Jail avec durée, sondages à choix multiples, cartes de rang en image et boosts d'XP par rôle.
-- Économie avec boutique, menus de rôles avec boutons ou liste déroulante, messages programmés, flux YouTube, Twitch et RSS, statistiques d'activité et un /setup guidé. Les messages aux membres existent en 12 langues.
+- Économie avec boutique, menus de rôles avec boutons ou liste déroulante, messages programmés, flux YouTube, Twitch et RSS, statistiques d'activité et un /admin setup guidé. Les messages aux membres existent en 12 langues.
 
 ### Administration
 
@@ -241,19 +243,99 @@ Optional
 Une configuration de départ raisonnable. Exécutez ces commandes sur votre serveur et remplacez les salons et les rôles par les vôtres :
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
+
+### Structure, membres et équipe
+
+La version 1.5 ajoute des commandes pour construire et garder un serveur en ordre, restaurer les membres qui reviennent et diriger l'équipe de modération. Chaque partie a un interrupteur de module (`/admin module`), ses propres réglages et une place dans le tableau de bord.
+
+```
+/structure channel create name:news kind:text category:Info private:False
+/structure channel clone channel:#news name:news-2
+/structure channel rename channel:#news name:announcements
+/structure channel move channel:#news category:Info position:1
+/structure channel sort category:Info
+/structure channel copyperms source:#news target:#rules whole_category:False
+/structure category create name:Events private:False
+/structure category clone category:Events name:Events 2
+/structure category sort
+/structure category sync category:Events
+/structure archive setup action:report days:60 report_channel:#staff interval_hours:24
+/structure archive ignore channel:#news
+/structure archive scan action:report
+/structure temprole give member:@User role:@Event duration:7d reason:Contest
+/structure temprole list
+/structure roletemplate save name:mod role:@Moderator
+/structure roletemplate apply name:mod role_name:Trial Mod
+/structure rules setup channel:#rules role:@Member remind:True remind_hours:24
+/structure rules add text:Be kind to each other.
+/structure rules post new_version:True
+/structure rules status
+
+/members stickyroles setup roles:True days:30 punishments:True dangerous:False
+/members stickyroles status
+/members stickyroles forget user:@User
+/members nickname setup dehoist:True usernames:True rename_to:Renamed notify:True
+/members nickname word word:badword
+/members nickname check name:!!hoisted
+/members nickname scan
+/members watch setup channel:#staff ping_role:@Moderator repeat:False
+/members watch add user:@User reason:Suspicious
+/members watch list
+/members reason add name:spam action:mute text:Spam duration:1h
+/members reason use name:spam user:@User
+
+/security approval setup channel:#staff role:@Moderator ban:True bulk:True minutes:30 owner_bypass:True
+/security approval list
+/security approval cancel request_id:3
+/moderation case undo case_id:12 reason:Mistake follow:True batch:False
+/moderation escalation expiry days:90
+
+/admin history list
+/admin history show number:5
+/admin history rollback number:5 section:welcome
+/admin history keep count:200
+/admin history copy source:123456789012345678 sections:welcome,tickets dry_run:True
+/admin exceptions add rule:invites channel:#media role:@Artist
+/admin exceptions list
+/admin dashaccess add role:@Helper level:viewer
+/admin dashaccess list
+
+/team teamstats overview days:30
+/team teamstats member user:@User
+/team teamstats inactive days:14
+/team weekly setup channel:#staff day:Monday hour:9
+/team weekly now days:7
+/team duty away duration:3d reason:Holiday
+/team duty back
+/team duty route feature:tickets enabled:True
+/team duty roster role:@Moderator
+/team apply setup channel:#applications staff_role:@Moderator accept_role:@Trial votes:3 open:True cooldown_days:30
+/team apply question action:add text:Why do you want to join?
+/team apply start
+/team apply list
+/team apply decide number:4 decision:accept
+```
+
+- `/structure` crée, clone, renomme et trie les salons et catégories et copie les permissions d'un autre salon. Les salons inactifs sont signalés ou déplacés dans une catégorie d'archives (`/structure archive`). Les rôles peuvent être donnés pour une durée limitée et enregistrés comme modèles ; un modèle n'accorde jamais une permission que la personne qui l'applique n'a pas.
+- `/structure rules` publie le règlement avec un bouton d'acceptation et un numéro de version. Après `post new_version:True`, les membres qui n'ont pas accepté la nouvelle version reçoivent un seul rappel par message privé.
+- `/members stickyroles` rend les rôles et rétablit un timeout ou un mute quand un membre revient. `/members nickname` retire les caractères de tête qui font monter dans la liste, vérifie les mots interdits dans les pseudos et noms d'utilisateur et renomme les contrevenants. La liste de surveillance est silencieuse : l'équipe est alertée au premier message d'un utilisateur listé.
+- L'approbation à quatre yeux (`/security approval`) n'exécute les bans, kicks, timeouts et actions groupées qu'après l'accord d'un second modérateur. `/moderation case undo` annule un dossier, y compris les actions qui en ont découlé (par exemple un mute et le ban qui a suivi). Les avertissements peuvent expirer après un nombre de jours (`/moderation escalation expiry`).
+- `/admin history` montre qui a changé quel réglage et quand, et restaure une section. Le nom de la personne est une supposition tirée des dernières commandes et modifications du tableau de bord sur le serveur. `/admin history copy` copie des sections vers un autre serveur que vous pouvez gérer avec le bot ; il commence en simulation. `/admin exceptions` exclut des salons et des rôles des règles AutoMod et de l'Anti-Scam. `/admin dashaccess` donne à des rôles un accès en lecture seule ou modérateur au tableau de bord.
+- `/team` montre le travail de chaque modérateur (dossiers, tickets, signalements, temps de réaction, membres inactifs), publie un rapport hebdomadaire (jour et heure en UTC), permet aux modérateurs de s'absenter avec `/team duty away` pour que tickets et mentions aillent à d'autres, et gère les candidatures au staff avec formulaire et vote de l'équipe.
+- Discord ne peut pas masquer les commandes d'un groupe à certains membres. Le bot vérifie quand même chaque appel. Les chiffres des statistiques d'équipe sont comptés depuis le jour de la mise à jour ; les actions plus anciennes manquent.
 
 ## Tableau de bord
 
@@ -327,31 +409,53 @@ L'éditeur affiche chaque réglage qui est un interrupteur, un nombre, un texte,
 
 La plupart des commandes sont des commandes slash, les commandes de modération fonctionnent aussi avec un préfixe. La liste complète se trouve dans la référence des commandes : [COMMANDS.md](../COMMANDS.md).
 
+<!-- groups -->
+### Groupes de commandes
+
+Pour économiser des emplacements de commandes slash (Discord autorise 100 commandes de premier niveau par bot), les commandes liées sont regroupées. Saisissez d'abord le groupe, puis la commande, par exemple `/moderation ban`. Les commandes texte avec préfixe, par exemple `!ban`, ne changent pas. Les droits, alias et interrupteurs de module utilisent toujours le nom simple de la commande.
+
+| Groupe | Contient |
+| --- | --- |
+| `/moderation` | `warn`, `unwarn`, `warnings`, `clearwarns`, `note`, `mute`, `unmute`, `kick`, `ban`, `unban`, `tempban`, `jail`, `unjail`, `jailed`, `role`, `case`, `cases`, `bulk`, `escalation`, `purge`, `slowmode` |
+| `/security` | `antinuke`, `antiscam`, `raid`, `block`, `unblock`, `blocklist`, `approval` |
+| `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
+| `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
+| `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
+| `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
+| `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
+| `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
+| `/post` | `say`, `embed`, `message`, `sticky`, `schedule`, `feed`, `reactionrole`, `rolemenu` |
+| | `/help`, `/play`, `/automod`, `/music`, `/xp`, `/modmail`, `/appeal`, `/report`, `/suggestion`, `/birthday`, `/notify` |
+
 ### Modération
 
 Avertissements, mutes, expulsions et bannissements fonctionnent en commandes slash et avec le préfixe, par exemple `!warn @User spam`. Chaque action crée un cas numéroté.
 
 ```
-/warn member:@User reason:Spam                    # also: !warn @User Spam
-/unwarn case_id:12                                 # remove one warning
-/clearwarns user:@User                             # remove all active warnings
-/mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
-/unmute member:@User
-/kick member:@User reason:Advertising
-/ban user:@User reason:Raid                        # user can also be an ID
-/unban user:123456789012345678
+/moderation warn member:@User reason:Spam                    # also: !warn @User Spam
+/moderation unwarn case_id:12                                 # remove one warning
+/moderation clearwarns user:@User                             # remove all active warnings
+/moderation mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
+/moderation unmute member:@User
+/moderation kick member:@User reason:Advertising
+/moderation ban user:@User reason:Raid                        # user can also be an ID
+/moderation unban user:123456789012345678
 
-/cases user:@User                                  # history, filter by mention or ID
-/cases kind:ban page:2                             # filter by type
-/cases search:john                                 # filter by part of a name
-/warnings user:@User
-/case view case_id:12
+/moderation cases user:@User                                  # history, filter by mention or ID
+/moderation cases kind:ban page:2                             # filter by type
+/moderation cases search:john                                 # filter by part of a name
+/moderation warnings user:@User
+/moderation case view case_id:12
 
-/escalation list
-/escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
-/escalation set warns:5 action:kick
-/escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
-/escalation remove warns:5
+/moderation escalation list
+/moderation escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
+/moderation escalation set warns:5 action:kick
+/moderation escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
+/moderation escalation remove warns:5
 ```
 
 ### Goulag (jail)
@@ -359,14 +463,14 @@ Avertissements, mutes, expulsions et bannissements fonctionnent en commandes sla
 Les membres au compte piraté sont déplacés dans un seul salon avec des consignes de sécurité. Leurs anciens rôles sont rendus à la libération.
 
 ```
-/jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
-/jailsetup apply                                   # apply the channel permissions again
-/jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
-/jailsetup preview
+/access jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
+/access jailsetup apply                                   # apply the channel permissions again
+/access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
+/access jailsetup preview
 
-/jail member:@User reason:Hacked account           # also: !jail @User Hacked account
-/jail member:@User duration:2h                     # released automatically after 2 hours
-/unjail member:@User reason:Account secured
+/moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
+/moderation jail member:@User duration:2h                     # released automatically after 2 hours
+/moderation unjail member:@User reason:Account secured
 ```
 
 ### Modération automatique
@@ -410,18 +514,18 @@ Les règles suppriment ou sanctionnent les messages concernés. Choisissez l'act
 Détecte de nombreuses arrivées en peu de temps et peut verrouiller le serveur. Le mode channels modifie chaque salon, le mode role agit immédiatement.
 
 ```
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
 # 5 joins within 10 seconds count as a raid, accounts younger than 3 days are punished,
 # actions: alert, timeout, kick
 
-/lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
-/lockdown mode:channels reason:Raid                # thorough, edits every channel
-/unlock
+/access lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
+/access lockdown mode:channels reason:Raid                # thorough, edits every channel
+/access unlock
 
-/lockdownconfig mode mode:role                     # default mode
-/lockdownconfig lockrole role:@Member              # extra role locked in role mode
-/lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
-/lockdownconfig exempt channel:#announcements
+/access lockdownconfig mode mode:role                     # default mode
+/access lockdownconfig lockrole role:@Member              # extra role locked in role mode
+/access lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
+/access lockdownconfig exempt channel:#announcements
 ```
 
 ### Anti-nuke
@@ -429,16 +533,16 @@ Détecte de nombreuses arrivées en peu de temps et peut verrouiller le serveur.
 Surveille le journal d'audit et réagit quand quelqu'un détruit le serveur. Le propriétaire reçoit un message privé.
 
 ```
-/antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
-/antinuke limit kind:channel_delete count:3 seconds:10
+/security antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
+/security antinuke limit kind:channel_delete count:3 seconds:10
 # kinds: channel_delete, role_delete, channel_create, ban, kick,
 #        role_perm, role_grant, webhook_create, bot_add, guild_update
-/antinuke whitelist user:@TrustedAdmin             # toggle, never checked
-/antinuke staffrole role:@Moderator                # toggle, shown in alerts
-/antinuke servername name:MyServer                 # extra name for the nuke talk detection
-/antinuke newbots kick:True                        # kick bots added by untrusted users
-/antinuke restore member:@User                     # give back roles that were removed
-/antinuke status
+/security antinuke whitelist user:@TrustedAdmin             # toggle, never checked
+/security antinuke staffrole role:@Moderator                # toggle, shown in alerts
+/security antinuke servername name:MyServer                 # extra name for the nuke talk detection
+/security antinuke newbots kick:True                        # kick bots added by untrusted users
+/security antinuke restore member:@User                     # give back roles that were removed
+/security antinuke status
 ```
 
 ### Vérification
@@ -446,13 +550,13 @@ Surveille le journal d'audit et réagit quand quelqu'un détruit le serveur. Le 
 Les nouveaux membres ne voient que le salon de vérification jusqu'à ce qu'ils appuient sur le bouton ou résolvent le captcha.
 
 ```
-/verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
+/access verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
 # modes: button, captcha (image), math; roles are created if you do not pass them
-/verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
-/verify panel channel:#verify                      # post the button again
-/verify apply                                      # apply the channel permissions again
-/verify member member:@User                        # verify someone manually
-/verify off
+/access verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
+/access verify panel channel:#verify                      # post the button again
+/access verify apply                                      # apply the channel permissions again
+/access verify member member:@User                        # verify someone manually
+/access verify off
 ```
 
 ### Journalisation
@@ -460,13 +564,13 @@ Les nouveaux membres ne voient que le salon de vérification jusqu'à ce qu'ils 
 Choisissez un salon par catégorie, ou un salon principal pour tout.
 
 ```
-/log set category:main channel:#logs               # fallback for every category
-/log set category:messages channel:#log-messages
-/log set category:moderation channel:#log-moderation
-/log set category:security channel:#log-security
+/server log set category:main channel:#logs               # fallback for every category
+/server log set category:messages channel:#log-messages
+/server log set category:moderation channel:#log-moderation
+/server log set category:security channel:#log-security
 # categories: main, messages, members, voice, server, moderation, security
-/log sent enabled:False                            # stop logging every sent message
-/log show
+/server log sent enabled:False                            # stop logging every sent message
+/server log show
 ```
 
 ### Bienvenue, au revoir et boosters
@@ -474,14 +578,14 @@ Choisissez un salon par catégorie, ou un salon principal pour tout.
 Messages, rôles automatiques et récompenses pour les boosters du serveur.
 
 ```
-/welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
-/welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
-/welcome autorole role:@Member                     # toggle, given to every new member
-/welcome botrole role:@Bots                        # toggle, given to every new bot
-/welcome test
+/community welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
+/community welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
+/community welcome autorole role:@Member                     # toggle, given to every new member
+/community welcome botrole role:@Bots                        # toggle, given to every new bot
+/community welcome test
 
-/booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
-/booster role role:@Booster                        # toggle
+/community booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
+/community booster role role:@Booster                        # toggle
 ```
 
 ### Tickets
@@ -489,15 +593,15 @@ Messages, rôles automatiques et récompenses pour les boosters du serveur.
 Les membres ouvrent des salons privés avec un bouton. La fermeture envoie une transcription.
 
 ```
-/ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
-/ticket addtype key:report label:Report description:Report a member
-/ticket removetype key:report
-/ticket panel channel:#support title:Support description:Press a button to open a ticket
+/support ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
+/support ticket addtype key:report label:Report description:Report a member
+/support ticket removetype key:report
+/support ticket panel channel:#support title:Support description:Press a button to open a ticket
 
 # inside a ticket
-/ticket add member:@User
-/ticket remove member:@User
-/ticket close
+/support ticket add member:@User
+/support ticket remove member:@User
+/support ticket close
 ```
 
 ### Sondages et concours
@@ -505,14 +609,14 @@ Les membres ouvrent des salons privés avec un bouton. La fermeture envoie une t
 Des boutons pour voter et participer. Les durées acceptent des valeurs comme 30m, 2h et 1d.
 
 ```
-/poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
-/poll end poll_id:3
-/poll list
+/engage poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
+/engage poll end poll_id:3
+/engage poll list
 
-/giveaway start prize:Nitro duration:2d winners:2 role:@Member
-/giveaway end giveaway_id:1
-/giveaway reroll giveaway_id:1
-/giveaway list
+/engage giveaway start prize:Nitro duration:2d winners:2 role:@Member
+/engage giveaway end giveaway_id:1
+/engage giveaway reroll giveaway_id:1
+/engage giveaway list
 ```
 
 ### Suggestions et starboard
@@ -521,12 +625,12 @@ Les membres postent des suggestions que l'équipe peut accepter ou refuser, et l
 
 ```
 /suggestion setup set channel:#suggestions review_role:@Staff
-/suggest text:Add a music channel                  # also: !suggest Add a music channel
+/support suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
 
-/starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
-/starboard ignore channel:#spam
+/engage starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
+/engage starboard ignore channel:#spam
 ```
 
 ### XP et niveaux
@@ -552,9 +656,9 @@ XP pour le chat et le vocal, rôles de niveau, boosts par rôle et cartes de ran
 /xp setlevel user:@User level:20
 /xp reset user:@User
 
-/rank                                              # also: !rank, shows a rank card image
-/rank user:@User
-/leaderboard
+/info rank                                              # also: !rank, shows a rank card image
+/info rank user:@User
+/info leaderboard
 ```
 
 ### Rôles par réaction et notifications
@@ -562,12 +666,12 @@ XP pour le chat et le vocal, rôles de niveau, boosts par rôle et cartes de ran
 Donnez des rôles avec n'importe quel emoji et laissez les membres choisir leurs thèmes de notification.
 
 ```
-/reactionrole panel channel:#roles title:Pick your roles description:React below
-/reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
-/reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
+/post reactionrole panel channel:#roles title:Pick your roles description:React below
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
 # mode unique: only one role of that message at a time
-/reactionrole remove message:<message link> emoji:<any emoji>
-/reactionrole list
+/post reactionrole remove message:<message link> emoji:<any emoji>
+/post reactionrole list
 
 /notify topic add key:events role:@Events description:Server events
 /notify topic panel channel:#roles title:Notifications   # one button per topic
@@ -596,7 +700,7 @@ Les membres indiquent le jour et le mois, le bot donne un rôle et poste un mess
 Rejoindre le salon hub crée une salle qui disparaît quand elle est vide.
 
 ```
-/tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
+/community tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
 # joining the hub creates a room for the member, empty rooms are deleted
 ```
 
@@ -605,12 +709,12 @@ Rejoindre le salon hub crée une salle qui disparaît quand elle est vide.
 Les sauvegardes contiennent rôles, salons, emojis, webhooks et rôles des membres. La restauration n'ajoute que ce qui manque.
 
 ```
-/backup create name:before-update
-/backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
-/backup list
-/backup download name:before-update
-/backup restore name:before-update member_roles:True   # only adds what is missing
-/backup delete name:before-update
+/server backup create name:before-update
+/server backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
+/server backup list
+/server backup download name:before-update
+/server backup restore name:before-update member_roles:True   # only adds what is missing
+/server backup delete name:before-update
 ```
 
 ### Données et confidentialité
@@ -618,12 +722,12 @@ Les sauvegardes contiennent rôles, salons, emojis, webhooks et rôles des membr
 Les membres peuvent exporter et supprimer leurs données. Les administrateurs règlent la durée de conservation.
 
 ```
-/mydata export                                     # members download their own data
-/mydata delete confirm:True                        # members delete their XP and birthday
+/info mydata export                                     # members download their own data
+/info mydata delete confirm:True                        # members delete their XP and birthday
 
-/privacy retention days:90                         # delete data of members who left after 90 days
-/privacy export user_id:123456789012345678
-/privacy delete user_id:123456789012345678 cases:True
+/server privacy retention days:90                         # delete data of members who left after 90 days
+/server privacy export user_id:123456789012345678
+/server privacy delete user_id:123456789012345678 cases:True
 ```
 
 ### Outils de modération
@@ -631,21 +735,21 @@ Les membres peuvent exporter et supprimer leurs données. Les administrateurs r�
 Nettoyer les salons, gérer les rôles et garder des notes privées. Chaque action est journalisée.
 
 ```
-/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
-/slowmode seconds:10 channel:#general              # 0 turns it off
-/lockchannel channel:#general reason:Spam wave
-/unlockchannel channel:#general
+/moderation purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/moderation slowmode seconds:10 channel:#general              # 0 turns it off
+/access lockchannel channel:#general reason:Spam wave
+/access unlockchannel channel:#general
 
-/role add member:@User role:@Member
-/role remove member:@User role:@Member
+/moderation role add member:@User role:@Member
+/moderation role remove member:@User role:@Member
 
-/note user:@User text:Watch this member            # private, shown in /cases
-/tempban user:@User duration:7d reason:Spam        # unbanned automatically
-/jailed                                            # who is in the gulag right now
+/moderation note user:@User text:Watch this member            # private, shown in /moderation cases
+/moderation tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/moderation jailed                                            # who is in the gulag right now
 
-/case view case_id:12
-/case edit case_id:12 reason:Corrected reason
-/case delete case_id:12
+/moderation case view case_id:12
+/moderation case edit case_id:12 reason:Corrected reason
+/moderation case delete case_id:12
 ```
 
 ### Informations
@@ -653,13 +757,13 @@ Nettoyer les salons, gérer les rôles et garder des notes privées. Chaque acti
 Consulter les utilisateurs, le serveur, les rôles et le bot.
 
 ```
-/userinfo user:@User
-/serverinfo
-/roleinfo role:@Moderator
-/avatar user:@User
+/info userinfo user:@User
+/server serverinfo
+/server roleinfo role:@Moderator
+/info avatar user:@User
 /help command:ban                                  # explains one command
-/ping
-/botinfo
+/info ping
+/info botinfo
 ```
 
 ### Annonces, tags et rappels
@@ -667,24 +771,24 @@ Consulter les utilisateurs, le serveur, les rôles et le bot.
 Écrire au nom du bot, créer des commandes personnalisées, répondre automatiquement aux messages et définir des rappels.
 
 ```
-/say channel:#news message:Maintenance tonight
-/embed channel:#news title:Update description:New rules color:#5865F2
+/post say channel:#news message:Maintenance tonight
+/post embed channel:#news title:Update description:New rules color:#5865F2
 
-/tag create name:rules text:Be kind to each other
-/tag show name:rules
-/tag list
-/tag info name:rules
-/tag edit name:rules text:Be kind and read the pinned message
-/tag delete name:rules
+/support tag create name:rules text:Be kind to each other
+/support tag show name:rules
+/support tag list
+/support tag info name:rules
+/support tag edit name:rules text:Be kind and read the pinned message
+/support tag delete name:rules
 
-/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
-/autoresponder list
-/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+/support autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/support autoresponder list
+/support autoresponder remove id:1                         # mode: contains, word, exact, startswith
 
-/remind set duration:2h text:Stream starts
-/remind list
-/remind cancel id:1
-/afk reason:Lunch                                  # the bot tells others who mention you
+/community remind set duration:2h text:Stream starts
+/community remind list
+/community remind cancel id:1
+/community afk reason:Lunch                                  # the bot tells others who mention you
 ```
 
 ### Mod-mail et demandes de débannissement
@@ -711,20 +815,20 @@ Les membres écrivent à l'équipe par un salon privé du serveur. Personne n'a 
 Un jeu de comptage, des messages qui restent en bas d'un salon et des salons qui affichent des chiffres en direct.
 
 ```
-/counting setup channel:#counting reset_on_fail:True delete_wrong:True
-/counting status
-/counting set number:100
-/counting off
+/engage counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/engage counting status
+/engage counting set number:100
+/engage counting off
 
-/sticky set channel:#rules text:Read the rules before you write
-/sticky list
-/sticky remove channel:#rules
+/post sticky set channel:#rules text:Read the rules before you write
+/post sticky list
+/post sticky remove channel:#rules
 
-/stats create template:Members: {members} category:Statistics
-/stats add channel:#info template:Boosts: {boosts}
-/stats list
-/stats refresh
-/stats remove channel:#info
+/server stats create template:Members: {members} category:Statistics
+/server stats add channel:#info template:Boosts: {boosts}
+/server stats list
+/server stats refresh
+/server stats remove channel:#info
 ```
 
 ### Autres options des fonctions existantes
@@ -732,40 +836,40 @@ Un jeu de comptage, des messages qui restent en bas d'un salon et des salons qui
 Ajouts pour les tickets, concours, salons vocaux, XP, anniversaires, sauvegardes, journaux et affichages d'état.
 
 ```
-/ticket claim
-/ticket rename name:billing-help
-/ticket list
+/support ticket claim
+/support ticket rename name:billing-help
+/support ticket list
 
-/giveaway cancel giveaway_id:3
-/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+/engage giveaway cancel giveaway_id:3
+/engage giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
 
-/voice rename name:Study room                      # only the owner of the room
-/voice limit limit:4
-/voice lock
-/voice unlock
-/voice kick member:@User
-/voice transfer member:@User
-/voice claim                                       # if the owner left
+/community voice rename name:Study room                      # only the owner of the room
+/community voice limit limit:4
+/community voice lock
+/community voice unlock
+/community voice kick member:@User
+/community voice transfer member:@User
+/community voice claim                                       # if the owner left
 
 /xp channelboost channel:#chat multiplier:1.5
 /xp resetall confirm:True
-/leaderboard page:2
+/info leaderboard page:2
 
 /birthday list
 /birthday setup user member:@User day:14 month:3
 /birthday setup clear member:@User
 
-/backup info name:weekly
-/log show
-/log ignorechannel channel:#bots
-/log ignoreuser user:@Bot
-/log sent enabled:True
+/server backup info name:weekly
+/server log show
+/server log ignorechannel channel:#bots
+/server log ignoreuser user:@Bot
+/server log sent enabled:True
 
 /automod status
-/verify status
-/raid status
-/welcome show
-/starboard show
+/access verify status
+/security raid status
+/community welcome show
+/engage starboard show
 ```
 
 ### Autres outils AutoMod
@@ -792,14 +896,14 @@ Suivre les liens raccourcis, limiter les liens des nouveaux membres, repérer le
 Recevoir une alerte quand un modérateur bannit ou expulse trop, et voir quels rôles ont des permissions dangereuses.
 
 ```
-/modwatch status
-/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
-/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
-/modwatch exclude member:@TrustedMod
+/team modwatch status
+/team modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/team modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/team modwatch exclude member:@TrustedMod
 
-/permaudit run                                                  # roles with dangerous permissions and who holds them
-/permaudit watch enabled:True                                   # alarm when a role or member gets one
-/permaudit trust role:@Admin
+/team permaudit run                                                  # roles with dangerous permissions and who holds them
+/team permaudit watch enabled:True                                   # alarm when a role or member gets one
+/team permaudit trust role:@Admin
 ```
 
 ### Signalements et suivi des invitations
@@ -814,10 +918,10 @@ Les membres signalent des messages à l'équipe, et le bot enregistre quelle inv
 /report send message_link:https://discord.com/channels/1/2/3 reason:Spam
 # or right click a message, Apps, Report message
 
-/invites who member:@User
-/invites stats user:@User
-/invites top
-/invites setup log:True alert_joins:5 alert_minutes:60
+/server invites who member:@User
+/server invites stats user:@User
+/server invites top
+/server invites setup log:True alert_joins:5 alert_minutes:60
 ```
 
 ### Diagnostic et débogage
@@ -825,18 +929,18 @@ Les membres signalent des messages à l'équipe, et le bot enregistre quelle inv
 Trouver les permissions manquantes et les réglages cassés, recevoir les rapports d'erreur dans un salon et exporter ou importer les réglages.
 
 ```
-/diagnose                                                       # permissions, role order, deleted channels and roles
-/debug status
-/debug errorchannel channel:#bot-errors
-/debug errortest
-/debug selftest enabled:True                                    # check at start-up
-/debug usagestats enabled:True
-/debug usage reset:False
-/debug level level:DEBUG                                        # owner of the bot only
-/debug db action:check                                          # owner of the bot only: check, vacuum, size
+/server diagnose                                                       # permissions, role order, deleted channels and roles
+/server debug status
+/server debug errorchannel channel:#bot-errors
+/server debug errortest
+/server debug selftest enabled:True                                    # check at start-up
+/server debug usagestats enabled:True
+/server debug usage reset:False
+/server debug level level:DEBUG                                        # owner of the bot only
+/server debug db action:check                                          # owner of the bot only: check, vacuum, size
 
-/config export
-/config import file:guardbot-settings.json confirm:False        # first without confirm
+/admin config export
+/admin config import file:guardbot-settings.json confirm:False        # first without confirm
 ```
 
 ### Musique
@@ -872,7 +976,7 @@ Lit des liens et des fichiers du dossier music dans un salon vocal. Les téléch
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
-/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/admin config set path:music.allowed_hosts value:bandcamp.com,archive.org
 /music cleardj
 /music status
 ```
@@ -881,12 +985,12 @@ Sans perte : vos propres fichiers (FLAC, WAV, ALAC) et les sources qui proposent
 
 ### Configuration et état de santé
 
-Un assistant guidé configure l'essentiel avec des boutons et des menus : salon de logs, salon de bienvenue, rôles de l'équipe, le goulag, un préréglage AutoMod (souple, normal, strict), un modèle de serveur (communauté, jeux, support) et la langue. /health montre ce qui est configuré et ce qui reste à faire. La langue change les textes que voient les membres, comme les messages de bienvenue par défaut, les avis d'AutoMod, la vérification, les tickets, les recours, le mod-mail et les menus de rôles. Les réponses fixes aux administrateurs sont traduites, celles qui contiennent des noms et des nombres restent en anglais.
+Un assistant guidé configure l'essentiel avec des boutons et des menus : salon de logs, salon de bienvenue, rôles de l'équipe, le goulag, un préréglage AutoMod (souple, normal, strict), un modèle de serveur (communauté, jeux, support) et la langue. /server health montre ce qui est configuré et ce qui reste à faire. La langue change les textes que voient les membres, comme les messages de bienvenue par défaut, les avis d'AutoMod, la vérification, les tickets, les recours, le mod-mail et les menus de rôles. Les réponses fixes aux administrateurs sont traduites, celles qui contiennent des noms et des nombres restent en anglais.
 
 ```
-/setup                                                         # buttons and menus, nothing is switched off by a template
-/health                                                        # what is set up, what is open, and the self-test
-/language code:de
+/admin setup                                                         # buttons and menus, nothing is switched off by a template
+/server health                                                        # what is set up, what is open, and the self-test
+/admin language code:de
 ```
 
 ### Économie
@@ -894,20 +998,20 @@ Un assistant guidé configure l'essentiel avec des boutons et des menus : salon 
 Une monnaie de serveur avec récompense quotidienne, travail, paiements, classement et une boutique dont les articles peuvent donner un rôle. Activez-la avec le module economy. Les commandes fonctionnent aussi avec le préfixe, par exemple !economy daily.
 
 ```
-/module enable name:economy
-/economy balance member:@User                                  # same as !economy
-/economy daily
-/economy work
-/economy pay member:@User amount:50
-/economy leaderboard
-/economy shop
-/economy buy item:1
-/economy inventory
+/admin module enable name:economy
+/engage economy balance member:@User                                  # same as !economy
+/engage economy daily
+/engage economy work
+/engage economy pay member:@User amount:50
+/engage economy leaderboard
+/engage economy shop
+/engage economy buy item:1
+/engage economy inventory
 
-/economy give member:@User amount:500                          # staff, a negative amount takes away
-/economy shopadd name:VIP price:1000 role:@VIP stock:10
-/economy shopremove item:1
-/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+/engage economy give member:@User amount:500                          # staff, a negative amount takes away
+/engage economy shopadd name:VIP price:1000 role:@VIP stock:10
+/engage economy shopremove item:1
+/engage economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
 ```
 
 ### Menus de rôles, messages programmés et flux
@@ -915,24 +1019,24 @@ Une monnaie de serveur avec récompense quotidienne, travail, paiements, classem
 Les menus de rôles donnent des rôles avec des boutons ou une liste déroulante. Les messages programmés sont publiés une fois ou répétés chaque heure, jour ou semaine. Les flux publient les nouvelles vidéos YouTube, les streams Twitch et les éléments RSS. Pour YouTube, utilisez l'ID de la chaîne (il commence par UC). Twitch nécessite TWITCH_CLIENT_ID et TWITCH_CLIENT_SECRET dans le fichier .env. Les heures s'écrivent in 2h, 18:30 ou sous forme de date avec heure comme 2026-12-24 18:00 dans le fuseau horaire du serveur. La première vérification d'un flux mémorise seulement ce qui existe déjà.
 
 ```
-/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
-/rolemenu add menu:1 role:@Red label:Red
-/rolemenu remove menu:1 role:@Red
-/rolemenu delete menu:1
-/rolemenu list
+/post rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/post rolemenu add menu:1 role:@Red label:Red
+/post rolemenu remove menu:1 role:@Red
+/post rolemenu delete menu:1
+/post rolemenu list
 
-/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
-/schedule add channel:#news when:in 2h text:Restart soon repeat:none
-/schedule list
-/schedule remove number:1
-/schedule timezone name:Europe/Berlin
+/post schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/post schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/post schedule list
+/post schedule remove number:1
+/post schedule timezone name:Europe/Berlin
 
-/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
-/feed add kind:twitch target:somestreamer channel:#live
-/feed add kind:rss target:https://example.com/feed.xml channel:#news
-/feed list
-/feed check
-/feed remove number:1
+/post feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/post feed add kind:twitch target:somestreamer channel:#live
+/post feed add kind:rss target:https://example.com/feed.xml channel:#news
+/post feed list
+/post feed check
+/post feed remove number:1
 ```
 
 ### Activité, actions groupées et recherche de cas
@@ -940,59 +1044,59 @@ Les menus de rôles donnent des rôles avec des boutons ou une liste déroulante
 L'activité compte les messages par salon et les arrivées et départs par jour, jamais le contenu ni les noms. Les actions groupées bannissent, expulsent ou mettent en sourdine jusqu'à 25 utilisateurs après confirmation. Les cas se recherchent par utilisateur, type, nom, motif, modérateur et ancienneté, et peuvent être liés entre eux, par exemple une note à un bannissement.
 
 ```
-/module enable name:activity
-/activity overview days:7
-/activity channels days:30
-/activity growth days:14
-/activity reset
+/admin module enable name:activity
+/community activity overview days:7
+/community activity channels days:30
+/community activity growth days:14
+/community activity reset
 
-/bulk ban users:123456789012345678 223456789012345678 reason:Raid
-/bulk kick users:123456789012345678 223456789012345678 reason:Spam
-/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+/moderation bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/moderation bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/moderation bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
 
-/cases user:@User kind:ban text:scam moderator:@Mod days:30
-/case link case_id:12 other:15
-/case unlink case_id:12 other:15
+/moderation cases user:@User kind:ban text:scam moderator:@Mod days:30
+/moderation case link case_id:12 other:15
+/moderation case unlink case_id:12 other:15
 ```
 
 ### Anti-arnaque et anti-crypto
 
-Supprime les faux concours, comme la fameuse arnaque MrBeast, dans le texte et les images en quelques millisecondes. Les noms de la liste immédiate sont supprimés sur-le-champ, quelle que soit l'orthographe (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Sinon, les mots des listes (noms, appâts, crypto, liens, montants) s'additionnent et le message est supprimé au seuil. Les images sont lues par OCR, et une image déjà jugée comme arnaque est supprimée sans être relue. La lecture des images nécessite tesseract, sans lui seul le texte est vérifié. Un serveur consacré à MrBeast peut retirer le nom de la liste immédiate ou exclure des salons avec /automod exemptchannel. Essayez avec /antiscam test avant de vous y fier.
+Supprime les faux concours, comme la fameuse arnaque MrBeast, dans le texte et les images en quelques millisecondes. Les noms de la liste immédiate sont supprimés sur-le-champ, quelle que soit l'orthographe (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Sinon, les mots des listes (noms, appâts, crypto, liens, montants) s'additionnent et le message est supprimé au seuil. Les images sont lues par OCR, et une image déjà jugée comme arnaque est supprimée sans être relue. La lecture des images nécessite tesseract, sans lui seul le texte est vérifié. Un serveur consacré à MrBeast peut retirer le nom de la liste immédiate ou exclure des salons avec /automod exemptchannel. Essayez avec /security antiscam test avant de vous y fier.
 
 ```
-/antiscam status
-/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
-/antiscam words action:add kind:instant word:mrbeast
-/antiscam words action:remove kind:crypto word:token
-/antiscam test text:MrBeast is giving away 1000 BTC, claim now
-/antiscam testimage image:scam.png
-/antiscam forget
+/security antiscam status
+/security antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/security antiscam words action:add kind:instant word:mrbeast
+/security antiscam words action:remove kind:crypto word:token
+/security antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/security antiscam testimage image:scam.png
+/security antiscam forget
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
 ### Période d'essai, détection d'essaim, chronologie et apprentissage
 
-La période d'essai place les nouveaux membres dans un rôle. Tant qu'ils n'ont pas écrit le nombre réglé de messages normaux ou que les minutes ne sont pas écoulées, les liens, invitations et fichiers sont supprimés avec un court avertissement. La protection anti-raid reconnaît aussi un essaim : plusieurs nouveaux comptes avec le même motif de nom, la même photo de profil ou créés à quelques minutes d'intervalle. La chronologie (/case timeline) réunit dans l'ordre du temps la création du compte, l'arrivée et l'invitation, la période d'essai, les cas et les recours d'un utilisateur. Les messages ne sont jamais stockés, ils n'en font donc pas partie. /block, /unblock et /blocklist gèrent la liste de blocage d'AutoMod avec des commandes courtes. Les modérateurs entraînent le module anti-arnaque avec l'entrée de menu contextuel Mark as scam sur un message ou avec une réaction portant l'émoji défini par learn_emoji : le message est supprimé, et ses images et son texte sont ensuite supprimés immédiatement. Chaque partie se désactive avec son module ou ses réglages.
+La période d'essai place les nouveaux membres dans un rôle. Tant qu'ils n'ont pas écrit le nombre réglé de messages normaux ou que les minutes ne sont pas écoulées, les liens, invitations et fichiers sont supprimés avec un court avertissement. La protection anti-raid reconnaît aussi un essaim : plusieurs nouveaux comptes avec le même motif de nom, la même photo de profil ou créés à quelques minutes d'intervalle. La chronologie (/moderation case timeline) réunit dans l'ordre du temps la création du compte, l'arrivée et l'invitation, la période d'essai, les cas et les recours d'un utilisateur. Les messages ne sont jamais stockés, ils n'en font donc pas partie. /security block, /security unblock et /security blocklist gèrent la liste de blocage d'AutoMod avec des commandes courtes. Les modérateurs entraînent le module anti-arnaque avec l'entrée de menu contextuel Mark as scam sur un message ou avec une réaction portant l'émoji défini par learn_emoji : le message est supprimé, et ses images et son texte sont ensuite supprimés immédiatement. Chaque partie se désactive avec son module ou ses réglages.
 
 ```
-/module enable name:probation
-/probation setup minutes:10 messages:1 block_links:True block_files:True
-/probation status
-/probation release member:@User
-/probation add member:@User
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
 
-/raid swarm enabled:True minimum:4 minutes:10
-/case timeline user:@User
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
 
-/block kind:link value:evil.example
-/blocklist
-/unblock kind:link number:1
-/antiscam set learn_emoji:X
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
 ```
 
 ### Créateur de messages et mises à jour
 
-Le créateur de messages publie des messages avec plusieurs embeds et des boutons de lien à partir de JSON. Il lit le JSON qu'exportent les générateurs d'embeds comme Embed Generator : vous concevez un message là-bas et le publiez avec le bot. Fournissez le JSON sous forme de texte, de fichier .json ou de lien https pointant directement vers le JSON, par exemple le fichier brut d'un dépôt (les liens avec redirection sont refusés). Seuls des boutons de lien sont créés, les boutons qui exigent une interaction sont ignorés. Chaque lien doit être http ou https, les mentions dans le texte ne notifient jamais, et les limites de Discord s'appliquent. /message copy exporte un message existant en JSON, /message edit modifie un message du bot et /message preview n'affiche le résultat qu'à vous. Les liens de partage des éditeurs web ne sont pas ouverts, car leur format n'est pas public.
+Le créateur de messages publie des messages avec plusieurs embeds et des boutons de lien à partir de JSON. Il lit le JSON qu'exportent les générateurs d'embeds comme Embed Generator : vous concevez un message là-bas et le publiez avec le bot. Fournissez le JSON sous forme de texte, de fichier .json ou de lien https pointant directement vers le JSON, par exemple le fichier brut d'un dépôt (les liens avec redirection sont refusés). Seuls des boutons de lien sont créés, les boutons qui exigent une interaction sont ignorés. Chaque lien doit être http ou https, les mentions dans le texte ne notifient jamais, et les limites de Discord s'appliquent. /post message copy exporte un message existant en JSON, /post message edit modifie un message du bot et /post message preview n'affiche le résultat qu'à vous. Les liens de partage des éditeurs web ne sont pas ouverts, car leur format n'est pas public.
 
 ```json
 {
@@ -1002,7 +1106,7 @@ Le créateur de messages publie des messages avec plusieurs embeds et des bouton
 }
 ```
 
-Toutes les 12 heures, le bot vérifie s'il existe une version plus récente dans le dépôt GitHub indiqué par update.repo (défini par scripts/set_repo_url.py). S'il y en a une, le propriétaire du bot reçoit un message privé avec les notes de version, puis la version est téléchargée et vérifiée : somme SHA-256 de la version, chemins sûrs dans l'archive et numéro de version conforme à l'étiquette. Elle s'installe avec /debug update action:install, ou automatiquement si auto_install est activé. Avant l'installation, les fichiers remplacés sont sauvegardés dans data/update, les nouveaux paquets sont installés et le nouveau code est importé à titre d'essai. En cas d'échec, les anciens fichiers sont restaurés. Votre .env, settings.json, data et music ne sont jamais touchés. Ensuite, le bot redémarre seul. Avec Docker, rien n'est installé sur place, mettez plutôt l'image à jour. Une mise à jour exécute du code du dépôt : ne la dirigez que vers un dépôt de confiance. Désactivez-la avec enabled sur false.
+Toutes les 12 heures, le bot vérifie s'il existe une version plus récente dans le dépôt GitHub indiqué par update.repo (défini par scripts/set_repo_url.py). S'il y en a une, le propriétaire du bot reçoit un message privé avec les notes de version, puis la version est téléchargée et vérifiée : somme SHA-256 de la version, chemins sûrs dans l'archive et numéro de version conforme à l'étiquette. Elle s'installe avec /server debug update action:install, ou automatiquement si auto_install est activé. Avant l'installation, les fichiers remplacés sont sauvegardés dans data/update, les nouveaux paquets sont installés et le nouveau code est importé à titre d'essai. En cas d'échec, les anciens fichiers sont restaurés. Votre .env, settings.json, data et music ne sont jamais touchés. Ensuite, le bot redémarre seul. Avec Docker, rien n'est installé sur place, mettez plutôt l'image à jour. Une mise à jour exécute du code du dépôt : ne la dirigez que vers un dépôt de confiance. Désactivez-la avec enabled sur false.
 
 ```json
 {
@@ -1017,15 +1121,15 @@ Toutes les 12 heures, le bot vérifie s'il existe une version plus récente dans
 ```
 
 ```
-/message send channel:#news url:https://example.com/message.json
-/message send channel:#news file:message.json
-/message preview url:https://example.com/message.json
-/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/message copy message:https://discord.com/channels/1/2/3
-/module disable name:builder
-/debug update action:status
-/debug update action:check
-/debug update action:install
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
 ```
 
 ### Exploitation
@@ -1045,8 +1149,8 @@ Le bot enregistre ses données toutes les quelques secondes et conserve des sauv
 ```
 
 ```
-/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
-/debug db action:list
+/server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/server debug db action:list
 ```
 
 ### Administration
@@ -1054,26 +1158,26 @@ Le bot enregistre ses données toutes les quelques secondes et conserve des sauv
 Activer ou désactiver modules et commandes, changer le préfixe, définir des alias et limiter des commandes à des rôles.
 
 ```
-/module list
-/module disable name:starboard
-/module enable name:tickets
-/command disable name:ban                          # single commands
-/command enable name:ban
-/command list
+/admin module list
+/admin module disable name:starboard
+/admin module enable name:tickets
+/admin command disable name:ban                          # single commands
+/admin command enable name:ban
+/admin command list
 
-/prefix new_prefix:?                               # text commands now start with ?
-/alias add alias:w command:warn                    # ?w @User Spam
-/alias remove alias:w
-/alias list
+/admin prefix new_prefix:?                               # text commands now start with ?
+/admin alias add alias:w command:warn                    # ?w @User Spam
+/admin alias remove alias:w
+/admin alias list
 
-/perms allow command:ban target:@HeadModerator     # only this role may use /ban
-/perms deny command:warn target:@Trainee
-/perms reset command:ban
-/perms show
+/admin perms allow command:ban target:@HeadModerator     # only this role may use /moderation ban
+/admin perms deny command:warn target:@Trainee
+/admin perms reset command:ban
+/admin perms show
 
-/settings
+/admin settings
 /help
-/about
+/info about
 ```
 
 ## Variables dans les messages
@@ -1081,17 +1185,17 @@ Activer ou désactiver modules et commandes, changer le préfixe, définir des a
 Ces variables sont remplacées dans les textes que vous configurez :
 
 ```
-/welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
-/booster set         message                         {user} {name} {server} {count}
+/community welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
+/community booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
 /birthday setup set   message                         {user} {name}
-/tempvoice setup     name                            {name}
-/jailsetup notice    text                            {staff}
+/community tempvoice setup     name                            {name}
+/access jailsetup notice    text                            {staff}
 ```
 
 ## Configuration
 
-Les options globales se règlent dans settings.json. Tout le reste se configure par serveur avec des commandes comme /module, /command, /perms, /alias et /config.
+Les options globales se règlent dans settings.json. Tout le reste se configure par serveur avec des commandes comme /admin module, /admin command, /admin perms, /admin alias et /admin config.
 
 Pour renommer une commande, ajoutez-la dans command_names et redémarrez le bot :
 
@@ -1108,21 +1212,21 @@ Pour renommer une commande, ajoutez-la dans command_names et redémarrez le bot 
 }
 ```
 
-Chaque réglage peut être lu et modifié avec /config. Voici les chemins que vous utiliserez le plus :
+Chaque réglage peut être lu et modifié avec /admin config. Voici les chemins que vous utiliserez le plus :
 
 ```
-/config get path:automod.caps.percent
-/config set path:automod.caps.percent value:80
-/config set path:mod.dm_user value:false             # no direct message on punishments
-/config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
-/config set path:mod.default_mute_minutes value:120
-/config set path:automod.mentions.max value:5
-/config set path:automod.phishing.lookalike value:true
-/config set path:raid.joins value:8
-/config set path:xp.cooldown value:45
-/config set path:tickets.max_open value:2
-/config set path:privacy.retention_days value:90
-/config reset section:welcome                        # back to the defaults of one section
+/admin config get path:automod.caps.percent
+/admin config set path:automod.caps.percent value:80
+/admin config set path:mod.dm_user value:false             # no direct message on punishments
+/admin config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
+/admin config set path:mod.default_mute_minutes value:120
+/admin config set path:automod.mentions.max value:5
+/admin config set path:automod.phishing.lookalike value:true
+/admin config set path:raid.joins value:8
+/admin config set path:xp.cooldown value:45
+/admin config set path:tickets.max_open value:2
+/admin config set path:privacy.retention_days value:90
+/admin config reset section:welcome                        # back to the defaults of one section
 ```
 
 ## Données et stockage
@@ -1173,7 +1277,7 @@ L'anglais est la langue d'origine du projet. Toutes les traductions de la docume
 - Toutes les données sont dans le dossier data de votre machine : réglages, XP, anniversaires (jour et mois uniquement) et cas de modération.
 - Le bot ignore les messages privés des membres.
 - Le jeton est lu depuis le fichier .env. Ne le partagez jamais et ne le publiez pas.
-- Les membres peuvent exporter et supprimer leurs propres données avec /mydata. Les administrateurs définissent combien de temps les données des membres partis sont conservées.
+- Les membres peuvent exporter et supprimer leurs propres données avec /info mydata. Les administrateurs définissent combien de temps les données des membres partis sont conservées.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Assistance

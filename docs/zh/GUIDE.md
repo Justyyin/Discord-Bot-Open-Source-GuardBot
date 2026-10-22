@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 在你的服务器中使用这些命令，并把频道名称替换为你自己的。
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 所有功能都在命令参考中说明： [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## 可选：读取图片与语言
 
-要让反诈骗模块读取图片中的文字，请在运行机器人的电脑上安装 tesseract（Docker 镜像已包含）。然后用 /antiscam status 检查是否就绪。用 /language 选择成员看到的消息语言。
+要让反诈骗模块读取图片中的文字，请在运行机器人的电脑上安装 tesseract（Docker 镜像已包含）。然后用 /security antiscam status 检查是否就绪。用 /admin language 选择成员看到的消息语言。
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## 控制面板
@@ -233,7 +233,7 @@ dashboard.example.com {
 - 机器人因特权 Intents 错误而停止：请在 Developer Portal 中开启 Server Members Intent 和 Message Content Intent。
 - Improper token：请重新复制令牌，并确认 .env 中恰好是 DISCORD_TOKEN=令牌，没有空格或引号。
 - I cannot assign that role：请把机器人的身份组移到它要管理的身份组之上。
-- 没有任何日志：用 /log set 设置频道，并确认机器人在该频道有发送消息、嵌入链接和附加文件的权限。
+- 没有任何日志：用 /server log set 设置频道，并确认机器人在该频道有发送消息、嵌入链接和附加文件的权限。
 - Unknown timezone：执行 pip install tzdata 并重启机器人。
 - 出现无明显原因的失败：错误和警告会输出到控制台。在 VPS 上可用 journalctl -u guardbot -f 查看。
 

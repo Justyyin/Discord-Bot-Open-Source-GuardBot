@@ -25,11 +25,13 @@ Självhostad Discord-bot för moderering, säkerhet och community. Öppen källk
   - [Uppdatera](#uppdatera)
 - [Botens behörigheter](#botens-behörigheter)
 - [Första stegen i Discord](#första-stegen-i-discord)
+  - [Struktur, medlemmar och team](#struktur-medlemmar-och-team)
 - [Kontrollpanel](#kontrollpanel)
   - [Ställ in kontrollpanelen](#ställ-in-kontrollpanelen)
   - [Säkerhet](#säkerhet-1)
   - [Kontrollpanel på en VPS](#kontrollpanel-på-en-vps)
 - [Kommandon](#kommandon)
+  - [Kommandogrupper](#kommandogrupper)
   - [Moderering](#moderering-1)
   - [Gulag (jail)](#gulag-jail)
   - [Automoderering](#automoderering)
@@ -93,7 +95,7 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 - Automoderering: ordfilter, versalfilter, mention-spam, inbjudningslänkar, nätfiskedomäner, personuppgifter, doxxing och hot. Alla listor kan redigeras.
 - Anti-raid med upptäckt av inströmning och låsning av hela servern.
 - Anti-nuke: gränser för massborttagningar och bannlysningar, automatisk reaktion och ett direktmeddelande till serverägaren.
-- Gulag-kanal: den som postar bedrägerilänkar eller bilder flyttas till en enda kanal med instruktioner för att säkra kontot. Moderatorer kan också använda /jail och /unjail.
+- Gulag-kanal: den som postar bedrägerilänkar eller bilder flyttas till en enda kanal med instruktioner för att säkra kontot. Moderatorer kan också använda /moderation jail och /moderation unjail.
 - Verifiering med knapp eller captcha, med automatisk borttagning av medlemmar som inte verifierar sig i tid.
 - Anti-nuke bevakar också beviljade behörigheter, nya webhooks, tillagda botar och namnbyten på servern.
 - Anti-bedrägeri: falska giveaways och kryptobluffar tas bort i text och bilder inom millisekunder, även MrBeast-bluffen i alla stavningar.
@@ -117,7 +119,7 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 - XP och nivåer från 1 till 100 för chatt och röst, nivåroller och födelsedagar.
 - Starboard och tillfälliga röstkanaler.
 - Jail med tidsgräns, omröstningar med flerval, rankkort som bild och XP-boostar per roll.
-- Ekonomi med butik, rollmenyer med knappar eller rullgardin, schemalagda meddelanden, YouTube-, Twitch- och RSS-flöden, aktivitetsstatistik och en guidad /setup. Meddelanden till medlemmar finns på 12 språk.
+- Ekonomi med butik, rollmenyer med knappar eller rullgardin, schemalagda meddelanden, YouTube-, Twitch- och RSS-flöden, aktivitetsstatistik och en guidad /admin setup. Meddelanden till medlemmar finns på 12 språk.
 
 ### Administration
 
@@ -241,19 +243,99 @@ Optional
 En vettig startkonfiguration. Kör de här kommandona på din server och byt ut kanaler och roller mot dina egna:
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
+
+### Struktur, medlemmar och team
+
+Version 1.5 lägger till kommandon för att bygga och hålla en server i ordning, återställa medlemmar som kommer tillbaka och leda modereringsteamet. Varje del har en modulströmbrytare (`/admin module`), egna inställningar och en plats i instrumentpanelen.
+
+```
+/structure channel create name:news kind:text category:Info private:False
+/structure channel clone channel:#news name:news-2
+/structure channel rename channel:#news name:announcements
+/structure channel move channel:#news category:Info position:1
+/structure channel sort category:Info
+/structure channel copyperms source:#news target:#rules whole_category:False
+/structure category create name:Events private:False
+/structure category clone category:Events name:Events 2
+/structure category sort
+/structure category sync category:Events
+/structure archive setup action:report days:60 report_channel:#staff interval_hours:24
+/structure archive ignore channel:#news
+/structure archive scan action:report
+/structure temprole give member:@User role:@Event duration:7d reason:Contest
+/structure temprole list
+/structure roletemplate save name:mod role:@Moderator
+/structure roletemplate apply name:mod role_name:Trial Mod
+/structure rules setup channel:#rules role:@Member remind:True remind_hours:24
+/structure rules add text:Be kind to each other.
+/structure rules post new_version:True
+/structure rules status
+
+/members stickyroles setup roles:True days:30 punishments:True dangerous:False
+/members stickyroles status
+/members stickyroles forget user:@User
+/members nickname setup dehoist:True usernames:True rename_to:Renamed notify:True
+/members nickname word word:badword
+/members nickname check name:!!hoisted
+/members nickname scan
+/members watch setup channel:#staff ping_role:@Moderator repeat:False
+/members watch add user:@User reason:Suspicious
+/members watch list
+/members reason add name:spam action:mute text:Spam duration:1h
+/members reason use name:spam user:@User
+
+/security approval setup channel:#staff role:@Moderator ban:True bulk:True minutes:30 owner_bypass:True
+/security approval list
+/security approval cancel request_id:3
+/moderation case undo case_id:12 reason:Mistake follow:True batch:False
+/moderation escalation expiry days:90
+
+/admin history list
+/admin history show number:5
+/admin history rollback number:5 section:welcome
+/admin history keep count:200
+/admin history copy source:123456789012345678 sections:welcome,tickets dry_run:True
+/admin exceptions add rule:invites channel:#media role:@Artist
+/admin exceptions list
+/admin dashaccess add role:@Helper level:viewer
+/admin dashaccess list
+
+/team teamstats overview days:30
+/team teamstats member user:@User
+/team teamstats inactive days:14
+/team weekly setup channel:#staff day:Monday hour:9
+/team weekly now days:7
+/team duty away duration:3d reason:Holiday
+/team duty back
+/team duty route feature:tickets enabled:True
+/team duty roster role:@Moderator
+/team apply setup channel:#applications staff_role:@Moderator accept_role:@Trial votes:3 open:True cooldown_days:30
+/team apply question action:add text:Why do you want to join?
+/team apply start
+/team apply list
+/team apply decide number:4 decision:accept
+```
+
+- Med `/structure` skapas, klonas, byts namn på och sorteras kanaler och kategorier, och behörigheter kopieras från en annan kanal. Inaktiva kanaler rapporteras eller flyttas till en arkivkategori (`/structure archive`). Roller kan ges tidsbegränsat och sparas som mallar; en mall ger aldrig en behörighet som den som använder den saknar.
+- `/structure rules` publicerar reglerna med en godkänn-knapp och ett versionsnummer. Efter `post new_version:True` får medlemmar som inte godkänt den nya versionen en enda påminnelse via direktmeddelande.
+- `/members stickyroles` ger tillbaka roller och återställer timeout eller mute när en medlem kommer tillbaka. `/members nickname` tar bort tecken som lyfter namnet överst i listan, kontrollerar förbjudna ord i smeknamn och användarnamn och byter namn på överträdare. Bevakningslistan är tyst: teamet larmas vid första meddelandet från en listad användare.
+- Fyra-ögon-godkännande (`/security approval`) kör bannlysningar, kickar, timeouts och massåtgärder först när en andra moderator godkänner. `/moderation case undo` återtar ett ärende, även de åtgärder det gav upphov till (till exempel en mute och bannlysningen som följde). Varningar kan gå ut efter ett antal dagar (`/moderation escalation expiry`).
+- `/admin history` visar vem som ändrade vilken inställning och när, och återställer ett avsnitt. Personens namn är en gissning utifrån de senaste kommandona och ändringarna i instrumentpanelen på servern. `/admin history copy` kopierar avsnitt till en annan server som du får hantera med boten; den börjar som en provkörning. `/admin exceptions` utesluter kanaler och roller från AutoMod-regler och Anti-Scam. `/admin dashaccess` ger roller skrivskyddad åtkomst eller moderatoråtkomst till instrumentpanelen.
+- `/team` visar varje moderators arbete (ärenden, tickets, rapporter, svarstid, inaktiva medlemmar), skickar en veckorapport (dag och timme i UTC), låter moderatorer anmäla frånvaro med `/team duty away` så att ticket och omnämnanden går till andra, och sköter personalansökningar med formulär och omröstning i teamet.
+- Discord kan inte dölja kommandon i en grupp för enskilda medlemmar. Boten kontrollerar ändå varje anrop. Siffrorna i teamstatistiken räknas från dagen för uppdateringen; äldre åtgärder saknas.
 
 ## Kontrollpanel
 
@@ -327,31 +409,53 @@ Redigeraren visar varje inställning som är ett reglage, ett tal, en text, en k
 
 De flesta kommandon är snedstreckskommandon, modereringskommandon fungerar även med prefix. Den fullständiga listan finns i kommandoreferensen: [COMMANDS.md](../COMMANDS.md).
 
+<!-- groups -->
+### Kommandogrupper
+
+För att spara platser för snedstreckskommandon (Discord tillåter 100 kommandon på översta nivån per bot) är kommandon som hör ihop grupperade. Skriv först gruppen och sedan kommandot, till exempel `/moderation ban`. Textkommandon med prefix, till exempel `!ban`, påverkas inte. Behörigheter, alias och modulbrytare använder fortfarande det enkla kommandonamnet.
+
+| Grupp | Innehåller |
+| --- | --- |
+| `/moderation` | `warn`, `unwarn`, `warnings`, `clearwarns`, `note`, `mute`, `unmute`, `kick`, `ban`, `unban`, `tempban`, `jail`, `unjail`, `jailed`, `role`, `case`, `cases`, `bulk`, `escalation`, `purge`, `slowmode` |
+| `/security` | `antinuke`, `antiscam`, `raid`, `block`, `unblock`, `blocklist`, `approval` |
+| `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
+| `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
+| `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
+| `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
+| `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
+| `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
+| `/post` | `say`, `embed`, `message`, `sticky`, `schedule`, `feed`, `reactionrole`, `rolemenu` |
+| | `/help`, `/play`, `/automod`, `/music`, `/xp`, `/modmail`, `/appeal`, `/report`, `/suggestion`, `/birthday`, `/notify` |
+
 ### Moderering
 
 Varningar, mute, kick och bann fungerar som snedstreckskommandon och med prefix, till exempel `!warn @User spam`. Varje åtgärd skapar ett numrerat ärende.
 
 ```
-/warn member:@User reason:Spam                    # also: !warn @User Spam
-/unwarn case_id:12                                 # remove one warning
-/clearwarns user:@User                             # remove all active warnings
-/mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
-/unmute member:@User
-/kick member:@User reason:Advertising
-/ban user:@User reason:Raid                        # user can also be an ID
-/unban user:123456789012345678
+/moderation warn member:@User reason:Spam                    # also: !warn @User Spam
+/moderation unwarn case_id:12                                 # remove one warning
+/moderation clearwarns user:@User                             # remove all active warnings
+/moderation mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
+/moderation unmute member:@User
+/moderation kick member:@User reason:Advertising
+/moderation ban user:@User reason:Raid                        # user can also be an ID
+/moderation unban user:123456789012345678
 
-/cases user:@User                                  # history, filter by mention or ID
-/cases kind:ban page:2                             # filter by type
-/cases search:john                                 # filter by part of a name
-/warnings user:@User
-/case view case_id:12
+/moderation cases user:@User                                  # history, filter by mention or ID
+/moderation cases kind:ban page:2                             # filter by type
+/moderation cases search:john                                 # filter by part of a name
+/moderation warnings user:@User
+/moderation case view case_id:12
 
-/escalation list
-/escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
-/escalation set warns:5 action:kick
-/escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
-/escalation remove warns:5
+/moderation escalation list
+/moderation escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
+/moderation escalation set warns:5 action:kick
+/moderation escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
+/moderation escalation remove warns:5
 ```
 
 ### Gulag (jail)
@@ -359,14 +463,14 @@ Varningar, mute, kick och bann fungerar som snedstreckskommandon och med prefix,
 Medlemmar med kapat konto flyttas till en enda kanal med säkerhetsanvisningar. Vid frisläppning får de tillbaka sina gamla roller.
 
 ```
-/jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
-/jailsetup apply                                   # apply the channel permissions again
-/jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
-/jailsetup preview
+/access jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
+/access jailsetup apply                                   # apply the channel permissions again
+/access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
+/access jailsetup preview
 
-/jail member:@User reason:Hacked account           # also: !jail @User Hacked account
-/jail member:@User duration:2h                     # released automatically after 2 hours
-/unjail member:@User reason:Account secured
+/moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
+/moderation jail member:@User duration:2h                     # released automatically after 2 hours
+/moderation unjail member:@User reason:Account secured
 ```
 
 ### Automoderering
@@ -410,18 +514,18 @@ Regler raderar eller bestraffar matchande meddelanden. Välj åtgärd per regel:
 Upptäcker många inträden på kort tid och kan låsa servern. Läget channels ändrar varje kanal, läget role verkar direkt.
 
 ```
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
 # 5 joins within 10 seconds count as a raid, accounts younger than 3 days are punished,
 # actions: alert, timeout, kick
 
-/lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
-/lockdown mode:channels reason:Raid                # thorough, edits every channel
-/unlock
+/access lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
+/access lockdown mode:channels reason:Raid                # thorough, edits every channel
+/access unlock
 
-/lockdownconfig mode mode:role                     # default mode
-/lockdownconfig lockrole role:@Member              # extra role locked in role mode
-/lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
-/lockdownconfig exempt channel:#announcements
+/access lockdownconfig mode mode:role                     # default mode
+/access lockdownconfig lockrole role:@Member              # extra role locked in role mode
+/access lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
+/access lockdownconfig exempt channel:#announcements
 ```
 
 ### Anti-nuke
@@ -429,16 +533,16 @@ Upptäcker många inträden på kort tid och kan låsa servern. Läget channels 
 Bevakar granskningsloggen och reagerar när någon förstör servern. Serverägaren får ett direktmeddelande.
 
 ```
-/antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
-/antinuke limit kind:channel_delete count:3 seconds:10
+/security antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
+/security antinuke limit kind:channel_delete count:3 seconds:10
 # kinds: channel_delete, role_delete, channel_create, ban, kick,
 #        role_perm, role_grant, webhook_create, bot_add, guild_update
-/antinuke whitelist user:@TrustedAdmin             # toggle, never checked
-/antinuke staffrole role:@Moderator                # toggle, shown in alerts
-/antinuke servername name:MyServer                 # extra name for the nuke talk detection
-/antinuke newbots kick:True                        # kick bots added by untrusted users
-/antinuke restore member:@User                     # give back roles that were removed
-/antinuke status
+/security antinuke whitelist user:@TrustedAdmin             # toggle, never checked
+/security antinuke staffrole role:@Moderator                # toggle, shown in alerts
+/security antinuke servername name:MyServer                 # extra name for the nuke talk detection
+/security antinuke newbots kick:True                        # kick bots added by untrusted users
+/security antinuke restore member:@User                     # give back roles that were removed
+/security antinuke status
 ```
 
 ### Verifiering
@@ -446,13 +550,13 @@ Bevakar granskningsloggen och reagerar när någon förstör servern. Serveräga
 Nya medlemmar ser bara verifieringskanalen tills de trycker på knappen eller löser captchan.
 
 ```
-/verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
+/access verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
 # modes: button, captcha (image), math; roles are created if you do not pass them
-/verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
-/verify panel channel:#verify                      # post the button again
-/verify apply                                      # apply the channel permissions again
-/verify member member:@User                        # verify someone manually
-/verify off
+/access verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
+/access verify panel channel:#verify                      # post the button again
+/access verify apply                                      # apply the channel permissions again
+/access verify member member:@User                        # verify someone manually
+/access verify off
 ```
 
 ### Loggning
@@ -460,13 +564,13 @@ Nya medlemmar ser bara verifieringskanalen tills de trycker på knappen eller l�
 Välj en kanal per kategori, eller en huvudkanal för allt.
 
 ```
-/log set category:main channel:#logs               # fallback for every category
-/log set category:messages channel:#log-messages
-/log set category:moderation channel:#log-moderation
-/log set category:security channel:#log-security
+/server log set category:main channel:#logs               # fallback for every category
+/server log set category:messages channel:#log-messages
+/server log set category:moderation channel:#log-moderation
+/server log set category:security channel:#log-security
 # categories: main, messages, members, voice, server, moderation, security
-/log sent enabled:False                            # stop logging every sent message
-/log show
+/server log sent enabled:False                            # stop logging every sent message
+/server log show
 ```
 
 ### Välkomst, avsked och boosters
@@ -474,14 +578,14 @@ Välj en kanal per kategori, eller en huvudkanal för allt.
 Meddelanden, automatiska roller och belöningar för serverns boosters.
 
 ```
-/welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
-/welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
-/welcome autorole role:@Member                     # toggle, given to every new member
-/welcome botrole role:@Bots                        # toggle, given to every new bot
-/welcome test
+/community welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
+/community welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
+/community welcome autorole role:@Member                     # toggle, given to every new member
+/community welcome botrole role:@Bots                        # toggle, given to every new bot
+/community welcome test
 
-/booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
-/booster role role:@Booster                        # toggle
+/community booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
+/community booster role role:@Booster                        # toggle
 ```
 
 ### Tickets
@@ -489,15 +593,15 @@ Meddelanden, automatiska roller och belöningar för serverns boosters.
 Medlemmar öppnar privata kanaler med en knapp. När ärendet stängs skickas en utskrift.
 
 ```
-/ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
-/ticket addtype key:report label:Report description:Report a member
-/ticket removetype key:report
-/ticket panel channel:#support title:Support description:Press a button to open a ticket
+/support ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
+/support ticket addtype key:report label:Report description:Report a member
+/support ticket removetype key:report
+/support ticket panel channel:#support title:Support description:Press a button to open a ticket
 
 # inside a ticket
-/ticket add member:@User
-/ticket remove member:@User
-/ticket close
+/support ticket add member:@User
+/support ticket remove member:@User
+/support ticket close
 ```
 
 ### Omröstningar och giveaways
@@ -505,14 +609,14 @@ Medlemmar öppnar privata kanaler med en knapp. När ärendet stängs skickas en
 Knappar för att rösta och delta. Tider accepterar värden som 30m, 2h och 1d.
 
 ```
-/poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
-/poll end poll_id:3
-/poll list
+/engage poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
+/engage poll end poll_id:3
+/engage poll list
 
-/giveaway start prize:Nitro duration:2d winners:2 role:@Member
-/giveaway end giveaway_id:1
-/giveaway reroll giveaway_id:1
-/giveaway list
+/engage giveaway start prize:Nitro duration:2d winners:2 role:@Member
+/engage giveaway end giveaway_id:1
+/engage giveaway reroll giveaway_id:1
+/engage giveaway list
 ```
 
 ### Förslag och starboard
@@ -521,12 +625,12 @@ Medlemmar skickar förslag som teamet kan godkänna eller avslå, och populära 
 
 ```
 /suggestion setup set channel:#suggestions review_role:@Staff
-/suggest text:Add a music channel                  # also: !suggest Add a music channel
+/support suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
 
-/starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
-/starboard ignore channel:#spam
+/engage starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
+/engage starboard ignore channel:#spam
 ```
 
 ### XP och nivåer
@@ -552,9 +656,9 @@ XP för chatt och röst, nivåroller, boostar per roll och rankkort.
 /xp setlevel user:@User level:20
 /xp reset user:@User
 
-/rank                                              # also: !rank, shows a rank card image
-/rank user:@User
-/leaderboard
+/info rank                                              # also: !rank, shows a rank card image
+/info rank user:@User
+/info leaderboard
 ```
 
 ### Reaktionsroller och aviseringar
@@ -562,12 +666,12 @@ XP för chatt och röst, nivåroller, boostar per roll och rankkort.
 Ge roller för reaktioner med valfri emoji och låt medlemmar välja sina aviseringsämnen.
 
 ```
-/reactionrole panel channel:#roles title:Pick your roles description:React below
-/reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
-/reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
+/post reactionrole panel channel:#roles title:Pick your roles description:React below
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
 # mode unique: only one role of that message at a time
-/reactionrole remove message:<message link> emoji:<any emoji>
-/reactionrole list
+/post reactionrole remove message:<message link> emoji:<any emoji>
+/post reactionrole list
 
 /notify topic add key:events role:@Events description:Server events
 /notify topic panel channel:#roles title:Notifications   # one button per topic
@@ -596,7 +700,7 @@ Medlemmar sparar dag och månad, boten ger en roll och skriver ett meddelande p�
 Att gå in i hubbkanalen skapar ett rum som försvinner när det är tomt.
 
 ```
-/tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
+/community tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
 # joining the hub creates a room for the member, empty rooms are deleted
 ```
 
@@ -605,12 +709,12 @@ Att gå in i hubbkanalen skapar ett rum som försvinner när det är tomt.
 Kopior innehåller roller, kanaler, emojis, webhooks och medlemmarnas roller. Återställning lägger bara till det som saknas.
 
 ```
-/backup create name:before-update
-/backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
-/backup list
-/backup download name:before-update
-/backup restore name:before-update member_roles:True   # only adds what is missing
-/backup delete name:before-update
+/server backup create name:before-update
+/server backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
+/server backup list
+/server backup download name:before-update
+/server backup restore name:before-update member_roles:True   # only adds what is missing
+/server backup delete name:before-update
 ```
 
 ### Data och integritet
@@ -618,12 +722,12 @@ Kopior innehåller roller, kanaler, emojis, webhooks och medlemmarnas roller. Å
 Medlemmar kan exportera och radera sina data. Administratörer styr hur länge data sparas.
 
 ```
-/mydata export                                     # members download their own data
-/mydata delete confirm:True                        # members delete their XP and birthday
+/info mydata export                                     # members download their own data
+/info mydata delete confirm:True                        # members delete their XP and birthday
 
-/privacy retention days:90                         # delete data of members who left after 90 days
-/privacy export user_id:123456789012345678
-/privacy delete user_id:123456789012345678 cases:True
+/server privacy retention days:90                         # delete data of members who left after 90 days
+/server privacy export user_id:123456789012345678
+/server privacy delete user_id:123456789012345678 cases:True
 ```
 
 ### Moderatorverktyg
@@ -631,21 +735,21 @@ Medlemmar kan exportera och radera sina data. Administratörer styr hur länge d
 Städa kanaler, hantera roller och för privata anteckningar. Varje åtgärd loggas.
 
 ```
-/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
-/slowmode seconds:10 channel:#general              # 0 turns it off
-/lockchannel channel:#general reason:Spam wave
-/unlockchannel channel:#general
+/moderation purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/moderation slowmode seconds:10 channel:#general              # 0 turns it off
+/access lockchannel channel:#general reason:Spam wave
+/access unlockchannel channel:#general
 
-/role add member:@User role:@Member
-/role remove member:@User role:@Member
+/moderation role add member:@User role:@Member
+/moderation role remove member:@User role:@Member
 
-/note user:@User text:Watch this member            # private, shown in /cases
-/tempban user:@User duration:7d reason:Spam        # unbanned automatically
-/jailed                                            # who is in the gulag right now
+/moderation note user:@User text:Watch this member            # private, shown in /moderation cases
+/moderation tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/moderation jailed                                            # who is in the gulag right now
 
-/case view case_id:12
-/case edit case_id:12 reason:Corrected reason
-/case delete case_id:12
+/moderation case view case_id:12
+/moderation case edit case_id:12 reason:Corrected reason
+/moderation case delete case_id:12
 ```
 
 ### Information
@@ -653,13 +757,13 @@ Städa kanaler, hantera roller och för privata anteckningar. Varje åtgärd log
 Slå upp användare, servern, roller och boten.
 
 ```
-/userinfo user:@User
-/serverinfo
-/roleinfo role:@Moderator
-/avatar user:@User
+/info userinfo user:@User
+/server serverinfo
+/server roleinfo role:@Moderator
+/info avatar user:@User
 /help command:ban                                  # explains one command
-/ping
-/botinfo
+/info ping
+/info botinfo
 ```
 
 ### Meddelanden, taggar och påminnelser
@@ -667,24 +771,24 @@ Slå upp användare, servern, roller och boten.
 Skriv i botens namn, skapa egna kommandon, svara automatiskt på meddelanden och sätt påminnelser.
 
 ```
-/say channel:#news message:Maintenance tonight
-/embed channel:#news title:Update description:New rules color:#5865F2
+/post say channel:#news message:Maintenance tonight
+/post embed channel:#news title:Update description:New rules color:#5865F2
 
-/tag create name:rules text:Be kind to each other
-/tag show name:rules
-/tag list
-/tag info name:rules
-/tag edit name:rules text:Be kind and read the pinned message
-/tag delete name:rules
+/support tag create name:rules text:Be kind to each other
+/support tag show name:rules
+/support tag list
+/support tag info name:rules
+/support tag edit name:rules text:Be kind and read the pinned message
+/support tag delete name:rules
 
-/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
-/autoresponder list
-/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+/support autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/support autoresponder list
+/support autoresponder remove id:1                         # mode: contains, word, exact, startswith
 
-/remind set duration:2h text:Stream starts
-/remind list
-/remind cancel id:1
-/afk reason:Lunch                                  # the bot tells others who mention you
+/community remind set duration:2h text:Stream starts
+/community remind list
+/community remind cancel id:1
+/community afk reason:Lunch                                  # the bot tells others who mention you
 ```
 
 ### Mod-mail och överklagan av avstängning
@@ -711,20 +815,20 @@ Medlemmar skriver till personalen via en privat kanal på servern. Ingen behöve
 Ett räknespel, meddelanden som stannar längst ned i en kanal och kanaler som visar siffror i realtid.
 
 ```
-/counting setup channel:#counting reset_on_fail:True delete_wrong:True
-/counting status
-/counting set number:100
-/counting off
+/engage counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/engage counting status
+/engage counting set number:100
+/engage counting off
 
-/sticky set channel:#rules text:Read the rules before you write
-/sticky list
-/sticky remove channel:#rules
+/post sticky set channel:#rules text:Read the rules before you write
+/post sticky list
+/post sticky remove channel:#rules
 
-/stats create template:Members: {members} category:Statistics
-/stats add channel:#info template:Boosts: {boosts}
-/stats list
-/stats refresh
-/stats remove channel:#info
+/server stats create template:Members: {members} category:Statistics
+/server stats add channel:#info template:Boosts: {boosts}
+/server stats list
+/server stats refresh
+/server stats remove channel:#info
 ```
 
 ### Fler alternativ för befintliga funktioner
@@ -732,40 +836,40 @@ Ett räknespel, meddelanden som stannar längst ned i en kanal och kanaler som v
 Tillägg för ärenden, giveaways, röstrum, XP, födelsedagar, säkerhetskopior, loggar och statusvyer.
 
 ```
-/ticket claim
-/ticket rename name:billing-help
-/ticket list
+/support ticket claim
+/support ticket rename name:billing-help
+/support ticket list
 
-/giveaway cancel giveaway_id:3
-/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+/engage giveaway cancel giveaway_id:3
+/engage giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
 
-/voice rename name:Study room                      # only the owner of the room
-/voice limit limit:4
-/voice lock
-/voice unlock
-/voice kick member:@User
-/voice transfer member:@User
-/voice claim                                       # if the owner left
+/community voice rename name:Study room                      # only the owner of the room
+/community voice limit limit:4
+/community voice lock
+/community voice unlock
+/community voice kick member:@User
+/community voice transfer member:@User
+/community voice claim                                       # if the owner left
 
 /xp channelboost channel:#chat multiplier:1.5
 /xp resetall confirm:True
-/leaderboard page:2
+/info leaderboard page:2
 
 /birthday list
 /birthday setup user member:@User day:14 month:3
 /birthday setup clear member:@User
 
-/backup info name:weekly
-/log show
-/log ignorechannel channel:#bots
-/log ignoreuser user:@Bot
-/log sent enabled:True
+/server backup info name:weekly
+/server log show
+/server log ignorechannel channel:#bots
+/server log ignoreuser user:@Bot
+/server log sent enabled:True
 
 /automod status
-/verify status
-/raid status
-/welcome show
-/starboard show
+/access verify status
+/security raid status
+/community welcome show
+/engage starboard show
 ```
 
 ### Fler AutoMod-verktyg
@@ -792,14 +896,14 @@ Följ förkortade länkar, begränsa länkar för nya medlemmar, hitta ghost pin
 Få larm när en moderator bannlyser eller sparkar för mycket, och se vilka roller som har farliga behörigheter.
 
 ```
-/modwatch status
-/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
-/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
-/modwatch exclude member:@TrustedMod
+/team modwatch status
+/team modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/team modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/team modwatch exclude member:@TrustedMod
 
-/permaudit run                                                  # roles with dangerous permissions and who holds them
-/permaudit watch enabled:True                                   # alarm when a role or member gets one
-/permaudit trust role:@Admin
+/team permaudit run                                                  # roles with dangerous permissions and who holds them
+/team permaudit watch enabled:True                                   # alarm when a role or member gets one
+/team permaudit trust role:@Admin
 ```
 
 ### Rapporter och inbjudningsspårning
@@ -814,10 +918,10 @@ Medlemmar rapporterar meddelanden till personalen och boten sparar vilken inbjud
 /report send message_link:https://discord.com/channels/1/2/3 reason:Spam
 # or right click a message, Apps, Report message
 
-/invites who member:@User
-/invites stats user:@User
-/invites top
-/invites setup log:True alert_joins:5 alert_minutes:60
+/server invites who member:@User
+/server invites stats user:@User
+/server invites top
+/server invites setup log:True alert_joins:5 alert_minutes:60
 ```
 
 ### Diagnos och felsökning
@@ -825,18 +929,18 @@ Medlemmar rapporterar meddelanden till personalen och boten sparar vilken inbjud
 Hitta saknade behörigheter och trasiga inställningar, få felrapporter i en kanal och exportera eller importera inställningarna.
 
 ```
-/diagnose                                                       # permissions, role order, deleted channels and roles
-/debug status
-/debug errorchannel channel:#bot-errors
-/debug errortest
-/debug selftest enabled:True                                    # check at start-up
-/debug usagestats enabled:True
-/debug usage reset:False
-/debug level level:DEBUG                                        # owner of the bot only
-/debug db action:check                                          # owner of the bot only: check, vacuum, size
+/server diagnose                                                       # permissions, role order, deleted channels and roles
+/server debug status
+/server debug errorchannel channel:#bot-errors
+/server debug errortest
+/server debug selftest enabled:True                                    # check at start-up
+/server debug usagestats enabled:True
+/server debug usage reset:False
+/server debug level level:DEBUG                                        # owner of the bot only
+/server debug db action:check                                          # owner of the bot only: check, vacuum, size
 
-/config export
-/config import file:guardbot-settings.json confirm:False        # first without confirm
+/admin config export
+/admin config import file:guardbot-settings.json confirm:False        # first without confirm
 ```
 
 ### Musik
@@ -872,7 +976,7 @@ Spelar länkar och filer från mappen music i en röstkanal. Nedladdningar spara
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
-/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/admin config set path:music.allowed_hosts value:bandcamp.com,archive.org
 /music cleardj
 /music status
 ```
@@ -881,12 +985,12 @@ Förlustfritt: egna filer (FLAC, WAV, ALAC) och källor som erbjuder FLAC spelas
 
 ### Installation och hälsokontroll
 
-En guidad assistent ställer in det viktigaste med knappar och menyer: loggkanal, välkomstkanal, personalroller, gulagen, en AutoMod-förinställning (lös, normal, sträng), en servermall (community, spel, support) och språket. /health visar vad som är klart och vad som återstår. Språket ändrar de texter som medlemmarna ser, som standardvälkomst, AutoMod-meddelanden, verifiering, tickets, överklaganden, mod-mail och rollmenyer. Fasta svar till administratörer är översatta, svar med namn och siffror förblir på engelska.
+En guidad assistent ställer in det viktigaste med knappar och menyer: loggkanal, välkomstkanal, personalroller, gulagen, en AutoMod-förinställning (lös, normal, sträng), en servermall (community, spel, support) och språket. /server health visar vad som är klart och vad som återstår. Språket ändrar de texter som medlemmarna ser, som standardvälkomst, AutoMod-meddelanden, verifiering, tickets, överklaganden, mod-mail och rollmenyer. Fasta svar till administratörer är översatta, svar med namn och siffror förblir på engelska.
 
 ```
-/setup                                                         # buttons and menus, nothing is switched off by a template
-/health                                                        # what is set up, what is open, and the self-test
-/language code:de
+/admin setup                                                         # buttons and menus, nothing is switched off by a template
+/server health                                                        # what is set up, what is open, and the self-test
+/admin language code:de
 ```
 
 ### Ekonomi
@@ -894,20 +998,20 @@ En guidad assistent ställer in det viktigaste med knappar och menyer: loggkanal
 En servervaluta med daglig belöning, arbete, betalningar, topplista och en butik vars varor kan ge en roll. Slå på den med modulen economy. Kommandona fungerar också med prefix, till exempel !economy daily.
 
 ```
-/module enable name:economy
-/economy balance member:@User                                  # same as !economy
-/economy daily
-/economy work
-/economy pay member:@User amount:50
-/economy leaderboard
-/economy shop
-/economy buy item:1
-/economy inventory
+/admin module enable name:economy
+/engage economy balance member:@User                                  # same as !economy
+/engage economy daily
+/engage economy work
+/engage economy pay member:@User amount:50
+/engage economy leaderboard
+/engage economy shop
+/engage economy buy item:1
+/engage economy inventory
 
-/economy give member:@User amount:500                          # staff, a negative amount takes away
-/economy shopadd name:VIP price:1000 role:@VIP stock:10
-/economy shopremove item:1
-/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+/engage economy give member:@User amount:500                          # staff, a negative amount takes away
+/engage economy shopadd name:VIP price:1000 role:@VIP stock:10
+/engage economy shopremove item:1
+/engage economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
 ```
 
 ### Rollmenyer, schemalagda meddelanden och flöden
@@ -915,24 +1019,24 @@ En servervaluta med daglig belöning, arbete, betalningar, topplista och en buti
 Rollmenyer ger roller med knappar eller en rullgardinsmeny. Schemalagda meddelanden skickas en gång eller upprepas varje timme, dag eller vecka. Flöden postar nya YouTube-videor, Twitch-sändningar och RSS-inlägg. För YouTube används kanal-ID:t (det börjar med UC). Twitch kräver TWITCH_CLIENT_ID och TWITCH_CLIENT_SECRET i .env. Tider skrivs som in 2h, 18:30 eller som datum med klockslag, till exempel 2026-12-24 18:00, i serverns tidszon. Den första kontrollen av ett flöde minns bara det som redan finns.
 
 ```
-/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
-/rolemenu add menu:1 role:@Red label:Red
-/rolemenu remove menu:1 role:@Red
-/rolemenu delete menu:1
-/rolemenu list
+/post rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/post rolemenu add menu:1 role:@Red label:Red
+/post rolemenu remove menu:1 role:@Red
+/post rolemenu delete menu:1
+/post rolemenu list
 
-/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
-/schedule add channel:#news when:in 2h text:Restart soon repeat:none
-/schedule list
-/schedule remove number:1
-/schedule timezone name:Europe/Berlin
+/post schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/post schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/post schedule list
+/post schedule remove number:1
+/post schedule timezone name:Europe/Berlin
 
-/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
-/feed add kind:twitch target:somestreamer channel:#live
-/feed add kind:rss target:https://example.com/feed.xml channel:#news
-/feed list
-/feed check
-/feed remove number:1
+/post feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/post feed add kind:twitch target:somestreamer channel:#live
+/post feed add kind:rss target:https://example.com/feed.xml channel:#news
+/post feed list
+/post feed check
+/post feed remove number:1
 ```
 
 ### Aktivitet, massåtgärder och ärendesökning
@@ -940,59 +1044,59 @@ Rollmenyer ger roller med knappar eller en rullgardinsmeny. Schemalagda meddelan
 Aktivitet räknar meddelanden per kanal samt inträden och utträden per dag, aldrig innehåll eller namn. Massåtgärder bannlyser, sparkar eller tystar upp till 25 användare efter en bekräftelse. Ärenden kan sökas efter användare, typ, namn, orsak, moderator och ålder och länkas till varandra, till exempel en anteckning till en bannlysning.
 
 ```
-/module enable name:activity
-/activity overview days:7
-/activity channels days:30
-/activity growth days:14
-/activity reset
+/admin module enable name:activity
+/community activity overview days:7
+/community activity channels days:30
+/community activity growth days:14
+/community activity reset
 
-/bulk ban users:123456789012345678 223456789012345678 reason:Raid
-/bulk kick users:123456789012345678 223456789012345678 reason:Spam
-/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+/moderation bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/moderation bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/moderation bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
 
-/cases user:@User kind:ban text:scam moderator:@Mod days:30
-/case link case_id:12 other:15
-/case unlink case_id:12 other:15
+/moderation cases user:@User kind:ban text:scam moderator:@Mod days:30
+/moderation case link case_id:12 other:15
+/moderation case unlink case_id:12 other:15
 ```
 
 ### Anti-bedrägeri och anti-krypto
 
-Tar bort falska giveaways, som den typiska MrBeast-bluffen, i text och bilder inom millisekunder. Namn på direktlistan tas bort direkt i alla stavningar (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Annars läggs ord från listorna (namn, bete, krypto, länkar, belopp) ihop och meddelandet tas bort vid tröskelvärdet. Bilder läses med OCR, och en bild som en gång bedömts som bluff tas bort utan att läsas igen. För bilder krävs tesseract, utan det kontrolleras bara text. En server om MrBeast kan ta bort namnet från direktlistan eller undanta kanaler med /automod exemptchannel. Testa med /antiscam test innan du litar på det.
+Tar bort falska giveaways, som den typiska MrBeast-bluffen, i text och bilder inom millisekunder. Namn på direktlistan tas bort direkt i alla stavningar (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Annars läggs ord från listorna (namn, bete, krypto, länkar, belopp) ihop och meddelandet tas bort vid tröskelvärdet. Bilder läses med OCR, och en bild som en gång bedömts som bluff tas bort utan att läsas igen. För bilder krävs tesseract, utan det kontrolleras bara text. En server om MrBeast kan ta bort namnet från direktlistan eller undanta kanaler med /automod exemptchannel. Testa med /security antiscam test innan du litar på det.
 
 ```
-/antiscam status
-/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
-/antiscam words action:add kind:instant word:mrbeast
-/antiscam words action:remove kind:crypto word:token
-/antiscam test text:MrBeast is giving away 1000 BTC, claim now
-/antiscam testimage image:scam.png
-/antiscam forget
+/security antiscam status
+/security antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/security antiscam words action:add kind:instant word:mrbeast
+/security antiscam words action:remove kind:crypto word:token
+/security antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/security antiscam testimage image:scam.png
+/security antiscam forget
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
 ### Prövotid, svärmigenkänning, tidslinje och inlärning
 
-Prövotiden placerar nya medlemmar i en roll. Tills de har skrivit det inställda antalet vanliga meddelanden eller minuterna har gått tas länkar, inbjudningar och filer bort med ett kort meddelande. Raidskyddet känner också igen en svärm: flera nya konton med samma namnmönster, samma profilbild eller skapade med några minuters mellanrum. Tidslinjen (/case timeline) sammanför kontots skapande, inträde och inbjudan, prövotid, ärenden och överklaganden för en användare i tidsordning. Meddelanden sparas aldrig och ingår därför inte. /block, /unblock och /blocklist hanterar AutoMods blocklista med korta kommandon. Moderatorer lär anti-bedrägerimodulen med snabbmenyvalet Mark as scam på ett meddelande eller med en reaktion med emojin från learn_emoji: meddelandet raderas och dess bilder och text tas därefter bort direkt. Varje del stänger du av med sin modul eller sina inställningar.
+Prövotiden placerar nya medlemmar i en roll. Tills de har skrivit det inställda antalet vanliga meddelanden eller minuterna har gått tas länkar, inbjudningar och filer bort med ett kort meddelande. Raidskyddet känner också igen en svärm: flera nya konton med samma namnmönster, samma profilbild eller skapade med några minuters mellanrum. Tidslinjen (/moderation case timeline) sammanför kontots skapande, inträde och inbjudan, prövotid, ärenden och överklaganden för en användare i tidsordning. Meddelanden sparas aldrig och ingår därför inte. /security block, /security unblock och /security blocklist hanterar AutoMods blocklista med korta kommandon. Moderatorer lär anti-bedrägerimodulen med snabbmenyvalet Mark as scam på ett meddelande eller med en reaktion med emojin från learn_emoji: meddelandet raderas och dess bilder och text tas därefter bort direkt. Varje del stänger du av med sin modul eller sina inställningar.
 
 ```
-/module enable name:probation
-/probation setup minutes:10 messages:1 block_links:True block_files:True
-/probation status
-/probation release member:@User
-/probation add member:@User
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
 
-/raid swarm enabled:True minimum:4 minutes:10
-/case timeline user:@User
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
 
-/block kind:link value:evil.example
-/blocklist
-/unblock kind:link number:1
-/antiscam set learn_emoji:X
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
 ```
 
 ### Meddelandebyggare och uppdateringar
 
-Meddelandebyggaren postar meddelanden med flera embeds och länkknappar från JSON. Den läser den JSON som embed-generatorer som Embed Generator exporterar, så du utformar ett meddelande där och postar det med boten. Ange JSON som text, som .json-fil eller som https-länk som pekar direkt på JSON, till exempel råfilen i ett arkiv (länkar med omdirigering avvisas). Bara länkknappar skapas, knappar som kräver en interaktion hoppas över. Varje länk måste vara http eller https, omnämnanden i texten pingar aldrig och Discords gränser gäller. /message copy exporterar ett befintligt meddelande som JSON, /message edit ändrar ett meddelande från boten och /message preview visar resultatet bara för dig. Delningslänkar från webbredigerare öppnas inte, eftersom deras format inte är offentligt.
+Meddelandebyggaren postar meddelanden med flera embeds och länkknappar från JSON. Den läser den JSON som embed-generatorer som Embed Generator exporterar, så du utformar ett meddelande där och postar det med boten. Ange JSON som text, som .json-fil eller som https-länk som pekar direkt på JSON, till exempel råfilen i ett arkiv (länkar med omdirigering avvisas). Bara länkknappar skapas, knappar som kräver en interaktion hoppas över. Varje länk måste vara http eller https, omnämnanden i texten pingar aldrig och Discords gränser gäller. /post message copy exporterar ett befintligt meddelande som JSON, /post message edit ändrar ett meddelande från boten och /post message preview visar resultatet bara för dig. Delningslänkar från webbredigerare öppnas inte, eftersom deras format inte är offentligt.
 
 ```json
 {
@@ -1002,7 +1106,7 @@ Meddelandebyggaren postar meddelanden med flera embeds och länkknappar från JS
 }
 ```
 
-Var 12:e timme kontrollerar boten GitHub-arkivet i update.repo (sätts med scripts/set_repo_url.py) efter en nyare version. Finns det en får botens ägare ett direktmeddelande med versionsanteckningarna, och versionen laddas ned och kontrolleras: SHA-256-kontrollsumma, säkra sökvägar i arkivet och en version som stämmer med taggen. Den installeras med /debug update action:install, eller av sig själv om auto_install är på. Före installationen sparas de ersatta filerna i data/update, nya paket installeras och den nya koden importeras som test. Om något misslyckas återställs de gamla filerna. Din .env, settings.json, data och music rörs aldrig. Sedan startar boten om sig själv. I Docker installeras inget på plats, uppdatera avbilden i stället. En uppdatering kör kod från arkivet, så peka den bara mot ett arkiv du litar på. Stäng av den med enabled satt till false.
+Var 12:e timme kontrollerar boten GitHub-arkivet i update.repo (sätts med scripts/set_repo_url.py) efter en nyare version. Finns det en får botens ägare ett direktmeddelande med versionsanteckningarna, och versionen laddas ned och kontrolleras: SHA-256-kontrollsumma, säkra sökvägar i arkivet och en version som stämmer med taggen. Den installeras med /server debug update action:install, eller av sig själv om auto_install är på. Före installationen sparas de ersatta filerna i data/update, nya paket installeras och den nya koden importeras som test. Om något misslyckas återställs de gamla filerna. Din .env, settings.json, data och music rörs aldrig. Sedan startar boten om sig själv. I Docker installeras inget på plats, uppdatera avbilden i stället. En uppdatering kör kod från arkivet, så peka den bara mot ett arkiv du litar på. Stäng av den med enabled satt till false.
 
 ```json
 {
@@ -1017,15 +1121,15 @@ Var 12:e timme kontrollerar boten GitHub-arkivet i update.repo (sätts med scrip
 ```
 
 ```
-/message send channel:#news url:https://example.com/message.json
-/message send channel:#news file:message.json
-/message preview url:https://example.com/message.json
-/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/message copy message:https://discord.com/channels/1/2/3
-/module disable name:builder
-/debug update action:status
-/debug update action:check
-/debug update action:install
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
 ```
 
 ### Drift
@@ -1045,8 +1149,8 @@ Boten sparar sina data var några sekunder och lagrar databassäkerhetskopior i 
 ```
 
 ```
-/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
-/debug db action:list
+/server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/server debug db action:list
 ```
 
 ### Administration
@@ -1054,26 +1158,26 @@ Boten sparar sina data var några sekunder och lagrar databassäkerhetskopior i 
 Slå på eller av moduler och kommandon, byt prefix, skapa alias och begränsa kommandon till roller.
 
 ```
-/module list
-/module disable name:starboard
-/module enable name:tickets
-/command disable name:ban                          # single commands
-/command enable name:ban
-/command list
+/admin module list
+/admin module disable name:starboard
+/admin module enable name:tickets
+/admin command disable name:ban                          # single commands
+/admin command enable name:ban
+/admin command list
 
-/prefix new_prefix:?                               # text commands now start with ?
-/alias add alias:w command:warn                    # ?w @User Spam
-/alias remove alias:w
-/alias list
+/admin prefix new_prefix:?                               # text commands now start with ?
+/admin alias add alias:w command:warn                    # ?w @User Spam
+/admin alias remove alias:w
+/admin alias list
 
-/perms allow command:ban target:@HeadModerator     # only this role may use /ban
-/perms deny command:warn target:@Trainee
-/perms reset command:ban
-/perms show
+/admin perms allow command:ban target:@HeadModerator     # only this role may use /moderation ban
+/admin perms deny command:warn target:@Trainee
+/admin perms reset command:ban
+/admin perms show
 
-/settings
+/admin settings
 /help
-/about
+/info about
 ```
 
 ## Platshållare i meddelanden
@@ -1081,17 +1185,17 @@ Slå på eller av moduler och kommandon, byt prefix, skapa alias och begränsa k
 De här platshållarna ersätts i texterna du ställer in:
 
 ```
-/welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
-/booster set         message                         {user} {name} {server} {count}
+/community welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
+/community booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
 /birthday setup set   message                         {user} {name}
-/tempvoice setup     name                            {name}
-/jailsetup notice    text                            {staff}
+/community tempvoice setup     name                            {name}
+/access jailsetup notice    text                            {staff}
 ```
 
 ## Konfiguration
 
-Globala alternativ anges i settings.json. Allt annat konfigureras per server med kommandon som /module, /command, /perms, /alias och /config.
+Globala alternativ anges i settings.json. Allt annat konfigureras per server med kommandon som /admin module, /admin command, /admin perms, /admin alias och /admin config.
 
 Om du vill döpa om ett kommando lägger du till det i command_names och startar om boten:
 
@@ -1108,21 +1212,21 @@ Om du vill döpa om ett kommando lägger du till det i command_names och startar
 }
 ```
 
-Varje inställning kan läsas och ändras med /config. Det här är de sökvägar du använder oftast:
+Varje inställning kan läsas och ändras med /admin config. Det här är de sökvägar du använder oftast:
 
 ```
-/config get path:automod.caps.percent
-/config set path:automod.caps.percent value:80
-/config set path:mod.dm_user value:false             # no direct message on punishments
-/config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
-/config set path:mod.default_mute_minutes value:120
-/config set path:automod.mentions.max value:5
-/config set path:automod.phishing.lookalike value:true
-/config set path:raid.joins value:8
-/config set path:xp.cooldown value:45
-/config set path:tickets.max_open value:2
-/config set path:privacy.retention_days value:90
-/config reset section:welcome                        # back to the defaults of one section
+/admin config get path:automod.caps.percent
+/admin config set path:automod.caps.percent value:80
+/admin config set path:mod.dm_user value:false             # no direct message on punishments
+/admin config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
+/admin config set path:mod.default_mute_minutes value:120
+/admin config set path:automod.mentions.max value:5
+/admin config set path:automod.phishing.lookalike value:true
+/admin config set path:raid.joins value:8
+/admin config set path:xp.cooldown value:45
+/admin config set path:tickets.max_open value:2
+/admin config set path:privacy.retention_days value:90
+/admin config reset section:welcome                        # back to the defaults of one section
 ```
 
 ## Data och lagring
@@ -1173,7 +1277,7 @@ Engelska är projektets originalspråk. Alla översättningar av dokumentationen
 - All data ligger i mappen data på din dator: inställningar, XP, födelsedagar (endast dag och månad) och modereringsärenden.
 - Boten ignorerar direktmeddelanden från medlemmar.
 - Token läses från filen .env. Dela den aldrig och ladda inte upp den.
-- Medlemmar kan exportera och radera sina egna data med /mydata. Administratörer bestämmer hur länge data från medlemmar som lämnat sparas.
+- Medlemmar kan exportera och radera sina egna data med /info mydata. Administratörer bestämmer hur länge data från medlemmar som lämnat sparas.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Support

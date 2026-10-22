@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 서버에서 다음 명령어를 사용하고 채널 이름을 내 채널로 바꾸세요.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 모든 기능은 명령어 참조에 설명되어 있습니다: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## 선택: 이미지 읽기와 언어
 
-사기 방지 모듈이 이미지 속 글자를 읽게 하려면 봇을 실행하는 컴퓨터에 tesseract를 설치하세요(Docker 이미지에는 이미 들어 있습니다). 그런 다음 /antiscam status로 준비되었는지 확인합니다. 멤버에게 보이는 메시지의 언어는 /language로 고릅니다.
+사기 방지 모듈이 이미지 속 글자를 읽게 하려면 봇을 실행하는 컴퓨터에 tesseract를 설치하세요(Docker 이미지에는 이미 들어 있습니다). 그런 다음 /security antiscam status로 준비되었는지 확인합니다. 멤버에게 보이는 메시지의 언어는 /admin language로 고릅니다.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## 대시보드
@@ -233,7 +233,7 @@ dashboard.example.com {
 - 권한 있는 Intent 오류로 봇이 멈춤: Developer Portal에서 Server Members Intent와 Message Content Intent를 켜세요.
 - Improper token: 토큰을 다시 복사하고 .env에 DISCORD_TOKEN=토큰 만 있고 공백이나 따옴표가 없는지 확인하세요.
 - I cannot assign that role: 봇의 역할을 관리해야 할 역할보다 위로 옮기세요.
-- 아무것도 기록되지 않음: /log set으로 채널을 지정하고, 봇이 그 채널에서 메시지 전송, 링크 삽입, 파일 첨부를 할 수 있는지 확인하세요.
+- 아무것도 기록되지 않음: /server log set으로 채널을 지정하고, 봇이 그 채널에서 메시지 전송, 링크 삽입, 파일 첨부를 할 수 있는지 확인하세요.
 - Unknown timezone: pip install tzdata를 실행하고 봇을 다시 시작하세요.
 - 이유 없이 실패하는 경우: 오류와 경고는 콘솔에 출력됩니다. VPS에서는 journalctl -u guardbot -f 로 확인하세요.
 

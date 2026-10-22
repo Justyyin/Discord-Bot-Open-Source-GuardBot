@@ -25,11 +25,13 @@
   - [Обновление](#обновление)
 - [Права бота](#права-бота)
 - [Первые шаги в Discord](#первые-шаги-в-discord)
+  - [Структура, участники и команда](#структура-участники-и-команда)
 - [Панель управления](#панель-управления)
   - [Настройка панели](#настройка-панели)
   - [Безопасность](#безопасность-1)
   - [Панель на VPS](#панель-на-vps)
 - [Команды](#команды)
+  - [Группы команд](#группы-команд)
   - [Модерация](#модерация-1)
   - [Гулаг (jail)](#гулаг-jail)
   - [Автомодерация](#автомодерация)
@@ -93,7 +95,7 @@ GuardBot объединяет функции, за которые многие �
 - Автомодерация: фильтр слов, фильтр заглавных букв, спам упоминаниями, ссылки-приглашения, фишинговые домены, личные данные, доксинг и угрозы. Все списки можно редактировать.
 - Защита от рейдов с обнаружением волн входов и блокировка всего сервера.
 - Защита от нюка: лимиты на массовые удаления и баны, автоматическая реакция и личное сообщение владельцу сервера.
-- Канал «гулаг»: участники, публикующие мошеннические ссылки или изображения, перемещаются в один канал с инструкцией по защите аккаунта. Модераторы также могут использовать /jail и /unjail.
+- Канал «гулаг»: участники, публикующие мошеннические ссылки или изображения, перемещаются в один канал с инструкцией по защите аккаунта. Модераторы также могут использовать /moderation jail и /moderation unjail.
 - Верификация кнопкой или капчей с автоматическим удалением участников, которые не прошли её вовремя.
 - Защита от нюка также следит за выдачей прав, новыми вебхуками, добавленными ботами и переименованием сервера.
 - Защита от мошенничества: поддельные розыгрыши и крипто-скам удаляются в тексте и на изображениях за миллисекунды, включая скам с MrBeast при любом написании.
@@ -117,7 +119,7 @@ GuardBot объединяет функции, за которые многие �
 - XP и уровни от 1 до 100 за чат и голос, роли за уровни и дни рождения.
 - Starboard и временные голосовые каналы.
 - Гулаг на заданное время, опросы с множественным выбором, карточки ранга в виде изображений и бонусы XP для ролей.
-- Экономика с магазином, меню ролей с кнопками или списком, отложенные сообщения, ленты YouTube, Twitch и RSS, статистика активности и пошаговый /setup. Сообщения для участников доступны на 12 языках.
+- Экономика с магазином, меню ролей с кнопками или списком, отложенные сообщения, ленты YouTube, Twitch и RSS, статистика активности и пошаговый /admin setup. Сообщения для участников доступны на 12 языках.
 
 ### Администрирование
 
@@ -241,19 +243,99 @@ Optional
 Разумная начальная настройка. Выполните эти команды на своём сервере и замените каналы и роли своими:
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
+
+### Структура, участники и команда
+
+Версия 1.5 добавляет команды для создания и поддержания порядка на сервере, восстановления вернувшихся участников и управления командой модерации. У каждой части есть переключатель модуля (`/admin module`), собственные настройки и место в панели.
+
+```
+/structure channel create name:news kind:text category:Info private:False
+/structure channel clone channel:#news name:news-2
+/structure channel rename channel:#news name:announcements
+/structure channel move channel:#news category:Info position:1
+/structure channel sort category:Info
+/structure channel copyperms source:#news target:#rules whole_category:False
+/structure category create name:Events private:False
+/structure category clone category:Events name:Events 2
+/structure category sort
+/structure category sync category:Events
+/structure archive setup action:report days:60 report_channel:#staff interval_hours:24
+/structure archive ignore channel:#news
+/structure archive scan action:report
+/structure temprole give member:@User role:@Event duration:7d reason:Contest
+/structure temprole list
+/structure roletemplate save name:mod role:@Moderator
+/structure roletemplate apply name:mod role_name:Trial Mod
+/structure rules setup channel:#rules role:@Member remind:True remind_hours:24
+/structure rules add text:Be kind to each other.
+/structure rules post new_version:True
+/structure rules status
+
+/members stickyroles setup roles:True days:30 punishments:True dangerous:False
+/members stickyroles status
+/members stickyroles forget user:@User
+/members nickname setup dehoist:True usernames:True rename_to:Renamed notify:True
+/members nickname word word:badword
+/members nickname check name:!!hoisted
+/members nickname scan
+/members watch setup channel:#staff ping_role:@Moderator repeat:False
+/members watch add user:@User reason:Suspicious
+/members watch list
+/members reason add name:spam action:mute text:Spam duration:1h
+/members reason use name:spam user:@User
+
+/security approval setup channel:#staff role:@Moderator ban:True bulk:True minutes:30 owner_bypass:True
+/security approval list
+/security approval cancel request_id:3
+/moderation case undo case_id:12 reason:Mistake follow:True batch:False
+/moderation escalation expiry days:90
+
+/admin history list
+/admin history show number:5
+/admin history rollback number:5 section:welcome
+/admin history keep count:200
+/admin history copy source:123456789012345678 sections:welcome,tickets dry_run:True
+/admin exceptions add rule:invites channel:#media role:@Artist
+/admin exceptions list
+/admin dashaccess add role:@Helper level:viewer
+/admin dashaccess list
+
+/team teamstats overview days:30
+/team teamstats member user:@User
+/team teamstats inactive days:14
+/team weekly setup channel:#staff day:Monday hour:9
+/team weekly now days:7
+/team duty away duration:3d reason:Holiday
+/team duty back
+/team duty route feature:tickets enabled:True
+/team duty roster role:@Moderator
+/team apply setup channel:#applications staff_role:@Moderator accept_role:@Trial votes:3 open:True cooldown_days:30
+/team apply question action:add text:Why do you want to join?
+/team apply start
+/team apply list
+/team apply decide number:4 decision:accept
+```
+
+- С помощью `/structure` каналы и категории создаются, клонируются, переименовываются, сортируются, а права копируются с другого канала. О неактивных каналах сообщается, либо они переносятся в категорию архива (`/structure archive`). Роли можно выдавать на ограниченный срок и сохранять как шаблоны; шаблон никогда не даёт право, которого нет у применяющего его.
+- `/structure rules` публикует правила с кнопкой принятия и номером версии. После `post new_version:True` участники, не принявшие новую версию, получают одно напоминание в личные сообщения.
+- `/members stickyroles` возвращает роли и восстанавливает таймаут или мьют при возвращении участника. `/members nickname` убирает символы, поднимающие имя в начало списка, проверяет запрещённые слова в никнеймах и именах пользователей и переименовывает нарушителей. Список наблюдения работает тихо: команда получает оповещение при первом сообщении пользователя из списка.
+- Согласование в четыре глаза (`/security approval`) выполняет баны, кики, таймауты и массовые действия только после согласия второго модератора. `/moderation case undo` отменяет случай вместе с вызванными им действиями (например, мьют и последовавший бан). Предупреждения могут истекать через заданное число дней (`/moderation escalation expiry`).
+- `/admin history` показывает, кто и когда изменил настройку, и откатывает раздел. Имя человека определяется предположительно по последним командам и изменениям в панели на сервере. `/admin history copy` копирует разделы на другой сервер, которым вы можете управлять через бота; сначала выполняется пробный прогон. `/admin exceptions` исключает каналы и роли из правил AutoMod и Anti-Scam. `/admin dashaccess` даёт ролям доступ к панели только для чтения или как модератору.
+- `/team` показывает работу каждого модератора (случаи, тикеты, жалобы, время реакции, неактивные участники), публикует еженедельный отчёт (день и час по UTC), позволяет модераторам отметить отсутствие через `/team duty away`, чтобы тикеты и упоминания шли другим, и ведёт заявки в команду с формой и голосованием.
+- Discord не умеет скрывать команды внутри группы от отдельных участников. Бот всё равно проверяет каждый вызов. Цифры статистики команды считаются со дня обновления; более ранние действия не учитываются.
 
 ## Панель управления
 
@@ -327,31 +409,53 @@ dashboard.example.com {
 
 Большинство команд являются слэш-командами, команды модерации работают и с префиксом. Полный список находится в справочнике команд: [COMMANDS.md](../COMMANDS.md).
 
+<!-- groups -->
+### Группы команд
+
+Чтобы экономить слоты слеш-команд (Discord допускает 100 команд верхнего уровня на бота), связанные команды объединены в группы. Сначала вводится группа, затем команда, например `/moderation ban`. Текстовые команды с префиксом, например `!ban`, не меняются. Права, псевдонимы и переключатели модулей по-прежнему используют простое имя команды.
+
+| Группа | Содержит |
+| --- | --- |
+| `/moderation` | `warn`, `unwarn`, `warnings`, `clearwarns`, `note`, `mute`, `unmute`, `kick`, `ban`, `unban`, `tempban`, `jail`, `unjail`, `jailed`, `role`, `case`, `cases`, `bulk`, `escalation`, `purge`, `slowmode` |
+| `/security` | `antinuke`, `antiscam`, `raid`, `block`, `unblock`, `blocklist`, `approval` |
+| `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
+| `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
+| `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
+| `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
+| `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
+| `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
+| `/post` | `say`, `embed`, `message`, `sticky`, `schedule`, `feed`, `reactionrole`, `rolemenu` |
+| | `/help`, `/play`, `/automod`, `/music`, `/xp`, `/modmail`, `/appeal`, `/report`, `/suggestion`, `/birthday`, `/notify` |
+
 ### Модерация
 
 Предупреждения, мьюты, кики и баны работают как слэш-команды и с префиксом, например `!warn @User spam`. Каждое действие создаёт нумерованный случай.
 
 ```
-/warn member:@User reason:Spam                    # also: !warn @User Spam
-/unwarn case_id:12                                 # remove one warning
-/clearwarns user:@User                             # remove all active warnings
-/mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
-/unmute member:@User
-/kick member:@User reason:Advertising
-/ban user:@User reason:Raid                        # user can also be an ID
-/unban user:123456789012345678
+/moderation warn member:@User reason:Spam                    # also: !warn @User Spam
+/moderation unwarn case_id:12                                 # remove one warning
+/moderation clearwarns user:@User                             # remove all active warnings
+/moderation mute member:@User duration:30m reason:Spam        # also: !mute @User 30m Spam
+/moderation unmute member:@User
+/moderation kick member:@User reason:Advertising
+/moderation ban user:@User reason:Raid                        # user can also be an ID
+/moderation unban user:123456789012345678
 
-/cases user:@User                                  # history, filter by mention or ID
-/cases kind:ban page:2                             # filter by type
-/cases search:john                                 # filter by part of a name
-/warnings user:@User
-/case view case_id:12
+/moderation cases user:@User                                  # history, filter by mention or ID
+/moderation cases kind:ban page:2                             # filter by type
+/moderation cases search:john                                 # filter by part of a name
+/moderation warnings user:@User
+/moderation case view case_id:12
 
-/escalation list
-/escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
-/escalation set warns:5 action:kick
-/escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
-/escalation remove warns:5
+/moderation escalation list
+/moderation escalation set warns:3 action:timeout minutes:60  # 3 warnings = 1 hour timeout
+/moderation escalation set warns:5 action:kick
+/moderation escalation set warns:7 action:ban                 # actions: timeout, kick, ban, jail
+/moderation escalation remove warns:5
 ```
 
 ### Гулаг (jail)
@@ -359,14 +463,14 @@ dashboard.example.com {
 Участники со взломанным аккаунтом перемещаются в один канал с инструкцией по безопасности. При освобождении им возвращаются прежние роли.
 
 ```
-/jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
-/jailsetup apply                                   # apply the channel permissions again
-/jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
-/jailsetup preview
+/access jailsetup setup role:@Gulag channel:#gulag staff_role:@Moderator   # empty options are created for you
+/access jailsetup apply                                   # apply the channel permissions again
+/access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
+/access jailsetup preview
 
-/jail member:@User reason:Hacked account           # also: !jail @User Hacked account
-/jail member:@User duration:2h                     # released automatically after 2 hours
-/unjail member:@User reason:Account secured
+/moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
+/moderation jail member:@User duration:2h                     # released automatically after 2 hours
+/moderation unjail member:@User reason:Account secured
 ```
 
 ### Автомодерация
@@ -410,18 +514,18 @@ dashboard.example.com {
 Обнаруживает много входов за короткое время и может заблокировать сервер. Режим channels меняет каждый канал, режим role действует мгновенно.
 
 ```
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3 lockdown:True
 # 5 joins within 10 seconds count as a raid, accounts younger than 3 days are punished,
 # actions: alert, timeout, kick
 
-/lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
-/lockdown mode:channels reason:Raid                # thorough, edits every channel
-/unlock
+/access lockdown mode:role reason:Raid                    # instant, edits only the @everyone role
+/access lockdown mode:channels reason:Raid                # thorough, edits every channel
+/access unlock
 
-/lockdownconfig mode mode:role                     # default mode
-/lockdownconfig lockrole role:@Member              # extra role locked in role mode
-/lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
-/lockdownconfig exempt channel:#announcements
+/access lockdownconfig mode mode:role                     # default mode
+/access lockdownconfig lockrole role:@Member              # extra role locked in role mode
+/access lockdownconfig bypassrole role:@Moderator         # can still write in channels mode
+/access lockdownconfig exempt channel:#announcements
 ```
 
 ### Защита от нюка
@@ -429,16 +533,16 @@ dashboard.example.com {
 Следит за журналом аудита и реагирует, когда кто-то разрушает сервер. Владелец получает личное сообщение.
 
 ```
-/antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
-/antinuke limit kind:channel_delete count:3 seconds:10
+/security antinuke setup enabled:True action:strip notify_owner:True   # actions: alert, strip, kick, ban
+/security antinuke limit kind:channel_delete count:3 seconds:10
 # kinds: channel_delete, role_delete, channel_create, ban, kick,
 #        role_perm, role_grant, webhook_create, bot_add, guild_update
-/antinuke whitelist user:@TrustedAdmin             # toggle, never checked
-/antinuke staffrole role:@Moderator                # toggle, shown in alerts
-/antinuke servername name:MyServer                 # extra name for the nuke talk detection
-/antinuke newbots kick:True                        # kick bots added by untrusted users
-/antinuke restore member:@User                     # give back roles that were removed
-/antinuke status
+/security antinuke whitelist user:@TrustedAdmin             # toggle, never checked
+/security antinuke staffrole role:@Moderator                # toggle, shown in alerts
+/security antinuke servername name:MyServer                 # extra name for the nuke talk detection
+/security antinuke newbots kick:True                        # kick bots added by untrusted users
+/security antinuke restore member:@User                     # give back roles that were removed
+/security antinuke status
 ```
 
 ### Верификация
@@ -446,13 +550,13 @@ dashboard.example.com {
 Новые участники видят только канал верификации, пока не нажмут кнопку или не решат капчу.
 
 ```
-/verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
+/access verify setup channel:#verify mode:captcha timeout_minutes:30 min_account_age_days:3
 # modes: button, captcha (image), math; roles are created if you do not pass them
-/verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
-/verify panel channel:#verify                      # post the button again
-/verify apply                                      # apply the channel permissions again
-/verify member member:@User                        # verify someone manually
-/verify off
+/access verify setup channel:#verify verified_role:@Member unverified_role:@Unverified
+/access verify panel channel:#verify                      # post the button again
+/access verify apply                                      # apply the channel permissions again
+/access verify member member:@User                        # verify someone manually
+/access verify off
 ```
 
 ### Журналирование
@@ -460,13 +564,13 @@ dashboard.example.com {
 Выберите канал для каждой категории или один основной канал для всего.
 
 ```
-/log set category:main channel:#logs               # fallback for every category
-/log set category:messages channel:#log-messages
-/log set category:moderation channel:#log-moderation
-/log set category:security channel:#log-security
+/server log set category:main channel:#logs               # fallback for every category
+/server log set category:messages channel:#log-messages
+/server log set category:moderation channel:#log-moderation
+/server log set category:security channel:#log-security
 # categories: main, messages, members, voice, server, moderation, security
-/log sent enabled:False                            # stop logging every sent message
-/log show
+/server log sent enabled:False                            # stop logging every sent message
+/server log show
 ```
 
 ### Приветствия, прощания и бустеры
@@ -474,14 +578,14 @@ dashboard.example.com {
 Сообщения, автороли и награды для бустеров сервера.
 
 ```
-/welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
-/welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
-/welcome autorole role:@Member                     # toggle, given to every new member
-/welcome botrole role:@Bots                        # toggle, given to every new bot
-/welcome test
+/community welcome set channel:#welcome message:Welcome {user} to {server}! dm:Please read the rules.
+/community welcome set goodbye_channel:#goodbye goodbye_message:{name} left the server.
+/community welcome autorole role:@Member                     # toggle, given to every new member
+/community welcome botrole role:@Bots                        # toggle, given to every new bot
+/community welcome test
 
-/booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
-/booster role role:@Booster                        # toggle
+/community booster set channel:#boosts message:Thank you {user}! remove_on_stop:True
+/community booster role role:@Booster                        # toggle
 ```
 
 ### Тикеты
@@ -489,15 +593,15 @@ dashboard.example.com {
 Участники открывают личные каналы кнопкой. При закрытии отправляется стенограмма.
 
 ```
-/ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
-/ticket addtype key:report label:Report description:Report a member
-/ticket removetype key:report
-/ticket panel channel:#support title:Support description:Press a button to open a ticket
+/support ticket setup category:Tickets support_role:@Support log_channel:#ticket-logs max_open:1
+/support ticket addtype key:report label:Report description:Report a member
+/support ticket removetype key:report
+/support ticket panel channel:#support title:Support description:Press a button to open a ticket
 
 # inside a ticket
-/ticket add member:@User
-/ticket remove member:@User
-/ticket close
+/support ticket add member:@User
+/support ticket remove member:@User
+/support ticket close
 ```
 
 ### Опросы и розыгрыши
@@ -505,14 +609,14 @@ dashboard.example.com {
 Кнопки для голосования и участия. Длительность принимает значения вроде 30m, 2h и 1d.
 
 ```
-/poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
-/poll end poll_id:3
-/poll list
+/engage poll create question:Best game? options:Chess; Go; Poker duration:1d multiple:True
+/engage poll end poll_id:3
+/engage poll list
 
-/giveaway start prize:Nitro duration:2d winners:2 role:@Member
-/giveaway end giveaway_id:1
-/giveaway reroll giveaway_id:1
-/giveaway list
+/engage giveaway start prize:Nitro duration:2d winners:2 role:@Member
+/engage giveaway end giveaway_id:1
+/engage giveaway reroll giveaway_id:1
+/engage giveaway list
 ```
 
 ### Предложения и starboard
@@ -521,12 +625,12 @@ dashboard.example.com {
 
 ```
 /suggestion setup set channel:#suggestions review_role:@Staff
-/suggest text:Add a music channel                  # also: !suggest Add a music channel
+/support suggest text:Add a music channel                  # also: !suggest Add a music channel
 /suggestion status suggestion_id:4 status:approved reason:Planned for next month
 # status: approved, denied, considering, implemented
 
-/starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
-/starboard ignore channel:#spam
+/engage starboard setup channel:#starboard emoji:<any emoji> threshold:3 self_star:False
+/engage starboard ignore channel:#spam
 ```
 
 ### XP и уровни
@@ -552,9 +656,9 @@ XP за чат и голос, роли за уровни, бонусы для р
 /xp setlevel user:@User level:20
 /xp reset user:@User
 
-/rank                                              # also: !rank, shows a rank card image
-/rank user:@User
-/leaderboard
+/info rank                                              # also: !rank, shows a rank card image
+/info rank user:@User
+/info leaderboard
 ```
 
 ### Роли по реакции и уведомления
@@ -562,12 +666,12 @@ XP за чат и голос, роли за уровни, бонусы для р
 Выдавайте роли за реакции с любыми эмодзи и позволяйте участникам выбирать темы уведомлений.
 
 ```
-/reactionrole panel channel:#roles title:Pick your roles description:React below
-/reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
-/reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
+/post reactionrole panel channel:#roles title:Pick your roles description:React below
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Gamer
+/post reactionrole add message:<message link> emoji:<any emoji> role:@Artist mode:unique
 # mode unique: only one role of that message at a time
-/reactionrole remove message:<message link> emoji:<any emoji>
-/reactionrole list
+/post reactionrole remove message:<message link> emoji:<any emoji>
+/post reactionrole list
 
 /notify topic add key:events role:@Events description:Server events
 /notify topic panel channel:#roles title:Notifications   # one button per topic
@@ -596,7 +700,7 @@ XP за чат и голос, роли за уровни, бонусы для р
 Вход в канал-хаб создаёт комнату, которая исчезает, когда пустеет.
 
 ```
-/tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
+/community tempvoice setup hub:#Join-to-create category:Voice name:{name}'s room limit:0
 # joining the hub creates a room for the member, empty rooms are deleted
 ```
 
@@ -605,12 +709,12 @@ XP за чат и голос, роли за уровни, бонусы для р
 Копии содержат роли, каналы, эмодзи, вебхуки и роли участников. Восстановление добавляет только недостающее.
 
 ```
-/backup create name:before-update
-/backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
-/backup list
-/backup download name:before-update
-/backup restore name:before-update member_roles:True   # only adds what is missing
-/backup delete name:before-update
+/server backup create name:before-update
+/server backup schedule enabled:True interval_hours:24 keep:7 include_members:True include_emojis:True
+/server backup list
+/server backup download name:before-update
+/server backup restore name:before-update member_roles:True   # only adds what is missing
+/server backup delete name:before-update
 ```
 
 ### Данные и конфиденциальность
@@ -618,12 +722,12 @@ XP за чат и голос, роли за уровни, бонусы для р
 Участники могут экспортировать и удалять свои данные. Администраторы задают срок хранения.
 
 ```
-/mydata export                                     # members download their own data
-/mydata delete confirm:True                        # members delete their XP and birthday
+/info mydata export                                     # members download their own data
+/info mydata delete confirm:True                        # members delete their XP and birthday
 
-/privacy retention days:90                         # delete data of members who left after 90 days
-/privacy export user_id:123456789012345678
-/privacy delete user_id:123456789012345678 cases:True
+/server privacy retention days:90                         # delete data of members who left after 90 days
+/server privacy export user_id:123456789012345678
+/server privacy delete user_id:123456789012345678 cases:True
 ```
 
 ### Инструменты модератора
@@ -631,21 +735,21 @@ XP за чат и голос, роли за уровни, бонусы для р
 Очистка каналов, управление ролями и личные заметки. Каждое действие записывается в журнал.
 
 ```
-/purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
-/slowmode seconds:10 channel:#general              # 0 turns it off
-/lockchannel channel:#general reason:Spam wave
-/unlockchannel channel:#general
+/moderation purge amount:50 user:@User kind:links           # kind: all, links, images, bots, attachments
+/moderation slowmode seconds:10 channel:#general              # 0 turns it off
+/access lockchannel channel:#general reason:Spam wave
+/access unlockchannel channel:#general
 
-/role add member:@User role:@Member
-/role remove member:@User role:@Member
+/moderation role add member:@User role:@Member
+/moderation role remove member:@User role:@Member
 
-/note user:@User text:Watch this member            # private, shown in /cases
-/tempban user:@User duration:7d reason:Spam        # unbanned automatically
-/jailed                                            # who is in the gulag right now
+/moderation note user:@User text:Watch this member            # private, shown in /moderation cases
+/moderation tempban user:@User duration:7d reason:Spam        # unbanned automatically
+/moderation jailed                                            # who is in the gulag right now
 
-/case view case_id:12
-/case edit case_id:12 reason:Corrected reason
-/case delete case_id:12
+/moderation case view case_id:12
+/moderation case edit case_id:12 reason:Corrected reason
+/moderation case delete case_id:12
 ```
 
 ### Информация
@@ -653,13 +757,13 @@ XP за чат и голос, роли за уровни, бонусы для р
 Справка о пользователях, сервере, ролях и боте.
 
 ```
-/userinfo user:@User
-/serverinfo
-/roleinfo role:@Moderator
-/avatar user:@User
+/info userinfo user:@User
+/server serverinfo
+/server roleinfo role:@Moderator
+/info avatar user:@User
 /help command:ban                                  # explains one command
-/ping
-/botinfo
+/info ping
+/info botinfo
 ```
 
 ### Объявления, теги и напоминания
@@ -667,24 +771,24 @@ XP за чат и голос, роли за уровни, бонусы для р
 Сообщения от имени бота, собственные команды, автоответы на сообщения и напоминания.
 
 ```
-/say channel:#news message:Maintenance tonight
-/embed channel:#news title:Update description:New rules color:#5865F2
+/post say channel:#news message:Maintenance tonight
+/post embed channel:#news title:Update description:New rules color:#5865F2
 
-/tag create name:rules text:Be kind to each other
-/tag show name:rules
-/tag list
-/tag info name:rules
-/tag edit name:rules text:Be kind and read the pinned message
-/tag delete name:rules
+/support tag create name:rules text:Be kind to each other
+/support tag show name:rules
+/support tag list
+/support tag info name:rules
+/support tag edit name:rules text:Be kind and read the pinned message
+/support tag delete name:rules
 
-/autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
-/autoresponder list
-/autoresponder remove id:1                         # mode: contains, word, exact, startswith
+/support autoresponder add trigger:server ip response:The IP is in #info mode:contains cooldown:30
+/support autoresponder list
+/support autoresponder remove id:1                         # mode: contains, word, exact, startswith
 
-/remind set duration:2h text:Stream starts
-/remind list
-/remind cancel id:1
-/afk reason:Lunch                                  # the bot tells others who mention you
+/community remind set duration:2h text:Stream starts
+/community remind list
+/community remind cancel id:1
+/community afk reason:Lunch                                  # the bot tells others who mention you
 ```
 
 ### Мод-почта и апелляции на бан
@@ -711,20 +815,20 @@ XP за чат и голос, роли за уровни, бонусы для р
 Игра в счёт, сообщения, которые остаются внизу канала, и каналы с живыми числами.
 
 ```
-/counting setup channel:#counting reset_on_fail:True delete_wrong:True
-/counting status
-/counting set number:100
-/counting off
+/engage counting setup channel:#counting reset_on_fail:True delete_wrong:True
+/engage counting status
+/engage counting set number:100
+/engage counting off
 
-/sticky set channel:#rules text:Read the rules before you write
-/sticky list
-/sticky remove channel:#rules
+/post sticky set channel:#rules text:Read the rules before you write
+/post sticky list
+/post sticky remove channel:#rules
 
-/stats create template:Members: {members} category:Statistics
-/stats add channel:#info template:Boosts: {boosts}
-/stats list
-/stats refresh
-/stats remove channel:#info
+/server stats create template:Members: {members} category:Statistics
+/server stats add channel:#info template:Boosts: {boosts}
+/server stats list
+/server stats refresh
+/server stats remove channel:#info
 ```
 
 ### Дополнительные возможности существующих функций
@@ -732,40 +836,40 @@ XP за чат и голос, роли за уровни, бонусы для р
 Дополнения для тикетов, розыгрышей, голосовых комнат, XP, дней рождения, резервных копий, журналов и экранов состояния.
 
 ```
-/ticket claim
-/ticket rename name:billing-help
-/ticket list
+/support ticket claim
+/support ticket rename name:billing-help
+/support ticket list
 
-/giveaway cancel giveaway_id:3
-/giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
+/engage giveaway cancel giveaway_id:3
+/engage giveaway edit giveaway_id:3 prize:Nitro winners:2 extend:1h
 
-/voice rename name:Study room                      # only the owner of the room
-/voice limit limit:4
-/voice lock
-/voice unlock
-/voice kick member:@User
-/voice transfer member:@User
-/voice claim                                       # if the owner left
+/community voice rename name:Study room                      # only the owner of the room
+/community voice limit limit:4
+/community voice lock
+/community voice unlock
+/community voice kick member:@User
+/community voice transfer member:@User
+/community voice claim                                       # if the owner left
 
 /xp channelboost channel:#chat multiplier:1.5
 /xp resetall confirm:True
-/leaderboard page:2
+/info leaderboard page:2
 
 /birthday list
 /birthday setup user member:@User day:14 month:3
 /birthday setup clear member:@User
 
-/backup info name:weekly
-/log show
-/log ignorechannel channel:#bots
-/log ignoreuser user:@Bot
-/log sent enabled:True
+/server backup info name:weekly
+/server log show
+/server log ignorechannel channel:#bots
+/server log ignoreuser user:@Bot
+/server log sent enabled:True
 
 /automod status
-/verify status
-/raid status
-/welcome show
-/starboard show
+/access verify status
+/security raid status
+/community welcome show
+/engage starboard show
 ```
 
 ### Другие инструменты AutoMod
@@ -792,14 +896,14 @@ XP за чат и голос, роли за уровни, бонусы для р
 Сигнал, если модератор слишком часто банит или кикает, и обзор ролей с опасными правами.
 
 ```
-/modwatch status
-/modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
-/modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
-/modwatch exclude member:@TrustedMod
+/team modwatch status
+/team modwatch limit kind:ban count:5 window:1h                     # count 0 = no limit
+/team modwatch action action:alert notify_owner:False               # alert, timeout, strip, none
+/team modwatch exclude member:@TrustedMod
 
-/permaudit run                                                  # roles with dangerous permissions and who holds them
-/permaudit watch enabled:True                                   # alarm when a role or member gets one
-/permaudit trust role:@Admin
+/team permaudit run                                                  # roles with dangerous permissions and who holds them
+/team permaudit watch enabled:True                                   # alarm when a role or member gets one
+/team permaudit trust role:@Admin
 ```
 
 ### Жалобы и отслеживание приглашений
@@ -814,10 +918,10 @@ XP за чат и голос, роли за уровни, бонусы для р
 /report send message_link:https://discord.com/channels/1/2/3 reason:Spam
 # or right click a message, Apps, Report message
 
-/invites who member:@User
-/invites stats user:@User
-/invites top
-/invites setup log:True alert_joins:5 alert_minutes:60
+/server invites who member:@User
+/server invites stats user:@User
+/server invites top
+/server invites setup log:True alert_joins:5 alert_minutes:60
 ```
 
 ### Диагностика и отладка
@@ -825,18 +929,18 @@ XP за чат и голос, роли за уровни, бонусы для р
 Поиск недостающих прав и неверных настроек, отчёты об ошибках в канале, экспорт и импорт настроек.
 
 ```
-/diagnose                                                       # permissions, role order, deleted channels and roles
-/debug status
-/debug errorchannel channel:#bot-errors
-/debug errortest
-/debug selftest enabled:True                                    # check at start-up
-/debug usagestats enabled:True
-/debug usage reset:False
-/debug level level:DEBUG                                        # owner of the bot only
-/debug db action:check                                          # owner of the bot only: check, vacuum, size
+/server diagnose                                                       # permissions, role order, deleted channels and roles
+/server debug status
+/server debug errorchannel channel:#bot-errors
+/server debug errortest
+/server debug selftest enabled:True                                    # check at start-up
+/server debug usagestats enabled:True
+/server debug usage reset:False
+/server debug level level:DEBUG                                        # owner of the bot only
+/server debug db action:check                                          # owner of the bot only: check, vacuum, size
 
-/config export
-/config import file:guardbot-settings.json confirm:False        # first without confirm
+/admin config export
+/admin config import file:guardbot-settings.json confirm:False        # first without confirm
 ```
 
 ### Музыка
@@ -872,7 +976,7 @@ XP за чат и голос, роли за уровни, бонусы для р
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
-/config set path:music.allowed_hosts value:bandcamp.com,archive.org
+/admin config set path:music.allowed_hosts value:bandcamp.com,archive.org
 /music cleardj
 /music status
 ```
@@ -881,12 +985,12 @@ XP за чат и голос, роли за уровни, бонусы для р
 
 ### Настройка и проверка состояния
 
-Пошаговый помощник настраивает самое важное кнопками и меню: канал логов, канал приветствий, роли команды, гулаг, пресет AutoMod (мягкий, обычный, строгий), шаблон сервера (сообщество, игры, поддержка) и язык. /health показывает, что уже настроено и что ещё осталось. Язык меняет тексты, которые видят участники: приветствия по умолчанию, уведомления AutoMod, верификацию, тикеты, апелляции, мод-почту и меню ролей. Фиксированные ответы администраторам переведены, ответы с именами и числами остаются на английском.
+Пошаговый помощник настраивает самое важное кнопками и меню: канал логов, канал приветствий, роли команды, гулаг, пресет AutoMod (мягкий, обычный, строгий), шаблон сервера (сообщество, игры, поддержка) и язык. /server health показывает, что уже настроено и что ещё осталось. Язык меняет тексты, которые видят участники: приветствия по умолчанию, уведомления AutoMod, верификацию, тикеты, апелляции, мод-почту и меню ролей. Фиксированные ответы администраторам переведены, ответы с именами и числами остаются на английском.
 
 ```
-/setup                                                         # buttons and menus, nothing is switched off by a template
-/health                                                        # what is set up, what is open, and the self-test
-/language code:de
+/admin setup                                                         # buttons and menus, nothing is switched off by a template
+/server health                                                        # what is set up, what is open, and the self-test
+/admin language code:de
 ```
 
 ### Экономика
@@ -894,20 +998,20 @@ XP за чат и голос, роли за уровни, бонусы для р
 Валюта сервера с ежедневной наградой, работой, переводами, рейтингом и магазином, товары которого могут выдавать роль. Включается модулем economy. Команды работают и с префиксом, например !economy daily.
 
 ```
-/module enable name:economy
-/economy balance member:@User                                  # same as !economy
-/economy daily
-/economy work
-/economy pay member:@User amount:50
-/economy leaderboard
-/economy shop
-/economy buy item:1
-/economy inventory
+/admin module enable name:economy
+/engage economy balance member:@User                                  # same as !economy
+/engage economy daily
+/engage economy work
+/engage economy pay member:@User amount:50
+/engage economy leaderboard
+/engage economy shop
+/engage economy buy item:1
+/engage economy inventory
 
-/economy give member:@User amount:500                          # staff, a negative amount takes away
-/economy shopadd name:VIP price:1000 role:@VIP stock:10
-/economy shopremove item:1
-/economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
+/engage economy give member:@User amount:500                          # staff, a negative amount takes away
+/engage economy shopadd name:VIP price:1000 role:@VIP stock:10
+/engage economy shopremove item:1
+/engage economy config name:gold daily:200 daily_hours:24 work_min:20 work_max:80 work_minutes:30
 ```
 
 ### Меню ролей, отложенные сообщения и ленты
@@ -915,24 +1019,24 @@ XP за чат и голос, роли за уровни, бонусы для р
 Меню ролей выдают роли кнопками или выпадающим списком. Отложенные сообщения публикуются один раз или повторяются каждый час, день или неделю. Ленты публикуют новые видео YouTube, трансляции Twitch и записи RSS. Для YouTube нужен ID канала (начинается с UC). Для Twitch в файле .env нужны TWITCH_CLIENT_ID и TWITCH_CLIENT_SECRET. Время записывается как in 2h, 18:30 или как дата со временем, например 2026-12-24 18:00, в часовом поясе сервера. Первая проверка ленты лишь запоминает то, что уже есть.
 
 ```
-/rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
-/rolemenu add menu:1 role:@Red label:Red
-/rolemenu remove menu:1 role:@Red
-/rolemenu delete menu:1
-/rolemenu list
+/post rolemenu create title:Pick your roles kind:buttons single:False channel:#roles
+/post rolemenu add menu:1 role:@Red label:Red
+/post rolemenu remove menu:1 role:@Red
+/post rolemenu delete menu:1
+/post rolemenu list
 
-/schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
-/schedule add channel:#news when:in 2h text:Restart soon repeat:none
-/schedule list
-/schedule remove number:1
-/schedule timezone name:Europe/Berlin
+/post schedule add channel:#news when:18:30 text:Daily reminder repeat:daily
+/post schedule add channel:#news when:in 2h text:Restart soon repeat:none
+/post schedule list
+/post schedule remove number:1
+/post schedule timezone name:Europe/Berlin
 
-/feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
-/feed add kind:twitch target:somestreamer channel:#live
-/feed add kind:rss target:https://example.com/feed.xml channel:#news
-/feed list
-/feed check
-/feed remove number:1
+/post feed add kind:youtube target:UCxxxxxxxxxxxxxxxxxxxxxx channel:#videos ping:@Subscribers
+/post feed add kind:twitch target:somestreamer channel:#live
+/post feed add kind:rss target:https://example.com/feed.xml channel:#news
+/post feed list
+/post feed check
+/post feed remove number:1
 ```
 
 ### Активность, массовые действия и поиск дел
@@ -940,59 +1044,59 @@ XP за чат и голос, роли за уровни, бонусы для р
 Активность считает сообщения по каналам и входы и выходы по дням, но никогда не содержимое и не имена. Массовые действия банят, кикают или отправляют в тайм-аут до 25 пользователей после подтверждения. Дела можно искать по пользователю, типу, имени, причине, модератору и давности и связывать друг с другом, например заметку с баном.
 
 ```
-/module enable name:activity
-/activity overview days:7
-/activity channels days:30
-/activity growth days:14
-/activity reset
+/admin module enable name:activity
+/community activity overview days:7
+/community activity channels days:30
+/community activity growth days:14
+/community activity reset
 
-/bulk ban users:123456789012345678 223456789012345678 reason:Raid
-/bulk kick users:123456789012345678 223456789012345678 reason:Spam
-/bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
+/moderation bulk ban users:123456789012345678 223456789012345678 reason:Raid
+/moderation bulk kick users:123456789012345678 223456789012345678 reason:Spam
+/moderation bulk timeout users:123456789012345678 223456789012345678 duration:2h reason:Spam
 
-/cases user:@User kind:ban text:scam moderator:@Mod days:30
-/case link case_id:12 other:15
-/case unlink case_id:12 other:15
+/moderation cases user:@User kind:ban text:scam moderator:@Mod days:30
+/moderation case link case_id:12 other:15
+/moderation case unlink case_id:12 other:15
 ```
 
 ### Защита от мошенничества и крипто-скама
 
-Удаляет поддельные розыгрыши, такие как типичный скам с MrBeast, в тексте и на изображениях за миллисекунды. Имена из мгновенного списка удаляются сразу при любом написании (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Иначе слова из списков (имена, приманки, крипто, ссылки, суммы) суммируются, и сообщение удаляется по достижении порога. Изображения читаются через OCR, а изображение, однажды признанное скамом, удаляется без повторного чтения. Для чтения изображений нужен tesseract, без него проверяется только текст. Сервер о MrBeast может убрать имя из мгновенного списка или исключить каналы командой /automod exemptchannel. Проверьте работу командой /antiscam test, прежде чем полагаться на неё.
+Удаляет поддельные розыгрыши, такие как типичный скам с MrBeast, в тексте и на изображениях за миллисекунды. Имена из мгновенного списка удаляются сразу при любом написании (MrBeast, Mr Beast, M R B E A S T, Mr.B3ast). Иначе слова из списков (имена, приманки, крипто, ссылки, суммы) суммируются, и сообщение удаляется по достижении порога. Изображения читаются через OCR, а изображение, однажды признанное скамом, удаляется без повторного чтения. Для чтения изображений нужен tesseract, без него проверяется только текст. Сервер о MrBeast может убрать имя из мгновенного списка или исключить каналы командой /automod exemptchannel. Проверьте работу командой /security antiscam test, прежде чем полагаться на неё.
 
 ```
-/antiscam status
-/antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
-/antiscam words action:add kind:instant word:mrbeast
-/antiscam words action:remove kind:crypto word:token
-/antiscam test text:MrBeast is giving away 1000 BTC, claim now
-/antiscam testimage image:scam.png
-/antiscam forget
+/security antiscam status
+/security antiscam set action:delete threshold:3 text:True images:True ocr_lang:eng max_images:3
+/security antiscam words action:add kind:instant word:mrbeast
+/security antiscam words action:remove kind:crypto word:token
+/security antiscam test text:MrBeast is giving away 1000 BTC, claim now
+/security antiscam testimage image:scam.png
+/security antiscam forget
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
 ### Испытательный срок, обнаружение роя, хронология и обучение
 
-Испытательный срок помещает новых участников в роль. Пока они не напишут заданное число обычных сообщений или не пройдёт заданное время, ссылки, приглашения и файлы удаляются с коротким уведомлением. Защита от рейдов также распознаёт рой: несколько новых аккаунтов с одинаковым шаблоном имени, одинаковой аватаркой или созданных с разницей в несколько минут. Хронология (/case timeline) собирает в порядке времени создание аккаунта, вход и приглашение, испытательный срок, дела и апелляции одного пользователя. Сообщения никогда не хранятся, поэтому в неё не входят. /block, /unblock и /blocklist управляют блок-листом AutoMod короткими командами. Модераторы обучают модуль защиты от мошенничества через пункт контекстного меню Mark as scam у сообщения или реакцией с эмодзи из learn_emoji: сообщение удаляется, а его изображения и текст с этого момента удаляются сразу. Каждая часть отключается своим модулем или настройками.
+Испытательный срок помещает новых участников в роль. Пока они не напишут заданное число обычных сообщений или не пройдёт заданное время, ссылки, приглашения и файлы удаляются с коротким уведомлением. Защита от рейдов также распознаёт рой: несколько новых аккаунтов с одинаковым шаблоном имени, одинаковой аватаркой или созданных с разницей в несколько минут. Хронология (/moderation case timeline) собирает в порядке времени создание аккаунта, вход и приглашение, испытательный срок, дела и апелляции одного пользователя. Сообщения никогда не хранятся, поэтому в неё не входят. /security block, /security unblock и /security blocklist управляют блок-листом AutoMod короткими командами. Модераторы обучают модуль защиты от мошенничества через пункт контекстного меню Mark as scam у сообщения или реакцией с эмодзи из learn_emoji: сообщение удаляется, а его изображения и текст с этого момента удаляются сразу. Каждая часть отключается своим модулем или настройками.
 
 ```
-/module enable name:probation
-/probation setup minutes:10 messages:1 block_links:True block_files:True
-/probation status
-/probation release member:@User
-/probation add member:@User
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
 
-/raid swarm enabled:True minimum:4 minutes:10
-/case timeline user:@User
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
 
-/block kind:link value:evil.example
-/blocklist
-/unblock kind:link number:1
-/antiscam set learn_emoji:X
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
 ```
 
 ### Конструктор сообщений и обновления
 
-Конструктор сообщений публикует сообщения с несколькими эмбедами и кнопками-ссылками из JSON. Он читает JSON, который экспортируют генераторы эмбедов, такие как Embed Generator, так что вы создаёте сообщение там и публикуете его ботом. Передайте JSON текстом, файлом .json или https-ссылкой, ведущей прямо на JSON, например на «сырой» файл репозитория (ссылки с перенаправлением отклоняются). Создаются только кнопки-ссылки, кнопки, требующие взаимодействия, пропускаются. Каждая ссылка должна быть http или https, упоминания в тексте никогда не уведомляют, действуют ограничения Discord. /message copy экспортирует существующее сообщение в JSON, /message edit изменяет сообщение бота, а /message preview показывает результат только вам. Ссылки для обмена из веб-редакторов не открываются, потому что их формат не публичен.
+Конструктор сообщений публикует сообщения с несколькими эмбедами и кнопками-ссылками из JSON. Он читает JSON, который экспортируют генераторы эмбедов, такие как Embed Generator, так что вы создаёте сообщение там и публикуете его ботом. Передайте JSON текстом, файлом .json или https-ссылкой, ведущей прямо на JSON, например на «сырой» файл репозитория (ссылки с перенаправлением отклоняются). Создаются только кнопки-ссылки, кнопки, требующие взаимодействия, пропускаются. Каждая ссылка должна быть http или https, упоминания в тексте никогда не уведомляют, действуют ограничения Discord. /post message copy экспортирует существующее сообщение в JSON, /post message edit изменяет сообщение бота, а /post message preview показывает результат только вам. Ссылки для обмена из веб-редакторов не открываются, потому что их формат не публичен.
 
 ```json
 {
@@ -1002,7 +1106,7 @@ XP за чат и голос, роли за уровни, бонусы для р
 }
 ```
 
-Каждые 12 часов бот проверяет репозиторий GitHub из update.repo (задаётся скриптом scripts/set_repo_url.py) на наличие более новой версии. Если она есть, владелец бота получает личное сообщение с описанием релиза, а релиз скачивается и проверяется: контрольная сумма SHA-256, безопасные пути внутри архива и версия, совпадающая с тегом. Устанавливается командой /debug update action:install или сама, если включён auto_install. Перед установкой заменяемые файлы сохраняются в data/update, устанавливаются новые пакеты, а новый код пробно импортируется. При любой ошибке старые файлы восстанавливаются. Ваши .env, settings.json, data и music никогда не затрагиваются. Затем бот перезапускается сам. В Docker на месте ничего не устанавливается, обновите образ. Обновление выполняет код из репозитория, поэтому указывайте только репозиторий, которому доверяете. Отключается параметром enabled со значением false.
+Каждые 12 часов бот проверяет репозиторий GitHub из update.repo (задаётся скриптом scripts/set_repo_url.py) на наличие более новой версии. Если она есть, владелец бота получает личное сообщение с описанием релиза, а релиз скачивается и проверяется: контрольная сумма SHA-256, безопасные пути внутри архива и версия, совпадающая с тегом. Устанавливается командой /server debug update action:install или сама, если включён auto_install. Перед установкой заменяемые файлы сохраняются в data/update, устанавливаются новые пакеты, а новый код пробно импортируется. При любой ошибке старые файлы восстанавливаются. Ваши .env, settings.json, data и music никогда не затрагиваются. Затем бот перезапускается сам. В Docker на месте ничего не устанавливается, обновите образ. Обновление выполняет код из репозитория, поэтому указывайте только репозиторий, которому доверяете. Отключается параметром enabled со значением false.
 
 ```json
 {
@@ -1017,15 +1121,15 @@ XP за чат и голос, роли за уровни, бонусы для р
 ```
 
 ```
-/message send channel:#news url:https://example.com/message.json
-/message send channel:#news file:message.json
-/message preview url:https://example.com/message.json
-/message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/message copy message:https://discord.com/channels/1/2/3
-/module disable name:builder
-/debug update action:status
-/debug update action:check
-/debug update action:install
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
 ```
 
 ### Эксплуатация
@@ -1045,8 +1149,8 @@ XP за чат и голос, роли за уровни, бонусы для р
 ```
 
 ```
-/debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
-/debug db action:list
+/server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
+/server debug db action:list
 ```
 
 ### Администрирование
@@ -1054,26 +1158,26 @@ XP за чат и голос, роли за уровни, бонусы для р
 Включение и выключение модулей и команд, смена префикса, псевдонимы и ограничение команд по ролям.
 
 ```
-/module list
-/module disable name:starboard
-/module enable name:tickets
-/command disable name:ban                          # single commands
-/command enable name:ban
-/command list
+/admin module list
+/admin module disable name:starboard
+/admin module enable name:tickets
+/admin command disable name:ban                          # single commands
+/admin command enable name:ban
+/admin command list
 
-/prefix new_prefix:?                               # text commands now start with ?
-/alias add alias:w command:warn                    # ?w @User Spam
-/alias remove alias:w
-/alias list
+/admin prefix new_prefix:?                               # text commands now start with ?
+/admin alias add alias:w command:warn                    # ?w @User Spam
+/admin alias remove alias:w
+/admin alias list
 
-/perms allow command:ban target:@HeadModerator     # only this role may use /ban
-/perms deny command:warn target:@Trainee
-/perms reset command:ban
-/perms show
+/admin perms allow command:ban target:@HeadModerator     # only this role may use /moderation ban
+/admin perms deny command:warn target:@Trainee
+/admin perms reset command:ban
+/admin perms show
 
-/settings
+/admin settings
 /help
-/about
+/info about
 ```
 
 ## Подстановки в сообщениях
@@ -1081,17 +1185,17 @@ XP за чат и голос, роли за уровни, бонусы для р
 Эти подстановки заменяются в настраиваемых вами текстах:
 
 ```
-/welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
-/booster set         message                         {user} {name} {server} {count}
+/community welcome set        message, dm, goodbye_message    {user} {name} {server} {count}
+/community booster set         message                         {user} {name} {server} {count}
 /xp config           message                         {user} {name} {level}
 /birthday setup set   message                         {user} {name}
-/tempvoice setup     name                            {name}
-/jailsetup notice    text                            {staff}
+/community tempvoice setup     name                            {name}
+/access jailsetup notice    text                            {staff}
 ```
 
 ## Настройка
 
-Глобальные параметры задаются в settings.json. Всё остальное настраивается для каждого сервера командами /module, /command, /perms, /alias и /config.
+Глобальные параметры задаются в settings.json. Всё остальное настраивается для каждого сервера командами /admin module, /admin command, /admin perms, /admin alias и /admin config.
 
 Чтобы переименовать команду, добавьте её в command_names и перезапустите бота:
 
@@ -1108,21 +1212,21 @@ XP за чат и голос, роли за уровни, бонусы для р
 }
 ```
 
-Любую настройку можно прочитать и изменить командой /config. Вот пути, которые понадобятся чаще всего:
+Любую настройку можно прочитать и изменить командой /admin config. Вот пути, которые понадобятся чаще всего:
 
 ```
-/config get path:automod.caps.percent
-/config set path:automod.caps.percent value:80
-/config set path:mod.dm_user value:false             # no direct message on punishments
-/config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
-/config set path:mod.default_mute_minutes value:120
-/config set path:automod.mentions.max value:5
-/config set path:automod.phishing.lookalike value:true
-/config set path:raid.joins value:8
-/config set path:xp.cooldown value:45
-/config set path:tickets.max_open value:2
-/config set path:privacy.retention_days value:90
-/config reset section:welcome                        # back to the defaults of one section
+/admin config get path:automod.caps.percent
+/admin config set path:automod.caps.percent value:80
+/admin config set path:mod.dm_user value:false             # no direct message on punishments
+/admin config set path:mod.warn_expiry_days value:30       # warnings expire after 30 days
+/admin config set path:mod.default_mute_minutes value:120
+/admin config set path:automod.mentions.max value:5
+/admin config set path:automod.phishing.lookalike value:true
+/admin config set path:raid.joins value:8
+/admin config set path:xp.cooldown value:45
+/admin config set path:tickets.max_open value:2
+/admin config set path:privacy.retention_days value:90
+/admin config reset section:welcome                        # back to the defaults of one section
 ```
 
 ## Данные и хранение
@@ -1173,7 +1277,7 @@ guardbot/
 - Все данные хранятся в папке data на вашем компьютере: настройки, XP, дни рождения (только день и месяц) и случаи модерации.
 - Бот игнорирует личные сообщения от участников.
 - Токен читается из файла .env. Никому его не передавайте и не публикуйте.
-- Участники могут экспортировать и удалять свои данные командой /mydata. Администраторы задают, как долго хранятся данные ушедших участников.
+- Участники могут экспортировать и удалять свои данные командой /info mydata. Администраторы задают, как долго хранятся данные ушедших участников.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Поддержка

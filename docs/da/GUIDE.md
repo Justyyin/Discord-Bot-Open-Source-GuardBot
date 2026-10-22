@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 Brug disse kommandoer på din server og erstat kanalnavnene med dine egne.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 Alle funktioner er beskrevet i kommandoreferencen: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## Valgfrit: læse billeder og sprog
 
-For at anti-svindel-modulet kan læse tekst i billeder, skal tesseract installeres på computeren, der kører botten (Docker-billedet indeholder det allerede). Tjek derefter med /antiscam status, at det er klart. Vælg sproget for de beskeder, medlemmerne ser, med /language.
+For at anti-svindel-modulet kan læse tekst i billeder, skal tesseract installeres på computeren, der kører botten (Docker-billedet indeholder det allerede). Tjek derefter med /security antiscam status, at det er klart. Vælg sproget for de beskeder, medlemmerne ser, med /admin language.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## Dashboard
@@ -233,7 +233,7 @@ dashboard.example.com {
 - Botten stopper med en fejl om privilegerede intents: slå Server Members Intent og Message Content Intent til i Developer Portal.
 - Improper token: kopiér tokenet igen og tjek, at .env indeholder præcis DISCORD_TOKEN=token, uden mellemrum eller citationstegn.
 - I cannot assign that role: flyt botens rolle over den rolle, den skal administrere.
-- Intet bliver logget: angiv en kanal med /log set og tjek, at botten kan sende beskeder, indlejre links og vedhæfte filer der.
+- Intet bliver logget: angiv en kanal med /server log set og tjek, at botten kan sende beskeder, indlejre links og vedhæfte filer der.
 - Unknown timezone: kør pip install tzdata og genstart botten.
 - Noget fejler uden synlig årsag: fejl og advarsler skrives til konsollen. På en VPS læser du dem med journalctl -u guardbot -f.
 

@@ -19,13 +19,13 @@ GuardBot runs on your own machine. The bot does not send data to anyone except D
 | User ID, XP, level | Level system | `data/guardbot.db` |
 | Birthday (day and month only) | Birthday role and message | `data/guardbot.db` |
 | Moderation cases (user ID, name at the time, moderator, reason, date) | History of warnings, mutes, kicks, bans, jail | `data/guardbot.db` |
-| Reminders (user ID, channel, text, time) | `/remind`, deleted when sent | `data/guardbot.db` |
-| AFK status (reason, time) | `/afk`, removed with your next message | `data/guardbot.db` |
+| Reminders (user ID, channel, text, time) | `/community remind`, deleted when sent | `data/guardbot.db` |
+| AFK status (reason, time) | `/community afk`, removed with your next message | `data/guardbot.db` |
 | Ban appeals (user ID, name, text, status) | Decision of the staff | `data/guardbot.db` |
 | Mod-mail conversations (user ID, channel) | Link between member and channel while open | `data/guardbot.db` |
 | Invite used when joining (invite code, inviter ID) | Invite tracking, only with the module on | `data/guardbot.db` |
 | Reports (message excerpt, reporter ID) | Posted to the report channel of your server, the database only keeps message and user IDs for 7 days to block duplicates | Discord and `data/guardbot.db` |
-| Command counters (number per command, no user) | `/debug usage`, can be turned off | `data/guardbot.db` |
+| Command counters (number per command, no user) | `/server debug usage`, can be turned off | `data/guardbot.db` |
 | Currency balance, shop items bought, last daily and work time | Economy module | `data/guardbot.db` |
 | Messages and joins per channel and day (numbers only, no content, no names) | Activity module, kept 120 days | `data/guardbot.db` |
 | Dashboard sessions (Discord user ID and name, no password, no token) | Only if the dashboard is on, kept in memory for 8 hours, never written to disk | Memory only |
@@ -33,6 +33,13 @@ GuardBot runs on your own machine. The bot does not send data to anyone except D
 | Fingerprints (hash) of texts that a moderator marked as scam | Remove the same text again, the text itself is not stored | `data/guardbot.db` |
 | Probation (member ID, start time, count of normal messages) | Probation module, removed when the probation ends | `data/guardbot.db` |
 | Scheduled messages, feeds and role menus | Settings of your server | `data/guardbot.db` |
+| Roles, timeout and mute of members who left (member ID, role IDs, end time) | Sticky roles and mute-evasion protection, kept for the configured days, removed with `/members stickyroles forget` | `data/guardbot.db` |
+| Watch list (user ID, reason, moderator) | `/members watch`, silent observation by the team, not removed when a member deletes their own data | `data/guardbot.db` |
+| Rules accepted (version and time) and reminder sent | `/structure rules` | `data/guardbot.db` |
+| Staff applications (user ID, answers, votes, status) | `/team apply`, included in the export and removed with the deletion of your data | `data/guardbot.db` |
+| Team statistics (numbers per moderator and week) and duty status | `/team`, no content | `data/guardbot.db` |
+| Settings history (which setting, old and new value, time, a guess of the person) | `/admin history`, the newest entries up to the configured count | `data/guardbot.db` |
+| Timed roles and requests waiting for a second moderator | `/structure temprole`, `/security approval`, removed when done | `data/guardbot.db` |
 | Copies of the database | Restore after damage, contain everything above | `data/dbbackups` |
 | Music library | Files you add or download | `music/` |
 | Roles of a jailed member | Restore after release | `data/guardbot.db` |
@@ -43,16 +50,16 @@ Message content is not written to disk by the bot. Images are read in memory by 
 
 ## Rights of members
 
-- `/mydata export` sends a member the stored profile and the cases about them.
-- `/mydata delete` removes XP, level and birthday. Moderation cases are kept for the safety of the server.
+- `/info mydata export` sends a member the stored profile and the cases about them.
+- `/info mydata delete` removes XP, level and birthday. Moderation cases are kept for the safety of the server.
 - `/birthday remove` removes only the birthday.
 
 ## Rights and tools for administrators
 
-- `/privacy export user_id` and `/privacy delete user_id` handle requests for members who are no longer on the server. Deleting also anonymizes the name in moderation cases.
-- `/privacy retention days` deletes the profile data of members who left after the given number of days. The default is 0, which keeps the data.
+- `/server privacy export user_id` and `/server privacy delete user_id` handle requests for members who are no longer on the server. Deleting also anonymizes the name in moderation cases.
+- `/server privacy retention days` deletes the profile data of members who left after the given number of days. The default is 0, which keeps the data.
 - Set `purge_on_guild_leave` to `true` in `settings.json` to delete all data of a server when the bot is removed from it.
-- Backups with member roles contain user IDs. Turn this off with `/backup schedule include_members:False` if you do not need it.
+- Backups with member roles contain user IDs. Turn this off with `/server backup schedule include_members:False` if you do not need it.
 
 ## Your responsibility
 

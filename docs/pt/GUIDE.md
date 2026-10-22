@@ -109,18 +109,18 @@ docker compose -f deploy/docker-compose.yml logs -f
 Use estes comandos no seu servidor e troque os nomes dos canais pelos seus.
 
 ```
-/log set category:main channel:#logs
-/jailsetup setup
+/server log set category:main channel:#logs
+/access jailsetup setup
 /automod toggle rule:phishing enabled:True action:jail
 /automod toggle rule:words enabled:True
 /automod add name:words value:example
-/raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
-/antinuke setup enabled:True action:strip
-/verify setup channel:#verify mode:captcha timeout_minutes:30
-/welcome set channel:#welcome message:Welcome {user} to {server}!
-/backup schedule enabled:True interval_hours:24 keep:7
+/security raid setup enabled:True joins:5 seconds:10 action:timeout min_age_days:3
+/security antinuke setup enabled:True action:strip
+/access verify setup channel:#verify mode:captcha timeout_minutes:30
+/community welcome set channel:#welcome message:Welcome {user} to {server}!
+/server backup schedule enabled:True interval_hours:24 keep:7
 /xp config enabled:True
-/module list
+/admin module list
 ```
 
 Todos os recursos estão descritos na referência de comandos: [COMMANDS.md](../COMMANDS.md).
@@ -155,13 +155,13 @@ brew install ffmpeg
 sudo apt install -y ffmpeg libopus0
 
 # in Discord
-/module enable name:music
+/admin module enable name:music
 /music settings allow_download:True
 ```
 
 ## Opcional: ler imagens e idiomas
 
-Para que o módulo anti-burla leia o texto das imagens, instale o tesseract no computador onde o bot corre (a imagem Docker já o inclui). Depois verifique com /antiscam status se está pronto. Escolha o idioma das mensagens que os membros veem com /language.
+Para que o módulo anti-burla leia o texto das imagens, instale o tesseract no computador onde o bot corre (a imagem Docker já o inclui). Depois verifique com /security antiscam status se está pronto. Escolha o idioma das mensagens que os membros veem com /admin language.
 
 ```
 # Ubuntu or Debian
@@ -172,8 +172,8 @@ brew install tesseract
 winget install UB-Mannheim.TesseractOCR
 
 # in Discord
-/antiscam status
-/language code:de
+/security antiscam status
+/admin language code:de
 ```
 
 ## Painel
@@ -233,7 +233,7 @@ dashboard.example.com {
 - O bot para com um erro de intents privilegiados: ative Server Members Intent e Message Content Intent no Developer Portal.
 - Improper token: copie o token novamente e confira se o .env contém exatamente DISCORD_TOKEN=token, sem espaços nem aspas.
 - I cannot assign that role: mova o cargo do bot para acima do cargo que ele deve gerenciar.
-- Nada é registrado: defina um canal com /log set e confira se o bot pode enviar mensagens, incorporar links e anexar arquivos nele.
+- Nada é registrado: defina um canal com /server log set e confira se o bot pode enviar mensagens, incorporar links e anexar arquivos nele.
 - Unknown timezone: execute pip install tzdata e reinicie o bot.
 - Algo falha sem motivo visível: erros e avisos são escritos no console. Em um VPS, leia-os com journalctl -u guardbot -f.
 
