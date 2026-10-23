@@ -13,6 +13,7 @@ Denne vejledning viser, hvordan du kører GuardBot på din egen computer eller p
 - [Kør den på en VPS](#kør-den-på-en-vps)
 - [Kør den med Docker](#kør-den-med-docker)
 - [Første skridt i Discord](#første-skridt-i-discord)
+- [Struktur, team og overblik (1.5)](#struktur-team-og-overblik-15)
 - [Opdateringer og backup](#opdateringer-og-backup)
 - [Musik (valgfrit)](#musik-valgfrit)
 - [Valgfrit: læse billeder og sprog](#valgfrit-læse-billeder-og-sprog)
@@ -124,6 +125,19 @@ Brug disse kommandoer på din server og erstat kanalnavnene med dine egne.
 ```
 
 Alle funktioner er beskrevet i kommandoreferencen: [COMMANDS.md](../COMMANDS.md).
+
+## Struktur, team og overblik (1.5)
+
+Disse trin sætter de nyere funktioner op. Hver funktion kan slås fra med /admin module, og præfiks og tekster kan stadig ændres pr. server.
+
+1. Se hvad der er sat op: `/admin module overview` viser hvert modul med status, og om det er sat op. Dashboardet viser det samme i sit opsætningspanel.
+2. Find en kommando: `/info find text:ban` søger i alle kommandoer efter et ord, `/help` viser grupperne.
+3. Offentliggør regler med accept-knap: `/structure rules setup`, derefter `/structure rules add`, derefter `/structure rules post`. Dem, der ikke har accepteret en ny version, bliver mindet om det med nogle timers mellemrum.
+4. Fortæl botten, hvem der er personale: `/team duty roster`. Lister over tilgængeligt personale og rutning af tickets og alarmer bruger det.
+5. Ryd op i inaktive kanaler: `/structure archive setup`, derefter `/structure archive scan`.
+6. Giv medlemmer, der vender tilbage, deres roller igen: `/members stickyroles setup`.
+7. Hold navne læsbare: `/members nickname setup`, test med `/members nickname check` før `/members nickname scan`.
+8. Eksportér indstillingerne med `/admin config export` før store ændringer, og tjek roller og kanaler med `/server diagnose`.
 
 ## Opdateringer og backup
 

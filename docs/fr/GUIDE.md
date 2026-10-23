@@ -13,6 +13,7 @@ Ce guide explique comment faire fonctionner GuardBot sur votre ordinateur ou sur
 - [Exécuter sur un VPS](#exécuter-sur-un-vps)
 - [Exécuter avec Docker](#exécuter-avec-docker)
 - [Premiers pas sur Discord](#premiers-pas-sur-discord)
+- [Structure, équipe et vue d'ensemble (1.5)](#structure-équipe-et-vue-densemble-15)
 - [Mises à jour et sauvegardes](#mises-à-jour-et-sauvegardes)
 - [Musique (facultatif)](#musique-facultatif)
 - [Facultatif : lire les images et les langues](#facultatif--lire-les-images-et-les-langues)
@@ -124,6 +125,19 @@ Utilisez ces commandes sur votre serveur et remplacez les noms de salons par les
 ```
 
 Toutes les fonctions sont décrites dans la référence des commandes : [COMMANDS.md](../COMMANDS.md).
+
+## Structure, équipe et vue d'ensemble (1.5)
+
+Ces étapes configurent les fonctions plus récentes. Chacune peut être désactivée avec /admin module, et le préfixe et les textes restent modifiables par serveur.
+
+1. Voir ce qui est configuré : `/admin module overview` liste chaque module avec son état et s'il est configuré. Le tableau de bord affiche la même chose dans son panneau de configuration.
+2. Trouver une commande : `/info find text:ban` cherche dans toutes les commandes par mot, `/help` affiche les groupes.
+3. Publier les règles avec un bouton d'acceptation : `/structure rules setup`, puis `/structure rules add`, puis `/structure rules post`. Les membres qui n'ont pas accepté une nouvelle version sont relancés toutes les quelques heures.
+4. Indiquer au bot qui fait partie de l'équipe : `/team duty roster`. Les listes du personnel disponible et le routage des tickets et alertes l'utilisent.
+5. Ranger les salons inactifs : `/structure archive setup`, puis `/structure archive scan`.
+6. Rendre leurs rôles aux membres qui reviennent : `/members stickyroles setup`.
+7. Garder des noms lisibles : `/members nickname setup`, tester avec `/members nickname check` avant `/members nickname scan`.
+8. Avant de gros changements, exportez les réglages avec `/admin config export` et vérifiez rôles et salons avec `/server diagnose`.
 
 ## Mises à jour et sauvegardes
 

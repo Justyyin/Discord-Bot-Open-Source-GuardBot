@@ -479,7 +479,7 @@ dashboard.example.com {
 | `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
 | `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
 | `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
-| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
 | `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
@@ -1139,10 +1139,18 @@ dashboard.example.com {
 ```json
 {
   "shard_count": null,
+  "message_cache": 10000,
+  "members_intent": true,
+  "chunk_guilds": true,
   "db_backup_hours": 24,
   "db_backup_keep": 7,
   "health_port": 0,
   "health_host": "127.0.0.1",
+  "metrics_token": "",
+  "log_format": "text",
+  "log_max_mb": 2,
+  "log_backups": 3,
+  "workers": {"ocr": {"threads": 2, "limit": 20}},
   "tesseract": null,
   "music_generic": true
 }
@@ -1152,6 +1160,15 @@ dashboard.example.com {
 /server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
 /server debug db action:list
 ```
+
+로그는 data/guardbot.log 에 기록됩니다(순환 저장, log_max_mb 와 log_backups 참조). log_format 을 json 으로 설정하면 서버와 명령이 담긴 JSON 객체가 한 줄에 하나씩 기록됩니다. health_port 를 설정하면 /metrics 가 Prometheus 지표(가동 시간, 지연, 메모리, 데이터베이스 크기, 오류, 명령 사용 횟수와 소요 시간, 작업 레인)를 제공합니다. 숫자만 내보내며 이름이나 ID는 포함하지 않고, metrics_token 을 설정하면 bearer 토큰이 필요합니다. 무거운 작업(이미지 읽기, 카드 그리기, 음악 파일, 백업)은 스레드 수와 한도가 정해진 레인에서 실행됩니다(settings.json 의 workers). 레인이 가득 차면 작업을 쌓지 않고 바쁘다고 응답합니다. 모든 데이터베이스 백업은 만들어진 직후 열어서 검사합니다. 복원하려면 봇을 멈추고 다음을 실행하세요:
+
+```
+python scripts/restore_db.py data/dbbackups/guardbot-YYYYMMDD-HHMMSS-auto.db
+python scripts/restore_db.py BACKUPFILE --check          # only check a backup
+```
+
+현재 데이터베이스는 before-restore 라는 이름의 백업으로 보관됩니다.
 
 ### 운영
 
@@ -1250,10 +1267,10 @@ guardbot/
   .env.example            token placeholder
   guardbot/
     core.py               bot class, storage, permission checks
-    defaults.py           default settings of every module
+    defaults/             default settings, one file per area (core, security, moderation, community) and base.py for modules and permissions
     utils.py              helpers
     images.py             rank cards and captcha images
-    cogs/                 one file per feature group
+    cogs/                 one file per feature, in the folders security, moderation, server, community, tools
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts

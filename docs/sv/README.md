@@ -421,7 +421,7 @@ För att spara platser för snedstreckskommandon (Discord tillåter 100 kommando
 | `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
 | `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
 | `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
-| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
 | `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
@@ -1139,10 +1139,18 @@ Boten sparar sina data var några sekunder och lagrar databassäkerhetskopior i 
 ```json
 {
   "shard_count": null,
+  "message_cache": 10000,
+  "members_intent": true,
+  "chunk_guilds": true,
   "db_backup_hours": 24,
   "db_backup_keep": 7,
   "health_port": 0,
   "health_host": "127.0.0.1",
+  "metrics_token": "",
+  "log_format": "text",
+  "log_max_mb": 2,
+  "log_backups": 3,
+  "workers": {"ocr": {"threads": 2, "limit": 20}},
   "tesseract": null,
   "music_generic": true
 }
@@ -1152,6 +1160,15 @@ Boten sparar sina data var några sekunder och lagrar databassäkerhetskopior i 
 /server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
 /server debug db action:list
 ```
+
+Loggar skrivs till data/guardbot.log (roterande, se log_max_mb och log_backups). Med log_format satt till json blir varje rad ett JSON-objekt med servern och kommandot. Om health_port är satt levererar /metrics Prometheus-mått (drifttid, latens, minne, databasstorlek, fel, kommandoanvändning och -tider, arbetsfiler). Bara siffror exporteras, aldrig namn eller ID:n, och metrics_token kräver en bearer-token. Tungt arbete (läsa bilder, rita kort, musikfiler, säkerhetskopior) körs i filer med fast antal trådar och en gräns (workers i settings.json). När en fil är full säger boten att den är upptagen i stället för att stapla upp arbete. Varje databasbackup öppnas och kontrolleras direkt efter att den skapats. För att återställa en, stoppa boten och kör:
+
+```
+python scripts/restore_db.py data/dbbackups/guardbot-YYYYMMDD-HHMMSS-auto.db
+python scripts/restore_db.py BACKUPFILE --check          # only check a backup
+```
+
+Den nuvarande databasen sparas som en backup med namnet before-restore.
 
 ### Administration
 
@@ -1250,10 +1267,10 @@ guardbot/
   .env.example            token placeholder
   guardbot/
     core.py               bot class, storage, permission checks
-    defaults.py           default settings of every module
+    defaults/             default settings, one file per area (core, security, moderation, community) and base.py for modules and permissions
     utils.py              helpers
     images.py             rank cards and captcha images
-    cogs/                 one file per feature group
+    cogs/                 one file per feature, in the folders security, moderation, server, community, tools
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts

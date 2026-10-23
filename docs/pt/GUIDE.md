@@ -13,6 +13,7 @@ Este guia mostra como executar o GuardBot no seu computador ou em um VPS. Leva c
 - [Executar em um VPS](#executar-em-um-vps)
 - [Executar com Docker](#executar-com-docker)
 - [Primeiros passos no Discord](#primeiros-passos-no-discord)
+- [Estrutura, equipa e visão geral (1.5)](#estrutura-equipa-e-visão-geral-15)
 - [Atualizações e backups](#atualizações-e-backups)
 - [Música (opcional)](#música-opcional)
 - [Opcional: ler imagens e idiomas](#opcional-ler-imagens-e-idiomas)
@@ -124,6 +125,19 @@ Use estes comandos no seu servidor e troque os nomes dos canais pelos seus.
 ```
 
 Todos os recursos estão descritos na referência de comandos: [COMMANDS.md](../COMMANDS.md).
+
+## Estrutura, equipa e visão geral (1.5)
+
+Estes passos configuram as funções mais recentes. Cada uma pode ser desativada com /admin module, e o prefixo e os textos continuam editáveis por servidor.
+
+1. Ver o que está configurado: `/admin module overview` lista cada módulo com o estado e se está configurado. O painel web mostra o mesmo no seu painel de configuração.
+2. Encontrar um comando: `/info find text:ban` procura em todos os comandos por palavra, `/help` mostra os grupos.
+3. Publicar as regras com botão de aceitar: `/structure rules setup`, depois `/structure rules add`, depois `/structure rules post`. Quem não aceitou uma nova versão é lembrado de poucas em poucas horas.
+4. Dizer ao bot quem é da equipa: `/team duty roster`. As listas de pessoal disponível e o encaminhamento de tickets e alertas usam isto.
+5. Arrumar canais inativos: `/structure archive setup`, depois `/structure archive scan`.
+6. Devolver os cargos aos membros que regressam: `/members stickyroles setup`.
+7. Manter os nomes legíveis: `/members nickname setup`, teste com `/members nickname check` antes de `/members nickname scan`.
+8. Antes de grandes alterações, exporte as definições com `/admin config export` e verifique cargos e canais com `/server diagnose`.
 
 ## Atualizações e backups
 

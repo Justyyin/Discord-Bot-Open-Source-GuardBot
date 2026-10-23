@@ -421,7 +421,7 @@ dashboard.example.com {
 | `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
 | `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
 | `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
-| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
 | `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
@@ -1139,10 +1139,18 @@ dashboard.example.com {
 ```json
 {
   "shard_count": null,
+  "message_cache": 10000,
+  "members_intent": true,
+  "chunk_guilds": true,
   "db_backup_hours": 24,
   "db_backup_keep": 7,
   "health_port": 0,
   "health_host": "127.0.0.1",
+  "metrics_token": "",
+  "log_format": "text",
+  "log_max_mb": 2,
+  "log_backups": 3,
+  "workers": {"ocr": {"threads": 2, "limit": 20}},
   "tesseract": null,
   "music_generic": true
 }
@@ -1152,6 +1160,15 @@ dashboard.example.com {
 /server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
 /server debug db action:list
 ```
+
+日志写入 data/guardbot.log(带轮转,见 log_max_mb 和 log_backups)。将 log_format 设为 json 后,每行是一个包含服务器和命令的 JSON 对象。设置 health_port 后,/metrics 提供 Prometheus 指标(运行时间、延迟、内存、数据库大小、错误、命令使用次数和耗时、工作通道)。只导出数字,从不导出名称或 ID,并且 metrics_token 会要求使用 bearer 令牌。繁重的工作(读取图片、绘制卡片、音乐文件、备份)在线程数固定且有上限的通道中运行(settings.json 中的 workers)。通道已满时,机器人会提示正忙,而不是堆积任务。每个数据库备份在创建后立即被打开并检查。要恢复备份,请先停止机器人,然后运行:
+
+```
+python scripts/restore_db.py data/dbbackups/guardbot-YYYYMMDD-HHMMSS-auto.db
+python scripts/restore_db.py BACKUPFILE --check          # only check a backup
+```
+
+当前数据库会保留为名为 before-restore 的备份。
 
 ### 运维
 
@@ -1250,10 +1267,10 @@ guardbot/
   .env.example            token placeholder
   guardbot/
     core.py               bot class, storage, permission checks
-    defaults.py           default settings of every module
+    defaults/             default settings, one file per area (core, security, moderation, community) and base.py for modules and permissions
     utils.py              helpers
     images.py             rank cards and captcha images
-    cogs/                 one file per feature group
+    cogs/                 one file per feature, in the folders security, moderation, server, community, tools
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts

@@ -13,6 +13,7 @@
 - [在 VPS 上运行](#在-vps-上运行)
 - [使用 Docker 运行](#使用-docker-运行)
 - [在 Discord 中的第一步](#在-discord-中的第一步)
+- [结构、团队与概览(1.5)](#结构团队与概览15)
 - [更新与备份](#更新与备份)
 - [音乐（可选）](#音乐可选)
 - [可选：读取图片与语言](#可选读取图片与语言)
@@ -124,6 +125,19 @@ docker compose -f deploy/docker-compose.yml logs -f
 ```
 
 所有功能都在命令参考中说明： [COMMANDS.md](../COMMANDS.md).
+
+## 结构、团队与概览(1.5)
+
+这些步骤用于设置较新的功能。每项功能都可以用 /admin module 关闭,前缀和文本也仍可按服务器修改。
+
+1. 查看已配置的内容:`/admin module overview` 列出每个模块的状态以及是否已设置。控制面板的设置面板显示相同内容。
+2. 查找命令:`/info find text:ban` 按词搜索所有命令,`/help` 显示分组。
+3. 发布带接受按钮的规则:先 `/structure rules setup`,再 `/structure rules add`,然后 `/structure rules post`。未接受新版本的成员每隔几小时会收到提醒。
+4. 告诉机器人谁是管理团队:`/team duty roster`。可用人员列表以及工单和警报的路由都会用到它。
+5. 整理闲置频道:先 `/structure archive setup`,再 `/structure archive scan`。
+6. 为回归的成员恢复身份组:`/members stickyroles setup`。
+7. 保持名称可读:`/members nickname setup`,在 `/members nickname scan` 之前先用 `/members nickname check` 测试。
+8. 进行大改动前,用 `/admin config export` 导出设置,并用 `/server diagnose` 检查身份组和频道。
 
 ## 更新与备份
 

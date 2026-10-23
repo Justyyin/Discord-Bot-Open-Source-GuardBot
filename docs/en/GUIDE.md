@@ -13,6 +13,7 @@ This guide shows how to run GuardBot on your own computer or on a VPS. It takes 
 - [Run it on a VPS](#run-it-on-a-vps)
 - [Run it with Docker](#run-it-with-docker)
 - [First steps in Discord](#first-steps-in-discord)
+- [Structure, team and overview (1.5)](#structure-team-and-overview-15)
 - [Updates and backups](#updates-and-backups)
 - [Music (optional)](#music-optional)
 - [Optional: reading images and languages](#optional-reading-images-and-languages)
@@ -124,6 +125,19 @@ Use these commands in your server and replace the channel names with your own.
 ```
 
 Every feature is described in the command reference: [COMMANDS.md](../COMMANDS.md).
+
+## Structure, team and overview (1.5)
+
+These steps set up the newer features. Each one can be turned off with /admin module, and the prefix and texts stay editable per server.
+
+1. See what is configured: `/admin module overview` lists every module with its state and whether it is set up. The dashboard shows the same in its setup panel.
+2. Find a command: `/info find text:ban` searches all commands by word, `/help` shows the groups.
+3. Publish rules with an accept button: `/structure rules setup`, then `/structure rules add`, then `/structure rules post`. Members who have not accepted a new version are reminded every few hours.
+4. Tell the bot who is staff: `/team duty roster`. Lists of available staff and the routing of tickets and alerts use it.
+5. Tidy up idle channels: `/structure archive setup`, then `/structure archive scan`.
+6. Give returning members their roles back: `/members stickyroles setup`.
+7. Keep names readable: `/members nickname setup`, test with `/members nickname check` before `/members nickname scan`.
+8. Before big changes export the settings with `/admin config export`, and check roles and channels with `/server diagnose`.
 
 ## Updates and backups
 

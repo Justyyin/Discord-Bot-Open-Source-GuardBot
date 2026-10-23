@@ -13,6 +13,7 @@ Diese Anleitung zeigt, wie du GuardBot auf deinem eigenen Computer oder auf eine
 - [Auf einem VPS betreiben](#auf-einem-vps-betreiben)
 - [Mit Docker betreiben](#mit-docker-betreiben)
 - [Erste Schritte in Discord](#erste-schritte-in-discord)
+- [Struktur, Team und Übersicht (1.5)](#struktur-team-und-übersicht-15)
 - [Updates und Backups](#updates-und-backups)
 - [Musik (optional)](#musik-optional)
 - [Optional: Bilder lesen und Sprachen](#optional-bilder-lesen-und-sprachen)
@@ -124,6 +125,19 @@ Nutze diese Befehle auf deinem Server und ersetze die Channel-Namen durch deine 
 ```
 
 Alle Funktionen sind in der Befehlsreferenz beschrieben: [COMMANDS.md](../COMMANDS.md).
+
+## Struktur, Team und Übersicht (1.5)
+
+Mit diesen Schritten richtest du die neueren Funktionen ein. Jede lässt sich mit /admin module abschalten, und Präfix und Texte bleiben pro Server änderbar.
+
+1. Sieh, was eingerichtet ist: `/admin module overview` listet jedes Modul mit Zustand und Einrichtungsstatus. Das Dashboard zeigt dasselbe im Einrichtungs-Panel.
+2. Befehl finden: `/info find text:ban` durchsucht alle Befehle nach einem Wort, `/help` zeigt die Gruppen.
+3. Regeln mit Akzeptieren-Knopf veröffentlichen: `/structure rules setup`, dann `/structure rules add`, dann `/structure rules post`. Wer eine neue Version nicht akzeptiert hat, wird alle paar Stunden erinnert.
+4. Dem Bot sagen, wer zum Team gehört: `/team duty roster`. Listen verfügbarer Teammitglieder und die Weiterleitung von Tickets und Warnungen nutzen das.
+5. Ungenutzte Kanäle aufräumen: `/structure archive setup`, dann `/structure archive scan`.
+6. Zurückkehrenden Mitgliedern ihre Rollen zurückgeben: `/members stickyroles setup`.
+7. Namen lesbar halten: `/members nickname setup`, vor `/members nickname scan` mit `/members nickname check` testen.
+8. Vor größeren Änderungen die Einstellungen mit `/admin config export` sichern und Rollen und Kanäle mit `/server diagnose` prüfen.
 
 ## Updates und Backups
 

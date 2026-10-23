@@ -13,6 +13,7 @@ Den här guiden visar hur du kör GuardBot på din egen dator eller på en VPS. 
 - [Köra på en VPS](#köra-på-en-vps)
 - [Köra med Docker](#köra-med-docker)
 - [Första stegen i Discord](#första-stegen-i-discord)
+- [Struktur, team och översikt (1.5)](#struktur-team-och-översikt-15)
 - [Uppdateringar och säkerhetskopior](#uppdateringar-och-säkerhetskopior)
 - [Musik (valfritt)](#musik-valfritt)
 - [Valfritt: läsa bilder och språk](#valfritt-läsa-bilder-och-språk)
@@ -124,6 +125,19 @@ Använd dessa kommandon på din server och byt ut kanalnamnen mot dina egna.
 ```
 
 Alla funktioner beskrivs i kommandoreferensen: [COMMANDS.md](../COMMANDS.md).
+
+## Struktur, team och översikt (1.5)
+
+De här stegen ställer in de nyare funktionerna. Varje funktion kan stängas av med /admin module, och prefix och texter går att ändra per server.
+
+1. Se vad som är inställt: `/admin module overview` listar varje modul med status och om den är konfigurerad. Instrumentpanelen visar samma sak i sin inställningspanel.
+2. Hitta ett kommando: `/info find text:ban` söker bland alla kommandon efter ett ord, `/help` visar grupperna.
+3. Publicera regler med godkänn-knapp: `/structure rules setup`, sedan `/structure rules add`, sedan `/structure rules post`. Den som inte godkänt en ny version påminns med några timmars mellanrum.
+4. Tala om för boten vem som är personal: `/team duty roster`. Listor över tillgänglig personal och dirigering av ärenden och larm använder det.
+5. Städa upp overksamma kanaler: `/structure archive setup`, sedan `/structure archive scan`.
+6. Ge tillbaka roller till medlemmar som återvänder: `/members stickyroles setup`.
+7. Håll namn läsbara: `/members nickname setup`, testa med `/members nickname check` före `/members nickname scan`.
+8. Exportera inställningarna med `/admin config export` före stora ändringar och kontrollera roller och kanaler med `/server diagnose`.
 
 ## Uppdateringar och säkerhetskopior
 

@@ -421,7 +421,7 @@ Um Slash-Plätze zu sparen (Discord erlaubt 100 Befehle pro Bot auf oberster Ebe
 | `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
 | `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
 | `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
-| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
 | `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
@@ -1139,10 +1139,18 @@ Der Bot speichert seine Daten alle paar Sekunden und legt Datenbank-Sicherungen 
 ```json
 {
   "shard_count": null,
+  "message_cache": 10000,
+  "members_intent": true,
+  "chunk_guilds": true,
   "db_backup_hours": 24,
   "db_backup_keep": 7,
   "health_port": 0,
   "health_host": "127.0.0.1",
+  "metrics_token": "",
+  "log_format": "text",
+  "log_max_mb": 2,
+  "log_backups": 3,
+  "workers": {"ocr": {"threads": 2, "limit": 20}},
   "tesseract": null,
   "music_generic": true
 }
@@ -1152,6 +1160,15 @@ Der Bot speichert seine Daten alle paar Sekunden und legt Datenbank-Sicherungen 
 /server debug db action:backup                                         # owner of the bot only, saved in data/dbbackups
 /server debug db action:list
 ```
+
+Logs werden in data/guardbot.log geschrieben (mit Rotation, siehe log_max_mb und log_backups). Mit log_format auf json entsteht ein JSON-Objekt pro Zeile, mit Server und Befehl. Ist health_port gesetzt, liefert /metrics Prometheus-Metriken (Laufzeit, Latenz, Speicher, Datenbankgröße, Fehler, Befehlsnutzung und -dauer, Arbeitsspuren). Exportiert werden nur Zahlen, nie Namen oder IDs, und metrics_token verlangt ein Bearer-Token. Schwere Arbeit (Bilder lesen, Karten zeichnen, Musikdateien, Backups) läuft in Spuren mit festen Threads und einer Obergrenze (workers in settings.json). Ist eine Spur voll, sagt der Bot, dass er ausgelastet ist, statt Arbeit aufzustauen. Jedes Datenbank-Backup wird direkt nach dem Erstellen geöffnet und geprüft. Zum Wiederherstellen den Bot stoppen und ausführen:
+
+```
+python scripts/restore_db.py data/dbbackups/guardbot-YYYYMMDD-HHMMSS-auto.db
+python scripts/restore_db.py BACKUPFILE --check          # only check a backup
+```
+
+Die bisherige Datenbank bleibt als Backup namens before-restore erhalten.
 
 ### Verwaltung
 
@@ -1250,10 +1267,10 @@ guardbot/
   .env.example            token placeholder
   guardbot/
     core.py               bot class, storage, permission checks
-    defaults.py           default settings of every module
+    defaults/             default settings, one file per area (core, security, moderation, community) and base.py for modules and permissions
     utils.py              helpers
     images.py             rank cards and captcha images
-    cogs/                 one file per feature group
+    cogs/                 one file per feature, in the folders security, moderation, server, community, tools
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts

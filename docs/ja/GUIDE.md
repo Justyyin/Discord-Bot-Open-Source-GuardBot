@@ -13,6 +13,7 @@
 - [VPS で動かす](#vps-で動かす)
 - [Docker で動かす](#docker-で動かす)
 - [Discord での最初の手順](#discord-での最初の手順)
+- [構成・チーム・概要(1.5)](#構成チーム概要15)
 - [更新とバックアップ](#更新とバックアップ)
 - [音楽（任意）](#音楽任意)
 - [任意：画像の読み取りと言語](#任意画像の読み取りと言語)
@@ -124,6 +125,19 @@ docker compose -f deploy/docker-compose.yml logs -f
 ```
 
 すべての機能はコマンドリファレンスで説明しています： [COMMANDS.md](../COMMANDS.md).
+
+## 構成・チーム・概要(1.5)
+
+これらの手順で新しい機能を設定します。どの機能も /admin module でオフにでき、プレフィックスとテキストはサーバーごとに変更できます。
+
+1. 設定状況を見る:`/admin module overview` は各モジュールの状態と設定済みかどうかを一覧表示します。ダッシュボードのセットアップパネルにも同じ内容が出ます。
+2. コマンドを探す:`/info find text:ban` は単語ですべてのコマンドを検索し、`/help` はグループを表示します。
+3. 同意ボタン付きでルールを公開する:`/structure rules setup`、`/structure rules add`、`/structure rules post` の順に実行します。新しい版に同意していないメンバーには数時間おきにお知らせが届きます。
+4. 誰がスタッフかをボットに伝える:`/team duty roster`。対応可能なスタッフの一覧や、チケットと警告の振り分けで使われます。
+5. 使われていないチャンネルを整理する:`/structure archive setup` のあと `/structure archive scan`。
+6. 戻ってきたメンバーにロールを返す:`/members stickyroles setup`。
+7. 名前を読みやすく保つ:`/members nickname setup`。`/members nickname scan` の前に `/members nickname check` で試します。
+8. 大きな変更の前に `/admin config export` で設定を書き出し、`/server diagnose` でロールとチャンネルを確認してください。
 
 ## 更新とバックアップ
 

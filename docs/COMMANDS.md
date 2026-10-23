@@ -2,6 +2,8 @@
 
 Commands marked with a slash work as slash commands. Moderation commands also work with the prefix (default `!`), for example `!warn @user spam`.
 
+The complete list of all slash commands with their options is in [REFERENCE.md](REFERENCE.md) (generated).
+
 Every command name can be changed in `settings.json` under `command_names`, and every module or single command can be turned off per server with `/admin module` and `/admin command`.
 
 <!-- toc -->
@@ -43,7 +45,7 @@ To save slash command slots (Discord allows 100 top-level commands per bot), rel
 | `/access` | `verify`, `probation`, `lockdown`, `lockdownconfig`, `unlock`, `lockchannel`, `unlockchannel`, `jailsetup` |
 | `/server` | `log`, `backup`, `privacy`, `invites`, `stats`, `serverinfo`, `roleinfo`, `health`, `diagnose`, `debug` |
 | `/admin` | `settings`, `config`, `module`, `command`, `perms`, `alias`, `prefix`, `language`, `setup`, `history`, `exceptions`, `dashaccess` |
-| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank` |
+| `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
 | `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |

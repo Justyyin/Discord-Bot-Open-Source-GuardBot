@@ -13,6 +13,7 @@ Esta guía muestra cómo ejecutar GuardBot en tu ordenador o en un VPS. Lleva un
 - [Ejecutarlo en un VPS](#ejecutarlo-en-un-vps)
 - [Ejecutarlo con Docker](#ejecutarlo-con-docker)
 - [Primeros pasos en Discord](#primeros-pasos-en-discord)
+- [Estructura, equipo y resumen (1.5)](#estructura-equipo-y-resumen-15)
 - [Actualizaciones y copias de seguridad](#actualizaciones-y-copias-de-seguridad)
 - [Música (opcional)](#música-opcional)
 - [Opcional: leer imágenes e idiomas](#opcional-leer-imágenes-e-idiomas)
@@ -124,6 +125,19 @@ Usa estos comandos en tu servidor y sustituye los nombres de canal por los tuyos
 ```
 
 Todas las funciones se describen en la referencia de comandos: [COMMANDS.md](../COMMANDS.md).
+
+## Estructura, equipo y resumen (1.5)
+
+Estos pasos configuran las funciones más nuevas. Cada una se puede desactivar con /admin module, y el prefijo y los textos siguen siendo editables por servidor.
+
+1. Ver qué está configurado: `/admin module overview` lista cada módulo con su estado y si está configurado. El panel web muestra lo mismo en su panel de configuración.
+2. Encontrar un comando: `/info find text:ban` busca en todos los comandos por palabra, `/help` muestra los grupos.
+3. Publicar las reglas con botón de aceptar: `/structure rules setup`, luego `/structure rules add`, luego `/structure rules post`. A quien no haya aceptado una versión nueva se le recuerda cada pocas horas.
+4. Decirle al bot quién es del equipo: `/team duty roster`. Las listas de personal disponible y el enrutamiento de tickets y avisos lo usan.
+5. Ordenar canales inactivos: `/structure archive setup`, luego `/structure archive scan`.
+6. Devolver sus roles a los miembros que vuelven: `/members stickyroles setup`.
+7. Mantener los nombres legibles: `/members nickname setup`, prueba con `/members nickname check` antes de `/members nickname scan`.
+8. Antes de cambios grandes, exporta los ajustes con `/admin config export` y revisa roles y canales con `/server diagnose`.
 
 ## Actualizaciones y copias de seguridad
 

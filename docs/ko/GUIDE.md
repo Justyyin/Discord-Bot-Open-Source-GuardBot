@@ -13,6 +13,7 @@
 - [VPS에서 실행하기](#vps에서-실행하기)
 - [Docker로 실행하기](#docker로-실행하기)
 - [Discord에서의 첫 단계](#discord에서의-첫-단계)
+- [구조, 팀, 개요(1.5)](#구조-팀-개요15)
 - [업데이트와 백업](#업데이트와-백업)
 - [음악 (선택)](#음악-선택)
 - [선택: 이미지 읽기와 언어](#선택-이미지-읽기와-언어)
@@ -124,6 +125,19 @@ docker compose -f deploy/docker-compose.yml logs -f
 ```
 
 모든 기능은 명령어 참조에 설명되어 있습니다: [COMMANDS.md](../COMMANDS.md).
+
+## 구조, 팀, 개요(1.5)
+
+이 단계로 새로운 기능을 설정합니다. 각 기능은 /admin module 로 끌 수 있고, 접두사와 문구는 서버별로 계속 수정할 수 있습니다.
+
+1. 설정 상태 보기: `/admin module overview` 는 각 모듈의 상태와 설정 여부를 보여 줍니다. 대시보드의 설정 패널에도 같은 내용이 나옵니다.
+2. 명령 찾기: `/info find text:ban` 은 단어로 모든 명령을 검색하고, `/help` 는 그룹을 보여 줍니다.
+3. 동의 버튼이 있는 규칙 게시: `/structure rules setup`, `/structure rules add`, `/structure rules post` 순서로 실행합니다. 새 버전에 동의하지 않은 멤버에게는 몇 시간마다 알림이 갑니다.
+4. 봇에게 누가 스태프인지 알려 주기: `/team duty roster`. 근무 가능한 스태프 목록과 티켓·경고 전달에 사용됩니다.
+5. 사용하지 않는 채널 정리: `/structure archive setup` 후 `/structure archive scan`.
+6. 돌아온 멤버에게 역할 돌려주기: `/members stickyroles setup`.
+7. 이름을 읽기 쉽게 유지: `/members nickname setup`, `/members nickname scan` 전에 `/members nickname check` 로 시험해 보세요.
+8. 큰 변경 전에 `/admin config export` 로 설정을 내보내고 `/server diagnose` 로 역할과 채널을 확인하세요.
 
 ## 업데이트와 백업
 
