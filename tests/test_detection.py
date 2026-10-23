@@ -4,10 +4,10 @@ import unittest
 
 import discord
 
-from guardbot.cogs.automod import find_pii, host_match, iban_ok, luhn, word_in
-from guardbot.cogs.birthday import next_date
-from guardbot.cogs.leveling import TOTALS, level_of
-from guardbot.cogs.roles import ekey, parse_msg
+from guardbot.detect import find_pii, host_match, iban_ok, luhn, word_in
+from guardbot.cogs.community.birthday import next_date
+from guardbot.cogs.community.leveling import TOTALS, level_of
+from guardbot.cogs.community.roles import ekey, parse_msg
 from guardbot.utils import bulk, fmt_duration, hosts, parse_duration, trim
 
 ALL = {"email": True, "phone": True, "ip": True, "iban": True, "card": True}

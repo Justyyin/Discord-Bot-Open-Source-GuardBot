@@ -5,13 +5,13 @@ from datetime import datetime
 from types import SimpleNamespace as NS
 from zoneinfo import ZoneInfo
 
-from guardbot.cogs.activity import KEEP_DAYS, bar, day_key, last_days, prune, top_channels
-from guardbot.cogs.bulk import MAX_USERS, parse_ids
-from guardbot.cogs.economy import Economy, cooldown_left, fmt_amount, wait_text
-from guardbot.cogs.feeds import SEEN_KEEP, new_entries, parse_feed, remember, valid_feed, youtube_id
-from guardbot.cogs.moderation import filter_cases
-from guardbot.cogs.rolemenu import role_problem
-from guardbot.cogs.schedule import advance, parse_when, valid_item
+from guardbot.cogs.community.activity import KEEP_DAYS, bar, day_key, last_days, prune, top_channels
+from guardbot.cogs.moderation.bulk import MAX_USERS, parse_ids
+from guardbot.cogs.community.economy import Economy, cooldown_left, fmt_amount, wait_text
+from guardbot.cogs.community.feeds import SEEN_KEEP, new_entries, parse_feed, remember, valid_feed, youtube_id
+from guardbot.cogs.moderation.moderation import filter_cases
+from guardbot.cogs.community.rolemenu import role_problem
+from guardbot.cogs.community.schedule import advance, parse_when, valid_item
 
 BERLIN = ZoneInfo("Europe/Berlin")
 ATOM = b"""<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>yt:2</id><title>Second</title><link rel="alternate" href="https://y/2"/></entry>

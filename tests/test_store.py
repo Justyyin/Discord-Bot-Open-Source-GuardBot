@@ -40,6 +40,36 @@ class StoreTest(unittest.TestCase):
         self.assertEqual(sum(len(v) for v in rows.values()), 0)
         s.close()
 
+    def test_only_the_changed_section_is_written(self):
+        s = Store(self.dir)
+        s.cfg(1)["prefix"] = "!"
+        s.flush()
+        s.cfg(1)["xp"]["enabled"] = not s.cfg(1)["xp"]["enabled"]
+        rows = s.snapshot()
+        self.assertEqual([r[1] for r in rows["c"]], ["xp"])
+        s.close()
+
+    def test_removed_section_is_deleted_from_the_database(self):
+        s = Store(self.dir)
+        s.cfg(1)["custom"] = {"a": 1}
+        s.flush()
+        del s.cfg(1)["custom"]
+        s.flush()
+        s.close()
+        s = Store(self.dir)
+        self.assertNotIn("custom", s.config["1"])
+        s.close()
+
+    def test_sections_are_loaded_back_together(self):
+        s = Store(self.dir)
+        s.cfg(1)["prefix"] = "%"
+        s.cfg(1)["xp"]["enabled"] = False
+        s.close()
+        s = Store(self.dir)
+        self.assertEqual(s.cfg(1)["prefix"], "%")
+        self.assertFalse(s.cfg(1)["xp"]["enabled"])
+        s.close()
+
     def test_modified_case_is_saved(self):
         s = Store(self.dir)
         s.cases(1).append({"id": 1, "type": "warn", "user": 5, "user_name": "x", "active": True})

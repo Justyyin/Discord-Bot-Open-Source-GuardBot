@@ -6,15 +6,22 @@
   "command_names": {},
   "log_level": "INFO",
   "log_file": true,
+  "log_format": "text",
+  "log_max_mb": 2,
+  "log_backups": 3,
   "music_dir": "music",
   "music_max_gb": 20,
   "music_max_mb": 300,
   "ffmpeg": "ffmpeg",
   "shard_count": null,
+  "message_cache": 10000,
+  "members_intent": true,
+  "chunk_guilds": true,
   "db_backup_hours": 24,
   "db_backup_keep": 7,
   "health_port": 0,
   "health_host": "127.0.0.1",
+  "metrics_token": "",
   "music_generic": true,
   "tesseract": null,
   "dashboard": {
@@ -31,5 +38,23 @@
     "check_hours": 12,
     "auto_install": false,
     "require_checksum": false
+  },
+  "workers": {
+    "ocr": {
+      "threads": 2,
+      "limit": 20
+    },
+    "image": {
+      "threads": 2,
+      "limit": 20
+    },
+    "music": {
+      "threads": 2,
+      "limit": 8
+    },
+    "maintenance": {
+      "threads": 1,
+      "limit": 4
+    }
   }
 }

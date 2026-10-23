@@ -13,7 +13,7 @@ from guardbot import layout
 from guardbot.core import EXTENSIONS, Bot
 from guardbot.defaults import COMMAND_MODULES, DEFAULTS, FALLBACK_PERMS, MODULES
 from guardbot.images import HAVE_PIL, captcha, new_code, rank_card
-from guardbot.cogs.jail import notice_embed
+from guardbot.cogs.moderation.jail import notice_embed
 
 
 class BotTest(unittest.IsolatedAsyncioTestCase):

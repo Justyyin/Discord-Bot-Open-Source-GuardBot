@@ -9,8 +9,10 @@ from types import SimpleNamespace as NS
 import discord
 
 from guardbot import configio
-from guardbot.cogs import approval, applications, exceptions, history, members, rules, structure, team
-from guardbot.cogs.automod import RULE_KEYS, without_rule
+from guardbot.cogs.moderation import approval, history, members
+from guardbot.cogs.security import exceptions
+from guardbot.cogs.server import applications, rules, structure, team
+from guardbot.cogs.security.automod import RULE_KEYS, without_rule
 from guardbot.core import EXTENSIONS, Bot
 from guardbot.defaults import DEFAULTS
 
@@ -250,6 +252,45 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0)
         self.bot.store.close()
 
+    async def test_gated_listener_is_skipped_when_module_is_off(self):
+        self.bot.loop = asyncio.get_running_loop()
+        calls = []
+
+        class Listener:
+            gate = {"on_message": "automod"}
+
+            async def on_message(self, msg):
+                calls.append(msg)
+
+        msg = NS(guild=NS(id=5))
+        self.bot.cfg(5)["modules"]["automod"] = False
+        self.assertIsNone(self.bot._schedule_event(Listener().on_message, "on_message", msg))
+        self.bot.cfg(5)["modules"]["automod"] = True
+        task = self.bot._schedule_event(Listener().on_message, "on_message", msg)
+        await task
+        self.assertEqual(len(calls), 1)
+
+    async def test_command_search_finds_nested_commands(self):
+        from guardbot.cogs.server.admin import search_commands
+        names = [c.qualified_name for c in search_commands(self.bot.tree, "timeout")]
+        self.assertTrue(any(n.startswith("moderation ") for n in names), names)
+        self.assertEqual(search_commands(self.bot.tree, "zzzznothing"), [])
+
+    async def test_help_overview_fits_into_one_embed(self):
+        sent = []
+
+        class Ctx:
+            guild = self.guild
+            bot = self.bot
+
+            async def send(self, *a, **k):
+                sent.append(k.get("embed") or a)
+
+        ctx = Ctx()
+        await self.bot.get_command("help").callback(self.bot.get_cog("Admin"), ctx, command=None)
+        self.assertLess(len(sent[0].description), 4096)
+        self.assertIn("/moderation", sent[0].description)
+
     async def test_history_records_and_rolls_back(self):
         cog = self.bot.get_cog("History")
         cfg = self.bot.cfg(77)
@@ -322,7 +363,7 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
             replies.append(text)
 
         guild = NS(id=77, owner_id=1, get_channel=lambda i: None, get_role=lambda i: None)
-        ctx = NS(guild=guild, author=NS(id=10), channel=Channel(), send=send)
+        ctx = NS(guild=guild, author=NS(id=10), channel=Channel(), send=send, bot=self.bot)
         target = NS(id=20, __str__=lambda s: "target")
         self.assertFalse(await cog.gate(ctx, "ban", target, "x"))
         self.bot.cfg(77)["modules"]["approval"] = True
@@ -356,3 +397,51 @@ class Runtime(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModuleStatus(unittest.TestCase):
+    def test_setup_state_follows_changed_settings(self):
+        from guardbot import configio
+        from guardbot.store import fill
+        cfg = {}
+        fill(cfg, DEFAULTS)
+        status = configio.module_status(cfg)
+        self.assertEqual(status["welcome"], (False, "open"))
+        self.assertEqual(status["utility"][1], "none")
+        cfg["welcome"]["channel"] = 5
+        cfg["modules"]["welcome"] = True
+        self.assertEqual(configio.module_status(cfg)["welcome"], (True, "done"))
+        cfg["rules"]["remind_hours"] = 5
+        self.assertEqual(configio.module_status(cfg)["rules"][1], "done")
+
+    def test_every_module_is_classified(self):
+        from guardbot import configio
+        from guardbot.store import fill
+        cfg = {}
+        fill(cfg, DEFAULTS)
+        self.assertEqual(set(configio.module_status(cfg)), set(cfg["modules"]))
+
+
+class Performance(unittest.TestCase):
+    def test_queue_gives_only_due_members_once(self):
+        from guardbot.cogs.server.rules import ReminderQueue, due_time
+        q = ReminderQueue()
+        q.add(1, 100)
+        q.add(2, 50)
+        q.add(2, 10)
+        q.add(3, 500)
+        self.assertEqual(q.pop_due(200, 10), [2, 1])
+        self.assertEqual(q.pop_due(200, 10), [])
+        self.assertEqual(len(q), 1)
+        self.assertEqual(due_time(100, 1000, 1), 1000 + 3600)
+        self.assertEqual(due_time(5000, 1000, 2), 5000 + 7200)
+
+    def test_queue_limit_and_speed_for_large_servers(self):
+        import time as _t
+        from guardbot.cogs.server.rules import ReminderQueue
+        q = ReminderQueue()
+        start = _t.perf_counter()
+        for i in range(200000):
+            q.add(i, i)
+        self.assertEqual(len(q.pop_due(10 ** 9, 20)), 20)
+        self.assertLess(_t.perf_counter() - start, 3.0)

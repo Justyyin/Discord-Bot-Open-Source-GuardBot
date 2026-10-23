@@ -46,10 +46,32 @@ class DocsTest(unittest.TestCase):
             for a in re.findall(r"\]\(#([^)]+)\)", text):
                 self.assertIn(a, anchors, f"{p}: #{a}")
 
+    def test_command_reference_is_current(self):
+        import asyncio
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import build_reference
+        current = (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+        self.assertEqual(current, asyncio.run(build_reference.build()), "run python scripts/build_reference.py")
+
     def test_documents_have_the_same_structure(self):
         counts = {c: len(re.findall(r"^## ", (ROOT / "docs" / c / "README.md").read_text(encoding="utf-8"), re.M)) for c in LANGS}
         self.assertEqual(len(set(counts.values())), 1, counts)
 
+    def test_commands_named_in_guides_exist(self):
+        """Every slash command written in a guide or in COMMANDS.md must exist in the generated reference."""
+        ref = (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+        known = set(re.findall(r"^\| `/([^`]+)` \|", ref, re.M))
+        prefixes = {" ".join(c.split()[:i]) for c in known for i in range(1, len(c.split()) + 1)}
+        pattern = re.compile(r"`/([a-z]+(?: [a-z]+){0,3})(?=[ `])")
+        files = [ROOT / "docs" / "COMMANDS.md", ROOT / "docs" / "TESTING.md"] + [ROOT / "docs" / code / "GUIDE.md" for code in LANGS]
+        missing = []
+        for p in files:
+            for m in pattern.finditer(p.read_text(encoding="utf-8")):
+                path = m.group(1)
+                if path not in prefixes and not any(" ".join(path.split()[:i]) in known for i in range(1, len(path.split()) + 1)):
+                    missing.append((p.name, path))
+        self.assertEqual(missing, [])
 
 if __name__ == "__main__":
     unittest.main()

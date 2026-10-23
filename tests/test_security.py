@@ -11,7 +11,7 @@ from types import SimpleNamespace as NS
 import discord
 
 from guardbot import configio
-from guardbot.cogs.reports import LINK_RE
+from guardbot.cogs.moderation.reports import LINK_RE
 from guardbot.core import EXTENSIONS, Bot
 from guardbot.defaults import DEFAULTS
 from guardbot.linkcheck import Resolver, host_of, is_public
@@ -323,7 +323,7 @@ class FeedFetchTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_internal_targets_are_never_requested(self):
         """Private, loopback, metadata and odd-port addresses stop before any request."""
-        from guardbot.cogs.feeds import fetch
+        from guardbot.cogs.community.feeds import fetch
 
         for url in ("http://127.0.0.1/feed", "http://localhost/feed", "http://169.254.169.254/latest/meta-data", "http://[::1]/x", "http://10.0.0.5/x", "https://example.com:22/x", "file:///etc/passwd", "ftp://example.com/x"):
             session = self.Session([])
@@ -333,7 +333,7 @@ class FeedFetchTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_redirect_to_internal_address_is_refused(self):
         """A public address that redirects to an internal one is stopped at the second step."""
-        from guardbot.cogs.feeds import fetch
+        from guardbot.cogs.community.feeds import fetch
 
         session = self.Session([self.Resp(302, {"Location": "http://169.254.169.254/latest"})])
         with self.assertRaises(ValueError):
@@ -342,7 +342,7 @@ class FeedFetchTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_redirect_loop_and_size_limit(self):
         """Endless redirects and huge documents are cut off."""
-        from guardbot.cogs.feeds import MAX_BYTES, fetch
+        from guardbot.cogs.community.feeds import MAX_BYTES, fetch
 
         loop = self.Session([self.Resp(301, {"Location": "https://example.com/b"}) for _ in range(10)])
         with self.assertRaises(ValueError):

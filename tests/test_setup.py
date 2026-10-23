@@ -4,7 +4,7 @@ import copy
 import unittest
 from types import SimpleNamespace as NS
 
-from guardbot.cogs.setup import Wizard, health_embed, overview
+from guardbot.cogs.server.setup import Wizard, health_embed, overview
 from guardbot.defaults import DEFAULTS, MODULES
 from guardbot.presets import AUTOMOD_PRESETS, AUTOMOD_RULES, EXTRA_SWITCHES, TEMPLATES, apply_automod_preset, apply_template
 

@@ -2,7 +2,6 @@
 
 import json
 import logging
-import logging.handlers
 import os
 import subprocess
 import sys
@@ -11,23 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from guardbot.core import Bot, banner
-
-
-def setup_logging(settings):
-    """Log to the console and to a rotating file (data/guardbot.log, 2 MB, 3 old files)."""
-    fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S")
-    handlers = [logging.StreamHandler()]
-    if settings.get("log_file", True):
-        directory = Path(settings.get("data_dir", "data"))
-        directory.mkdir(parents=True, exist_ok=True)
-        handlers.append(logging.handlers.RotatingFileHandler(directory / "guardbot.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8"))
-    root = logging.getLogger()
-    root.setLevel(logging.INFO)
-    for handler in handlers:
-        handler.setFormatter(fmt)
-        root.addHandler(handler)
-    level = str(settings.get("log_level", "INFO")).upper()
-    logging.getLogger("guardbot").setLevel(getattr(logging, level, logging.INFO))
+from guardbot.logsetup import setup_logging
 
 
 def main():

@@ -97,7 +97,7 @@ class LayoutTest(unittest.IsolatedAsyncioTestCase):
         member = SimpleNamespace(id=5, roles=[], guild=SimpleNamespace(owner_id=1, id=1), guild_permissions=SimpleNamespace(ban_members=False))
         guild = SimpleNamespace(id=1, owner_id=1)
         cmd = self.bot.tree.get_command("moderation").get_command("ban")
-        interaction = SimpleNamespace(command=cmd, guild=guild, user=member, client=self.bot, response=SimpleNamespace(send_message=send_message))
+        interaction = SimpleNamespace(command=cmd, guild=guild, user=member, client=self.bot, extras={}, response=SimpleNamespace(send_message=send_message))
         self.assertFalse(await self.bot.tree.interaction_check(interaction))
         self.assertEqual(len(messages), 1)
         member.guild_permissions.ban_members = True

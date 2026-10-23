@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from guardbot import updater
-from guardbot.cogs.updates import Updates
+from guardbot.cogs.server.updates import Updates
 
 
 def make_zip(path, version, extra=None, root="GuardBot-x/", names=None):
@@ -254,7 +254,7 @@ class CogTest(unittest.IsolatedAsyncioTestCase):
     async def test_off_without_repository(self):
         """Without a repository no check is scheduled."""
         cog = self.make(repo="")
-        with mock.patch("guardbot.cogs.updates.__repository__", ""):
+        with mock.patch("guardbot.cogs.server.updates.__repository__", ""):
             cog.repo = ""
             await cog.cog_load()
         self.assertIsNone(cog.task)

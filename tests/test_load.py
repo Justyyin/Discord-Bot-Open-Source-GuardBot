@@ -8,11 +8,12 @@ from types import SimpleNamespace
 from unittest import mock
 
 from guardbot import scamscan, swarm
-from guardbot.cogs import antiscam
-from guardbot.cogs.moderation import build_timeline
-from guardbot.cogs.probation import due, has_link, is_harmless
+from guardbot.cogs.security import antiscam
+from guardbot.cogs.moderation.moderation import build_timeline
+from guardbot.cogs.security.probation import due, has_link, is_harmless
 from guardbot.defaults import DEFAULTS
 from guardbot.scamscan import text_key
+from guardbot.workers import Workers
 
 
 class FakeBot:
@@ -25,6 +26,7 @@ class FakeBot:
         self.bot_deleted = set()
         self.tree = SimpleNamespace()
         self.acted = []
+        self.work = Workers({})
 
     def cfg(self, gid):
         """Settings of the server."""
@@ -88,7 +90,7 @@ class LoadTest(unittest.IsolatedAsyncioTestCase):
         self.assertLess(took, 10, "1000 messages must be scanned in far less than the minute they arrive in")
 
     async def test_ocr_queue_is_bounded(self):
-        """A flood of different images never keeps more than MAX_PENDING waiting, the rest is skipped."""
+        """A flood of different images never keeps more jobs in the OCR lane than its limit, the rest is skipped."""
         cog = make_cog()
         c = cog.conf(1)
         peak = 0
@@ -103,7 +105,7 @@ class LoadTest(unittest.IsolatedAsyncioTestCase):
             """Record the highest number of waiting images."""
             nonlocal peak
             while not lock.is_set():
-                peak = max(peak, cog.pending)
+                peak = max(peak, cog.bot.work.lanes["ocr"].load)
                 await asyncio.sleep(0)
 
         with mock.patch.object(scamscan, "read_text", slow):
@@ -111,8 +113,9 @@ class LoadTest(unittest.IsolatedAsyncioTestCase):
             results = await asyncio.gather(*[cog.image_bad(Attachment(bytes([i % 256, i // 256]) + b"x" * 20), c) for i in range(300)])
             lock.set()
             await task
-        self.assertLessEqual(peak, antiscam.MAX_PENDING)
-        self.assertEqual(cog.pending, 0)
+        self.assertLessEqual(peak, cog.bot.work.lanes["ocr"].limit)
+        self.assertEqual(cog.bot.work.lanes["ocr"].load, 0)
+        self.assertGreater(cog.bot.work.lanes["ocr"].rejected, 0)
         self.assertTrue(all(not bad for bad, _ in results))
         self.assertLessEqual(len(cog.verdicts), 2000)
 
@@ -122,7 +125,7 @@ class LoadTest(unittest.IsolatedAsyncioTestCase):
         c = cog.conf(1)
         data = b"\x89PNG-scam-image"
         cog.remember(c, scamscan.digest(data), True)
-        cog.pending = antiscam.MAX_PENDING
+        cog.bot.work.lanes["ocr"].waiting = cog.bot.work.lanes["ocr"].limit
         bad, why = await cog.image_bad(Attachment(data), c)
         self.assertTrue(bad)
         self.assertIn("known", why)

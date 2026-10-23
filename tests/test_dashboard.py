@@ -134,6 +134,36 @@ class HelperTest(unittest.TestCase):
         self.assertIn("modules.automod", fields)
 
 
+class OverviewTest(unittest.TestCase):
+    """Setup status, descriptions and chart numbers."""
+
+    def test_sections_have_category_and_explanation(self):
+        cfg = copy.deepcopy(DEFAULTS)
+        sections = describe(cfg, [])
+        self.assertTrue(all(s["category"] for s in sections))
+        by = {s["key"]: s for s in sections}
+        self.assertIn("info", by["automod"])
+        self.assertIn("info_de", by["automod"])
+        self.assertEqual(by["rules"]["category"], "Structure and team")
+
+    def test_every_listed_section_has_an_explanation(self):
+        cfg = copy.deepcopy(DEFAULTS)
+        missing = [s["key"] for s in describe(cfg, []) if "info" not in s]
+        self.assertEqual(missing, [])
+
+    def test_stats_count_by_day(self):
+        cfg = copy.deepcopy(DEFAULTS)
+        cfg["activity"]["days"] = {"2026-10-22": {"msgs": 5, "channels": {}, "joins": 2, "leaves": 1}}
+        import calendar
+        import time as _t
+        ts = calendar.timegm(_t.strptime("2026-10-22 10:00", "%Y-%m-%d %H:%M"))
+        out = dashboard.build_stats(cfg, [{"ts": ts, "type": "ban"}, {"ts": ts, "type": "warn"}, {"ts": 1000, "type": "ban"}], 7, today="2026-10-23")
+        self.assertEqual(out["days"][-1], "2026-10-23")
+        self.assertEqual(out["messages"][-2], 5)
+        self.assertEqual(out["cases"][-2], 2)
+        self.assertEqual(out["case_types"], {"ban": 1, "warn": 1})
+
+
 class WebTest(unittest.IsolatedAsyncioTestCase):
     """The web server with a fake bot."""
 
@@ -170,7 +200,7 @@ class WebTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_everything_needs_a_login(self):
         """Without a session the API answers 401."""
-        for path in ("/api/me", "/api/guild/5", "/api/guild/5/cases", "/api/guild/5/export"):
+        for path in ("/api/me", "/api/guild/5", "/api/guild/5/cases", "/api/guild/5/stats", "/api/guild/5/export"):
             self.assertEqual((await self.client.get(path)).status, 401, path)
         for path in ("/api/guild/5/set", "/api/guild/5/import", "/api/logout"):
             self.assertEqual((await self.client.post(path, json={}, headers=self.origin)).status, 401, path)

@@ -12,7 +12,7 @@ from pathlib import Path
 import discord
 
 from guardbot import musiclib as ml
-from guardbot.cogs import music
+from guardbot import musicdl
 from guardbot.linkcheck import url_problem
 
 HAVE_FFMPEG = shutil.which("ffmpeg") is not None
@@ -136,8 +136,8 @@ class PolicyTest(unittest.TestCase):
 
     def test_artist_cleanup(self):
         """The Topic suffix of generated YouTube channels is removed."""
-        self.assertEqual(music.clean_artist("Daft Punk - Topic"), "Daft Punk")
-        self.assertEqual(music.clean_artist(None), "")
+        self.assertEqual(musicdl.clean_artist("Daft Punk - Topic"), "Daft Punk")
+        self.assertEqual(musicdl.clean_artist(None), "")
 
 
 @unittest.skipUnless(HAVE_FFMPEG, "ffmpeg is not installed")
@@ -190,7 +190,7 @@ class LibraryFilesTest(unittest.TestCase):
             source.cleanup()
 
 
-@unittest.skipUnless(HAVE_FFMPEG and music.yt_dlp is not None, "ffmpeg or yt-dlp is missing")
+@unittest.skipUnless(HAVE_FFMPEG and musicdl.yt_dlp is not None, "ffmpeg or yt-dlp is missing")
 class DownloadTest(unittest.TestCase):
     """The download pipeline with a local web server that offers a FLAC file."""
 
@@ -206,9 +206,9 @@ class DownloadTest(unittest.TestCase):
         folder = root / ml.TEMP_DIR / "job"
         folder.mkdir(parents=True)
         try:
-            files = music.download_job(f"http://127.0.0.1:{server.server_port}/song.flac", folder, "ffmpeg", "best", False, 5, 600, 50)
+            files = musicdl.download_job(f"http://127.0.0.1:{server.server_port}/song.flac", folder, "ffmpeg", "best", False, 5, 600, 50)
             self.assertEqual(len(files), 1)
-            entry, codec = music.file_into_library(root, *files[0])
+            entry, codec = musicdl.file_into_library(root, *files[0])
         finally:
             server.shutdown()
         self.assertEqual(entry["path"], "Test Artist/Test Album/02 - Test Song.flac")
@@ -226,12 +226,10 @@ class GenericSwitchTest(unittest.TestCase):
 
     def test_option_only_set_when_switched_off(self):
         """allowed_extractors excludes the generic extractor only when the switch is off."""
-        from guardbot.cogs import music
-
         try:
-            music.GENERIC["on"] = True
-            self.assertNotIn("allowed_extractors", music.base_options("ffmpeg"))
-            music.GENERIC["on"] = False
-            self.assertEqual(music.base_options("ffmpeg")["allowed_extractors"], ["default", "-generic"])
+            musicdl.GENERIC["on"] = True
+            self.assertNotIn("allowed_extractors", musicdl.base_options("ffmpeg"))
+            musicdl.GENERIC["on"] = False
+            self.assertEqual(musicdl.base_options("ffmpeg")["allowed_extractors"], ["default", "-generic"])
         finally:
-            music.GENERIC["on"] = True
+            musicdl.GENERIC["on"] = True

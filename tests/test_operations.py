@@ -50,6 +50,25 @@ class MigrationTest(unittest.TestCase):
         db.close()
         return d
 
+    def test_every_schema_version_has_exactly_one_migration(self):
+        """SCHEMA_VERSION equals the highest migration and no number is missing or used twice."""
+        from guardbot import migrations
+        numbers = [v for v, _ in migrations.MIGRATIONS]
+        self.assertEqual(numbers, list(range(2, migrations.SCHEMA_VERSION + 1)))
+
+    def test_old_settings_row_becomes_section_rows(self):
+        """Version 3 writes one row per section and removes the old per-server row."""
+        d = self.old_store()
+        store = Store(d)
+        store.close()
+        db = sqlite3.connect(Path(d) / "guardbot.db")
+        try:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM config").fetchone()[0], 0)
+            sections = {r[0] for r in db.execute("SELECT section FROM config_sections WHERE gid='1'")}
+            self.assertTrue({"aliases", "perms", "disabled_commands"} <= sections)
+        finally:
+            db.close()
+
     def test_old_data_is_migrated_and_backed_up(self):
         """Moved commands are rewritten in aliases and dropped from rules, and a backup is made first."""
         d = self.old_store()
@@ -105,7 +124,7 @@ class StateTest(StoreCase):
         self.store.cfg(1)["prefix"] = "?"
         path = self.store.backup("manual")
         db = sqlite3.connect(path)
-        self.assertEqual(json.loads(db.execute("SELECT data FROM config WHERE gid='1'").fetchone()[0])["prefix"], "?")
+        self.assertEqual(json.loads(db.execute("SELECT data FROM config_sections WHERE gid='1' AND section='prefix'").fetchone()[0]), "?")
         db.close()
         folder = self.store.dir / "dbbackups"
         for n in range(4):

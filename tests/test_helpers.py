@@ -3,9 +3,9 @@
 import unittest
 from types import SimpleNamespace as NS
 
-from guardbot.cogs.channels import parse_count, render_template
-from guardbot.cogs.tags import match_trigger
-from guardbot.cogs.tools import parse_color, purge_check
+from guardbot.cogs.server.channels import parse_count, render_template
+from guardbot.cogs.community.tags import match_trigger
+from guardbot.cogs.tools.tools import parse_color, purge_check
 
 
 class HelperTest(unittest.TestCase):
