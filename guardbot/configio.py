@@ -214,3 +214,33 @@ def id_map(source, target):
         if key in channels:
             mapping[c.id] = channels[key]
     return mapping
+
+
+# Which settings section holds the setup of a module. Modules that are not listed use the section with their own name.
+# None means the module needs no setup.
+MODULE_SECTIONS = {
+    "logging": ("log", "log_options"), "moderation": ("mod",), "leveling": ("xp",), "reactionroles": ("reaction_roles",),
+    "verification": ("verify",), "rolemenu": ("rolemenus",), "duty": ("team",), "structure": ("roletemplates",),
+    "info": None, "announce": None, "utility": None, "builder": None, "privacy": None, "exceptions": ("exceptions",),
+}
+
+
+def module_status(cfg):
+    """For every module: whether it is on and whether its settings differ from the defaults.
+
+    The result is {module: (on, setup)} where setup is "done" (settings were changed), "open" (still the defaults) or "none" (nothing to set up).
+    """
+    from .store import fill
+
+    fresh = {}
+    fill(fresh, DEFAULTS)
+    mine, base = export_config(cfg)["settings"], export_config(fresh)["settings"]
+    out = {}
+    for name, on in cfg["modules"].items():
+        sections = MODULE_SECTIONS.get(name, (name,))
+        if sections is None:
+            out[name] = (on, "none")
+        else:
+            changed = any(mine.get(s) != base.get(s) for s in sections if s in base)
+            out[name] = (on, "done" if changed else "open")
+    return out

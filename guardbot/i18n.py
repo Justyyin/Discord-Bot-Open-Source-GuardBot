@@ -27,7 +27,7 @@ LANGUAGES = {
 }
 
 _DIR = Path(__file__).parent / "locales"
-_tables = {}
+_tables: dict = {}
 
 
 def table(lang):

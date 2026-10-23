@@ -1,13 +1,14 @@
 """Versioned migrations of the stored data. They run once at start-up, after an automatic backup."""
 
 import logging
+from typing import Any, Callable
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Commands that moved into another command in 1.4.0: old root name -> new command text
-MOVED = {
+MOVED: dict[str, str] = {
     "birthdaysetup": "birthday setup",
     "suggestionsetup": "suggestion setup",
     "notifytopic": "notify topic",
@@ -18,7 +19,7 @@ MOVED = {
 }
 
 
-def v2_moved_commands(store):
+def v2_moved_commands(store: Any) -> None:
     """Commands that were merged into groups: rewrite aliases and drop rules that no longer point to a command."""
     for gid, cfg in store.config.items():
         changed = False
@@ -47,10 +48,19 @@ def v2_moved_commands(store):
             store.t_cfg.add(gid)
 
 
-MIGRATIONS = [(2, v2_moved_commands)]
+def v3_config_sections(store: Any) -> None:
+    """Settings used to be one row per server. Write them as one row per section and remove the old rows."""
+    for gid in store.config:
+        store.t_cfg.add(gid)
+    store.flush()
+    with store.lock, store.db:
+        store.db.execute("DELETE FROM config")
 
 
-def run(store):
+MIGRATIONS: list[tuple[int, Callable[[Any], None]]] = [(2, v2_moved_commands), (3, v3_config_sections)]
+
+
+def run(store: Any) -> None:
     """Bring the stored data to the current version. Refuses to start on data from a newer version."""
     raw = store.get_meta("schema_version")
     current = int(raw) if raw else (SCHEMA_VERSION if not store.config else 1)

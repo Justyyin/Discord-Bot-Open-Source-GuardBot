@@ -1,9 +1,11 @@
 "use strict";
 (function () {
   var TEXT = {
-    en: { signin: "Sign in with Discord", intro: "Manage your GuardBot servers.", offline: "The bot is not connected right now. Try again in a moment.", server: "Server", overview: "Overview", members: "Members", cases: "Cases", modules: "Modules on", latency: "Latency", search: "Search settings", saved: "Saved", failed: "Could not save", none: "None", logout: "Log out", general: "General", modulesTitle: "Modules", moderation: "Moderation cases", backup: "Backup", export: "Download settings", import: "Import settings", importNote: "Importing replaces the settings of this server with the file. Counters, open tickets and other running data are kept.", imported: "Settings imported", noServers: "You do not manage any server where the bot is connected.", nocases: "No cases yet.", user: "User", type: "Type", reason: "Reason", moderator: "Moderator", when: "When", lines: "One entry per line", sections: "Settings", loginHelp: "Only members with the Manage Server permission can sign in, and only for servers the bot is connected to.", sure: "Replace all settings with this file?", about: "Version", readOnly: "You can read this page but not change it. Ask an administrator for more access.", adminOnly: "Only administrators can download or import settings." },
-    de: { signin: "Mit Discord anmelden", intro: "Verwalte deine GuardBot-Server.", offline: "Der Bot ist gerade nicht verbunden. Versuche es gleich noch einmal.", server: "Server", overview: "Übersicht", members: "Mitglieder", cases: "Fälle", modules: "Module aktiv", latency: "Latenz", search: "Einstellungen suchen", saved: "Gespeichert", failed: "Speichern fehlgeschlagen", none: "Keine", logout: "Abmelden", general: "Allgemein", modulesTitle: "Module", moderation: "Moderationsfälle", backup: "Sicherung", export: "Einstellungen herunterladen", import: "Einstellungen importieren", importNote: "Der Import ersetzt die Einstellungen dieses Servers durch die Datei. Zähler, offene Tickets und andere laufende Daten bleiben erhalten.", imported: "Einstellungen importiert", noServers: "Du verwaltest keinen Server, auf dem der Bot verbunden ist.", nocases: "Noch keine Fälle.", user: "Nutzer", type: "Art", reason: "Grund", moderator: "Moderator", when: "Wann", lines: "Ein Eintrag pro Zeile", sections: "Einstellungen", loginHelp: "Nur Mitglieder mit der Berechtigung Server verwalten können sich anmelden, und nur für Server, auf denen der Bot verbunden ist.", sure: "Alle Einstellungen durch diese Datei ersetzen?", about: "Version", readOnly: "Du kannst diese Seite lesen, aber nicht ändern. Frage einen Administrator nach mehr Rechten.", adminOnly: "Nur Administratoren können Einstellungen herunterladen oder importieren." }
+    en: { signin: "Sign in with Discord", intro: "Manage your GuardBot servers.", offline: "The bot is not connected right now. Try again in a moment.", server: "Server", overview: "Overview", members: "Members", cases: "Cases", modules: "Modules on", latency: "Latency", search: "Search settings", setupTitle: "Setup status", setupOpen: "On, not set up yet", setupDone: "On and set up", setupNone: "On, needs no setup", setupOff: "Off", chartsTitle: "Last 30 days", chMessages: "Messages per day", chJoins: "Joins", chLeaves: "Leaves", chCases: "Moderation cases per day", chTypes: "Cases by type", noData: "No data yet. Turn on the activity module to count messages.", searchAll: "Search all settings", noMatch: "No setting matches.", saved: "Saved", failed: "Could not save", none: "None", logout: "Log out", general: "General", modulesTitle: "Modules", moderation: "Moderation cases", backup: "Backup", export: "Download settings", import: "Import settings", importNote: "Importing replaces the settings of this server with the file. Counters, open tickets and other running data are kept.", imported: "Settings imported", noServers: "You do not manage any server where the bot is connected.", nocases: "No cases yet.", user: "User", type: "Type", reason: "Reason", moderator: "Moderator", when: "When", lines: "One entry per line", sections: "Settings", loginHelp: "Only members with the Manage Server permission can sign in, and only for servers the bot is connected to.", sure: "Replace all settings with this file?", about: "Version", readOnly: "You can read this page but not change it. Ask an administrator for more access.", adminOnly: "Only administrators can download or import settings." },
+    de: { signin: "Mit Discord anmelden", intro: "Verwalte deine GuardBot-Server.", offline: "Der Bot ist gerade nicht verbunden. Versuche es gleich noch einmal.", server: "Server", overview: "Übersicht", members: "Mitglieder", cases: "Fälle", modules: "Module aktiv", latency: "Latenz", search: "Einstellungen suchen", setupTitle: "Einrichtungsstatus", setupOpen: "An, noch nicht eingerichtet", setupDone: "An und eingerichtet", setupNone: "An, braucht keine Einrichtung", setupOff: "Aus", chartsTitle: "Letzte 30 Tage", chMessages: "Nachrichten pro Tag", chJoins: "Beitritte", chLeaves: "Austritte", chCases: "Moderationsfälle pro Tag", chTypes: "Fälle nach Art", noData: "Noch keine Daten. Schalte das Aktivitätsmodul ein, um Nachrichten zu zählen.", searchAll: "Alle Einstellungen durchsuchen", noMatch: "Keine Einstellung gefunden.", saved: "Gespeichert", failed: "Speichern fehlgeschlagen", none: "Keine", logout: "Abmelden", general: "Allgemein", modulesTitle: "Module", moderation: "Moderationsfälle", backup: "Sicherung", export: "Einstellungen herunterladen", import: "Einstellungen importieren", importNote: "Der Import ersetzt die Einstellungen dieses Servers durch die Datei. Zähler, offene Tickets und andere laufende Daten bleiben erhalten.", imported: "Einstellungen importiert", noServers: "Du verwaltest keinen Server, auf dem der Bot verbunden ist.", nocases: "Noch keine Fälle.", user: "Nutzer", type: "Art", reason: "Grund", moderator: "Moderator", when: "Wann", lines: "Ein Eintrag pro Zeile", sections: "Einstellungen", loginHelp: "Nur Mitglieder mit der Berechtigung Server verwalten können sich anmelden, und nur für Server, auf denen der Bot verbunden ist.", sure: "Alle Einstellungen durch diese Datei ersetzen?", about: "Version", readOnly: "Du kannst diese Seite lesen, aber nicht ändern. Frage einen Administrator nach mehr Rechten.", adminOnly: "Nur Administratoren können Einstellungen herunterladen oder importieren." }
   };
+  TEXT.en.cat = { "Basics": "Basics", "Moderation": "Moderation", "Security": "Security", "Community": "Community", "Structure and team": "Structure and team", "More": "More" };
+  TEXT.de.cat = { "Basics": "Grundlagen", "Moderation": "Moderation", "Security": "Sicherheit", "Community": "Community", "Structure and team": "Struktur und Team", "More": "Weitere" };
   var lang = (navigator.language || "en").slice(0, 2);
   var T = TEXT[lang] || TEXT.en;
   var app = document.getElementById("app");
@@ -105,7 +107,11 @@
       var nav = h("nav", { class: "nav" },
         navLink("overview", T.overview), navLink("cases", T.moderation), navLink("backup", T.backup),
         h("div", { class: "nav-title" }, T.sections));
-      S.info.sections.forEach(function (s) { nav.appendChild(navLink("s:" + s.key, s.title, s.fields.length)); });
+      var cat = null;
+      S.info.sections.slice().sort(function (a, b) { return (a.category || "").localeCompare(b.category || ""); }).forEach(function (s) {
+        if (s.category !== cat) { cat = s.category; nav.appendChild(h("div", { class: "nav-title" }, T.cat[cat] || cat)); }
+        nav.appendChild(navLink("s:" + s.key, s.title, s.fields.length));
+      });
       side.appendChild(nav);
     }
     side.appendChild(h("div", { class: "spacer" }));
@@ -138,10 +144,90 @@
   function overview() {
     var i = S.info;
     function tile(v, l) { return h("div", { class: "tile" }, h("b", null, v === null ? "-" : v), h("span", null, l)); }
-    return h("div", null, top(i.name),
+    var found = h("div", { class: "fields" });
+    var finder = h("input", { class: "search", type: "search", placeholder: T.searchAll, "aria-label": T.searchAll, oninput: function (e) {
+      var q = e.target.value.trim().toLowerCase(), n = 0;
+      found.textContent = "";
+      if (q.length < 2) return;
+      i.sections.forEach(function (s) {
+        s.fields.forEach(function (f) {
+          if (n >= 30 || (f.label + " " + f.path + " " + (f.group || "")).toLowerCase().indexOf(q) === -1) return;
+          n++;
+          var row = fieldRow(f);
+          if (!s.editable) lock(row, false);
+          found.appendChild(row);
+        });
+      });
+      if (!n) found.appendChild(h("p", { class: "note flat" }, T.noMatch));
+    } });
+    var setup = setupPanel(i.module_status || []);
+    var charts = h("div", { class: "charts" });
+    loadCharts(charts);
+    return h("div", null, top(i.name), finder, found,
       h("div", { class: "tiles" }, tile(i.members, T.members), tile(i.cases, T.cases), tile(i.modules_on + " / " + i.modules_total, T.modules), tile(i.latency_ms === null ? null : i.latency_ms + " ms", T.latency)),
       h("div", { class: "group" }, T.modulesTitle), fieldsBox(i.sections.filter(function (s) { return s.key === "modules"; })[0].fields.slice(0, 8), i.level === "admin"),
+      h("div", { class: "group" }, T.setupTitle), setup,
+      h("div", { class: "group" }, T.chartsTitle), charts,
       h("p", { class: "note flat" }, T.about + " " + S.version));
+  }
+
+  function setupPanel(list) {
+    var kinds = [["open", T.setupOpen, "warn"], ["done", T.setupDone, "ok"], ["none", T.setupNone, "mute"], ["off", T.setupOff, "off"]];
+    var box = h("div", { class: "setup" });
+    kinds.forEach(function (k) {
+      var items = list.filter(function (m) { return k[0] === "off" ? !m.on : m.on && m.setup === k[0]; });
+      var col = h("div", { class: "setup-col" }, h("h3", null, k[1] + " (" + items.length + ")"));
+      var chips = h("div", { class: "chips" });
+      items.forEach(function (m) { chips.appendChild(h("span", { class: "chip " + k[2] }, m.name)); });
+      col.appendChild(chips);
+      box.appendChild(col);
+    });
+    return box;
+  }
+
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  function barChart(title, days, series) {
+    var W = 560, H = 140, pad = 24, max = 1, n = days.length;
+    series.forEach(function (s) { s.values.forEach(function (v) { if (v > max) max = v; }); });
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + (H + 22), role: "img", "aria-label": title, class: "chart" });
+    var slot = (W - pad) / n, bar = Math.max(1, slot / series.length - 1);
+    svg.appendChild(svgEl("line", { x1: pad, y1: H, x2: W, y2: H, class: "axis" }));
+    var top = svgEl("text", { x: 0, y: 10, class: "tick" }); top.textContent = String(max); svg.appendChild(top);
+    series.forEach(function (s, si) {
+      s.values.forEach(function (v, i) {
+        var hgt = v / max * (H - 12);
+        var r = svgEl("rect", { x: pad + i * slot + si * (bar + 1), y: H - hgt, width: bar, height: hgt, class: "bar s" + si });
+        var tip = svgEl("title", {}); tip.textContent = days[i] + ": " + v + " " + s.name; r.appendChild(tip);
+        svg.appendChild(r);
+      });
+    });
+    [0, Math.floor(n / 2), n - 1].forEach(function (i) {
+      var x = svgEl("text", { x: pad + i * slot, y: H + 16, class: "tick" }); x.textContent = days[i].slice(5); svg.appendChild(x);
+    });
+    var legend = h("div", { class: "legend" }, series.map(function (s, si) { return h("span", null, h("i", { class: "sw s" + si }), s.name); }));
+    return h("div", { class: "chart-card" }, h("h3", null, title), svg, legend);
+  }
+
+  function loadCharts(box) {
+    api("GET", "/api/guild/" + S.gid + "/stats?days=30").then(function (r) {
+      if (r.status !== 200) return;
+      var d = r.data, any = d.messages.some(Boolean) || d.joins.some(Boolean) || d.cases.some(Boolean);
+      if (!any) { box.appendChild(h("p", { class: "note flat" }, T.noData)); return; }
+      box.appendChild(barChart(T.chMessages, d.days, [{ name: T.chMessages, values: d.messages }]));
+      box.appendChild(barChart(T.chJoins + " / " + T.chLeaves, d.days, [{ name: T.chJoins, values: d.joins }, { name: T.chLeaves, values: d.leaves }]));
+      box.appendChild(barChart(T.chCases, d.days, [{ name: T.chCases, values: d.cases }]));
+      var types = Object.keys(d.case_types);
+      if (types.length) {
+        var list = h("div", { class: "chips" });
+        types.sort(function (a, b) { return d.case_types[b] - d.case_types[a]; }).forEach(function (k) { list.appendChild(h("span", { class: "chip mute" }, k + " " + d.case_types[k])); });
+        box.appendChild(h("div", { class: "chart-card" }, h("h3", null, T.chTypes), list));
+      }
+    });
   }
 
   function matches(f) {
@@ -154,6 +240,8 @@
 
   function settingsView(section) {
     var box = h("div", null, top(section.title, true)), group = null, cur = null;
+    var about = lang === "de" ? section.info_de : section.info;
+    if (about) box.appendChild(h("p", { class: "note flat" }, about));
     section.fields.forEach(function (f) {
       var g = f.group || "";
       if (g !== group || !cur) {

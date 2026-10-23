@@ -20,7 +20,7 @@ GROUPS = {
     "access": ("New members, verification and lockdown", ["verify", "probation", "lockdown", "lockdownconfig", "unlock", "lockchannel", "unlockchannel", "jailsetup"]),
     "server": ("Logs, backups, statistics and server information", ["log", "backup", "privacy", "invites", "stats", "serverinfo", "roleinfo", "health", "diagnose", "debug"]),
     "admin": ("Settings, modules, permissions and setup of the bot", ["settings", "config", "module", "command", "perms", "alias", "prefix", "language", "setup", "history", "exceptions", "dashaccess"]),
-    "info": ("Information about you, members and the bot", ["about", "avatar", "botinfo", "ping", "userinfo", "mydata", "leaderboard", "rank"]),
+    "info": ("Information about you, members and the bot", ["about", "avatar", "botinfo", "ping", "userinfo", "mydata", "leaderboard", "rank", "find"]),
     "community": ("Welcome, boosters, reminders, statistics and voice rooms", ["welcome", "booster", "afk", "remind", "activity", "tempvoice", "voice"]),
     "engage": ("Economy, giveaways, polls, counting and starboard", ["economy", "giveaway", "poll", "counting", "starboard"]),
     "support": ("Tickets, suggestions, tags and automatic replies", ["ticket", "suggest", "tag", "autoresponder"]),

@@ -9,6 +9,7 @@ import math
 import os
 import secrets
 import time
+from datetime import datetime, timezone
 from collections import deque
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
@@ -58,6 +59,85 @@ TITLES = {
     "modwatch": "Moderator limits", "permaudit": "Permission audit", "tempvoice": "Temporary voice", "log": "Log channels", "log_options": "Log options", "debug": "Diagnostics",
     "welcome": "Welcome and goodbye", "boosters": "Boosters", "verify": "Verification", "modmail": "Mod-mail", "appeals": "Ban appeals", "reports": "Reports",
 }
+
+
+CATEGORIES = {
+    "general": "Basics", "modules": "Basics", "log": "Basics", "log_options": "Basics", "debug": "Basics", "backup": "Basics", "privacy": "Basics", "invites": "Basics",
+    "mod": "Moderation", "jail": "Moderation", "automod": "Moderation", "modmail": "Moderation", "appeals": "Moderation", "reports": "Moderation",
+    "stickyroles": "Moderation", "nicknames": "Moderation", "watchlist": "Moderation", "approval": "Moderation",
+    "antiscam": "Security", "antinuke": "Security", "raid": "Security", "lockdown": "Security", "verify": "Security", "probation": "Security", "modwatch": "Security", "permaudit": "Security",
+    "welcome": "Community", "boosters": "Community", "birthday": "Community", "xp": "Community", "economy": "Community", "tickets": "Community", "starboard": "Community",
+    "tempvoice": "Community", "suggestions": "Community", "counting": "Community", "music": "Community",
+    "rules": "Structure and team", "archive": "Structure and team", "team": "Structure and team", "applications": "Structure and team",
+}
+
+INFO = {
+    "general": ("Prefix, language and turned off commands of this server.", "Prefix, Sprache und abgeschaltete Befehle dieses Servers."),
+    "modules": ("Turn whole features on or off.", "Ganze Funktionen ein- oder ausschalten."),
+    "log": ("Which channel receives which kind of log entry.", "Welcher Kanal welche Art von Protokolleintrag bekommt."),
+    "log_options": ("What the logs contain and what they leave out.", "Was die Protokolle enthalten und was sie auslassen."),
+    "debug": ("Error reports, usage statistics and diagnostics.", "Fehlerberichte, Nutzungsstatistik und Diagnose."),
+    "backup": ("Automatic backups of roles, channels and emojis.", "Automatische Sicherungen von Rollen, Kanälen und Emojis."),
+    "privacy": ("How long data of members who left is kept.", "Wie lange Daten ausgetretener Mitglieder aufbewahrt werden."),
+    "invites": ("Invite tracking: who joined with which invite.", "Einladungs-Tracking: wer mit welcher Einladung beigetreten ist."),
+    "mod": ("Warnings, escalation, expiry, reasons and appeals of punishments.", "Verwarnungen, Eskalation, Ablauf und Gründe von Strafen."),
+    "jail": ("The gulag: a role and a room for members under watch.", "Der Gulag: Rolle und Raum für Mitglieder unter Beobachtung."),
+    "automod": ("Automatic rules for spam, links, words, caps and mentions.", "Automatische Regeln gegen Spam, Links, Wörter, Großschreibung und Erwähnungen."),
+    "modmail": ("Members write to the team through the bot.", "Mitglieder schreiben dem Team über den Bot."),
+    "appeals": ("Ban appeals from the main server.", "Einsprüche gegen Banns vom Hauptserver."),
+    "reports": ("Members report messages to the staff.", "Mitglieder melden Nachrichten an das Team."),
+    "stickyroles": ("Restore roles, timeouts and mutes when a member returns.", "Rollen, Timeouts und Mutes wiederherstellen, wenn ein Mitglied zurückkehrt."),
+    "nicknames": ("Name moderation: dehoist, banned words, automatic renaming.", "Namensmoderation: Sonderzeichen, verbotene Wörter, automatisches Umbenennen."),
+    "watchlist": ("Silent watch list. The team is alerted at the first message.", "Stille Beobachtungsliste. Das Team wird bei der ersten Nachricht gewarnt."),
+    "approval": ("Four-eyes approval: a second moderator must agree to serious actions.", "Vier-Augen-Freigabe: Ein zweiter Moderator muss schweren Aktionen zustimmen."),
+    "antiscam": ("Detects fake giveaways and crypto scams in text and images.", "Erkennt Fake-Gewinnspiele und Krypto-Betrug in Text und Bildern."),
+    "antinuke": ("Stops mass deletions, permission grants and new bots.", "Stoppt Massenlöschungen, Rechtevergabe und neue Bots."),
+    "raid": ("Detects join swarms and reacts automatically.", "Erkennt Beitrittswellen und reagiert automatisch."),
+    "lockdown": ("Close the server or channels in an emergency.", "Server oder Kanäle im Notfall schließen."),
+    "verify": ("New members must verify before they get access.", "Neue Mitglieder müssen sich verifizieren, bevor sie Zugang bekommen."),
+    "probation": ("New members may not post links or files at first.", "Neue Mitglieder dürfen zunächst keine Links oder Dateien posten."),
+    "modwatch": ("Limits for moderators: too many bans or kicks trigger an alert.", "Grenzen für Moderatoren: zu viele Bans oder Kicks lösen Alarm aus."),
+    "permaudit": ("Reports roles with dangerous permissions.", "Meldet Rollen mit gefährlichen Rechten."),
+    "welcome": ("Welcome and goodbye messages, auto roles and direct messages.", "Begrüßung, Verabschiedung, Auto-Rollen und Direktnachrichten."),
+    "boosters": ("Thank members who boost the server.", "Mitgliedern danken, die den Server boosten."),
+    "birthday": ("Birthday role and message.", "Geburtstagsrolle und Nachricht."),
+    "xp": ("Levels, XP rates, level roles and the level-up message.", "Level, XP-Raten, Level-Rollen und die Level-Up-Nachricht."),
+    "economy": ("Currency, daily reward, work and shop.", "Währung, tägliche Belohnung, Arbeit und Shop."),
+    "tickets": ("Support tickets with types, panel and transcripts.", "Support-Tickets mit Arten, Panel und Protokollen."),
+    "starboard": ("Best messages are collected in a channel.", "Die besten Nachrichten werden in einem Kanal gesammelt."),
+    "tempvoice": ("Members create their own temporary voice rooms.", "Mitglieder erstellen eigene temporäre Sprachräume."),
+    "suggestions": ("Members suggest, others vote, the team decides.", "Mitglieder schlagen vor, andere stimmen ab, das Team entscheidet."),
+    "counting": ("Counting game in one channel.", "Zählspiel in einem Kanal."),
+    "music": ("Music player, library and downloads.", "Musikplayer, Bibliothek und Downloads."),
+    "rules": ("Rules with accept button, version and reminders.", "Regeln mit Annehmen-Knopf, Version und Erinnerungen."),
+    "archive": ("Report or move inactive channels.", "Inaktive Kanäle melden oder verschieben."),
+    "team": ("Team statistics, weekly report and duty roster.", "Teamstatistik, Wochenbericht und Dienstplan."),
+    "applications": ("Staff applications with a form and a team vote.", "Team-Bewerbungen mit Formular und Abstimmung."),
+}
+
+
+def build_stats(cfg, cases, count=30, today=None):
+    """Numbers for the charts: messages, joins, leaves and cases per day over the last days, plus case totals per type."""
+    from .cogs.community.activity import last_days
+    keys = last_days({}, count, today)
+    days = cfg["activity"]["days"]
+    first = keys[0]
+    per_day = {k: 0 for k in keys}
+    totals = {}
+    for c in cases:
+        day = datetime.fromtimestamp(c["ts"], timezone.utc).strftime("%Y-%m-%d")
+        if day >= first:
+            totals[c["type"]] = totals.get(c["type"], 0) + 1
+            if day in per_day:
+                per_day[day] += 1
+    return {
+        "days": keys,
+        "messages": [days.get(k, {}).get("msgs", 0) for k in keys],
+        "joins": [days.get(k, {}).get("joins", 0) for k in keys],
+        "leaves": [days.get(k, {}).get("leaves", 0) for k in keys],
+        "cases": [per_day[k] for k in keys],
+        "case_types": totals,
+    }
 
 
 def label(key):
@@ -229,6 +309,11 @@ def describe(cfg, commands):
             fields.append(dict(spec, value=value, group=" / ".join(label(p) for p in spec["path"].split(".")[1:-1])))
         if fields:
             sections.append({"key": top, "title": TITLES.get(top, label(top)), "fields": fields})
+    for s in sections:
+        s["category"] = CATEGORIES.get(s["key"], "More")
+        info = INFO.get(s["key"])
+        if info:
+            s["info"], s["info_de"] = info
     return sections
 
 
@@ -348,6 +433,7 @@ class Dashboard:
         app.router.add_get("/api/guild/{gid:\\d+}", self.guild_info)
         app.router.add_post("/api/guild/{gid:\\d+}/set", self.guild_set)
         app.router.add_get("/api/guild/{gid:\\d+}/cases", self.guild_cases)
+        app.router.add_get("/api/guild/{gid:\\d+}/stats", self.guild_stats)
         app.router.add_get("/api/guild/{gid:\\d+}/export", self.guild_export)
         app.router.add_post("/api/guild/{gid:\\d+}/import", self.guild_import)
         return app
@@ -593,6 +679,7 @@ class Dashboard:
             "latency_ms": round(self.bot.latency * 1000) if math.isfinite(self.bot.latency) else None,
             "channels": channels, "roles": roles, "sections": self.mark_editable(describe(cfg, self.commands()), level),
             "level": next(k for k, v in LEVELS.items() if v == level),
+            "module_status": [{"name": k, "on": on, "setup": setup} for k, (on, setup) in sorted(configio.module_status(cfg).items())],
         })
 
     @staticmethod
@@ -660,6 +747,16 @@ class Dashboard:
         cases = self.bot.store.cases(guild.id)[-100:][::-1]
         out = [{"id": c["id"], "type": c["type"], "user": c["user_name"], "mod": c.get("mod_name", ""), "reason": str(c["reason"])[:300], "ts": c["ts"], "active": c.get("active", True)} for c in cases]
         return web.json_response({"cases": out})
+
+    async def guild_stats(self, request):
+        """Numbers for the charts of the overview, read only."""
+        s = self.require(request)
+        guild = self.guild_for(request, s, need="viewer")
+        try:
+            count = min(90, max(7, int(request.query.get("days", "30"))))
+        except ValueError:
+            count = 30
+        return web.json_response(build_stats(self.bot.cfg(guild.id), self.bot.store.cases(guild.id), count))
 
     async def guild_export(self, request):
         """Download the portable settings as a file."""
