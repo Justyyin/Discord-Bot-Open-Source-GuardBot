@@ -1418,3 +1418,20 @@ GuardBot is inspired by [Embed Generator](https://github.com/merlinfuchs/embed-g
 Released under the MIT License. See [LICENSE](LICENSE).
 
 Copyright (c) Justyn - made in Germany
+<img width="1440" height="900" alt="en_login_1" src="https://github.com/user-attachments/assets/179c9526-2231-49a6-8941-d0171f0202a4" />
+<img width="1440" height="900" alt="en_overview_1" src="https://github.com/user-attachments/assets/4b1ea7aa-4ab9-42a5-8440-e893a33fcb24" />
+<img width="1440" height="900" alt="en_plugins_1" src="https://github.com/user-attachments/assets/99731048-adf7-4cb1-a3b9-bc8a4387337f" />
+<img width="1440" height="900" alt="en_p_automod_1" src="https://github.com/user-attachments/assets/2d42f809-dfb7-4cc6-a9d6-b4ed0eaba3d7" />
+<img width="1440" height="900" alt="en_p_automod_scroll_1" src="https://github.com/user-attachments/assets/4238c5f7-16fb-4757-8a70-3f0e92830824" />
+<img width="1440" height="900" alt="en_p_jail_pencil_1" src="https://github.com/user-attachments/assets/b5577125-11a0-432e-92cf-9ddaa6cc6643" />
+<img width="1440" height="900" alt="en_commands_1" src="https://github.com/user-attachments/assets/6f53008c-e058-4802-a9c0-2896b4ddea37" />
+<img width="1440" height="900" alt="en_panels_edit_1" src="https://github.com/user-attachments/assets/6ed3dfca-2741-4ffd-98f3-81766875b4ad" />
+<img width="1440" height="900" alt="en_skills_1" src="https://github.com/user-attachments/assets/a47dea39-df81-4831-8f8d-576a98224770" />
+<img width="1440" height="900" alt="en_ai_1" src="https://github.com/user-attachments/assets/1fa5f19a-8e8e-4a8e-86eb-056e8394dc2d" />
+<img width="1440" height="900" alt="en_music_1" src="https://github.com/user-attachments/assets/6f9526ed-d6cb-47a4-be6d-9c43a9c71ecc" />
+<img width="1440" height="900" alt="en_music_scroll_1" src="https://github.com/user-attachments/assets/004738dc-ba11-4caa-a51d-47b232aec279" />
+<img width="1440" height="900" alt="en_profile_1" src="https://github.com/user-attachments/assets/c26ccc70-9e29-40e6-8381-887248ace8af" />
+<img width="1440" height="900" alt="en_settings_1" src="https://github.com/user-attachments/assets/84598c2b-b4a0-4747-9f97-8db27b6afbcd" />
+<img width="1440" height="900" alt="en_settings_scroll_1" src="https://github.com/user-attachments/assets/076dae03-09e2-461a-a154-4c240066f191" />
+<img width="1440" height="900" alt="en_t_t1_1" src="https://github.com/user-attachments/assets/f21a0d04-4aaf-4af1-941e-23416e75243d" />
+<img width="1440" height="900" alt="en_t_t2_1" src="https://github.com/user-attachments/assets/ccedd30b-0025-4592-8666-f4be7b285b90" />
