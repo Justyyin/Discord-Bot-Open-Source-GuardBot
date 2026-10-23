@@ -1,5 +1,64 @@
 # Changelog
 
+## 1.11.0
+
+- Dashboard details: every plugin page explains what the plugin does, lists all of its functions with their own switch and a short explanation, and keeps the other settings in boxes below. Every setting has a help text. Plugin cards on the Plugins page and on the overview have a real on and off switch and show how many functions and settings they have. All new texts are in 12 languages (machine translated).
+- Guard Music: the music can run as a second bot in the same process, with its own token (MUSIC_TOKEN in .env, music_bot in settings.json), the same settings and data, and its own slash commands. It can stay in a voice channel around the clock (/music stay) and play a saved playlist on repeat, also after a restart. Without the token the music stays inside GuardBot as before.
+- Music sources: YouTube and SoundCloud play directly. Spotify, Apple Music and Tidal links are read for title and artist and played from the search source (YouTube or SoundCloud); nothing is downloaded from these services. Tidal albums and playlists use the official Tidal API with your own free key. Each source can be switched off per server (/music sources).
+- Saved playlists (/music playlist save, add, play, show, remove, delete) that mix all sources and the music folder.
+- Dashboard page Music: player with pause, skip, stop, mix, repeat and volume, the queue, adding links, searches and folder music, editing playlists, the 24/7 mode, the sources and the setup guide with the note that use is at your own risk.
+- Dashboard appearance (Settings): accent colour, background, boxes and text colour, a wallpaper with darkening and blur, compact view, hidden categories, and own menus and tabs in the side bar (a set of plugins, a shortcut to a page, an https link or a note). Stored per server, checked strictly, and the wallpaper is served only to signed-in users of the server.
+- Footer with copyright, Discord and GitHub links. The official logos can be added as guardbot/web/brand/discord.svg and github.svg; without them the dashboard shows its own simple icons.
+- Playlists from the dashboard keep only music folder files that really are inside the folder.
+- Documentation: Music, Guard Music, sources and appearance in all 12 README and GUIDE files.
+- Tests: 393.
+
+## 1.10.0
+
+- Dashboard in 12 languages: a language menu in the top bar and on the sign-in page. The choice is kept in the browser and does not change the server language. All page texts, section titles, explanations, field labels, groups, choices, categories and plugin descriptions are translated (machine translated); anything missing falls back to English.
+- The translations live in `guardbot/locales/dashboard/<lang>.json` and are served by the public route `/api/texts/<lang>`; `guardbot/dashtexts.py` collects the English texts, and a test checks that every language is complete and keeps the placeholders.
+- The search on the overview also finds settings by their translated names.
+- Overview: the charts come first, then the setup status and the module switches.
+- Clearer English labels for some fields (for example "OCR language" instead of "ocr_lang").
+- Tests: 367.
+
+## 1.9.0
+
+- Dashboard redesign in a dark look: top bar with the user, a left bar with the server picker, the main pages (Overview, Plugins, Commands, Panels, Skills, AI, Bot profile, Settings, Moderation cases, Backup) and every plugin grouped by category with a dot that shows whether it is on; categories can be folded.
+- Plugins page: every module as a card with icon, short description and an Active or Activate button, with tabs per category.
+- A page per plugin: the switch Active at the top, its settings in boxes that open and close, and its commands with a switch and a pencil that opens the role editor. Plugins with their own page (Panels, Skills, AI) link to it.
+- Settings page for prefix, language and the settings that belong to no single plugin.
+- `guardbot/plugins.py` holds the catalog of the plugins (category, icon, sections, texts in English and German); a test checks that every module and section is covered.
+- The icons are simple line drawings made for this dashboard.
+
+## 1.8.0
+
+- Panels (`/panel`, `guardbot/panels.py`): posts made of banner pictures, text boxes and buttons, for example a welcome post, rules, a role choice, notification buttons or a verification gate. Templates for each of these with texts in the server language. A section has a banner above the box, title, text, colour, a large picture, a small picture and a footer; buttons give or take roles (optionally only one role of the panel at a time), start the verification, or open a link, and keep working after a restart.
+- Pictures are uploaded as command options or in the dashboard, checked (PNG, JPEG, GIF, WebP, at most 8 MB), stored once in `data/panels/<server>/` and removed when no panel uses them, because links to Discord attachments stop working after a while.
+- `/panel post` posts a panel and replaces an older post of it, `/panel update` changes the posted messages in place after an edit, `/panel preview` shows it only to you.
+- Dashboard: new page Panels to create panels from templates, upload pictures, edit sections and buttons, post and update. Pictures are served only to signed-in users of the server.
+- Documentation: section Panels in all 12 README files, COMMANDS.md, PRIVACY.md, TESTING.md.
+- Tests: 361.
+
+## 1.7.1
+
+- Gulag notice: the "Account Security Required" message now looks like the template (lock in the title, numbered steps, bold words, footer "Account Safety Check" with the server icon and the time) and is posted with a mention for everyone who comes into the gulag: by command, by AutoMod, by the anti-scam check, when a jailed member rejoins, and when someone gives the gulag role by hand. Taking the role away by hand clears the gulag entry. Changes the bot makes itself are not reported twice.
+- Reminder: while someone is in the gulag, an "Account Recovery Reminder" stays at the bottom of the gulag channel and is renewed every 10 minutes (edited when nothing was written since, moved down otherwise, removed when the gulag is empty).
+- Release requests: a member in the gulag who writes the prefix and the release word (default `unban`, so `!unban`) in the gulag channel creates a request with Release and Keep buttons that only the staff role or Manage Roles can use. The bot never releases anyone on its own, and the moderation command `unban` does not react to this message.
+- `/access jailsetup reminder` switches notice, reminder and requests on or off and sets the interval and the word; the dashboard shows the same settings. `/access jailsetup preview` shows both messages. All texts are translated into the server language (machine translated).
+- Tests: 351.
+
+## 1.7.0
+
+- Skills (`guardbot/skills.py`, `/support skill`): commands, games (dice, choice, slots, rock paper scissors, quiz) and automations (member joins or leaves, message contains words, button) built from a fixed set of actions and conditions. Skills are data, never code: every field is checked, unknown fields are refused, and there are limits for actions, messages, role changes, coins and counters. The bot only hands out roles below its own highest role without dangerous permissions. Skills run with `/support skill run`, with the prefix and from persistent buttons (`/support skill panel`).
+- AI connection (`guardbot/ai.py`, `/support ai`): Anthropic, OpenAI and Kimi (Moonshot) with the key of the server. The key is entered in a private box or in the dashboard, stored encrypted (secret in `data/ai.secret`), never shown, logged or exported, and the provider can only change together with a new key. Daily limit, wait time per person and answer length can be set. `/support ai make` writes a skill from a description; the answer is checked like an imported skill and saved only after confirmation.
+- Anti-scam: a learned filter per server (naive Bayes over hashed words, trained with "Mark as scam" and the new "Not a scam" menu, optional sampling of normal messages), picture fingerprints that find re-saved or resized scam pictures without Tesseract, and an optional AI second opinion for borderline cases that can only lead to the normal anti-scam action.
+- Dashboard: new pages Commands (every slash command, prefix command and context menu with module, permission and state; switch on or off, allowed and denied roles, short names, prefix), Skills (list, switch, edit as JSON with the same checks), AI (model, limits, write-only key) and Bot profile (name, picture, banner and about text on the server; everywhere for the owner of the application or `owner_ids`). Bodies of normal requests stay limited to 256 KiB. The moderation cases page loads again (wrong address since 1.5).
+- Privacy: counters of skills per member are part of the member export and deletion. PRIVACY.md describes what the AI features send.
+- Fix: `scripts/missing_texts.py` scanned no file after the cogs moved into folders in 1.5.2; it now scans all of them and also texts listed in `TEXTS` tuples.
+- Documentation: section Skills and AI and the new dashboard pages in all 12 README files, a short section in all guides, COMMANDS.md, TESTING.md. The Korean README had three sections in the wrong place; they are back where the other languages have them.
+- Tests: 342.
+
 ## 1.6.0
 
 - Storage: the settings of a server are saved one row per section (`config_sections`), so a change writes only that section instead of the whole server. Schema version 3 converts the old rows once, after an automatic backup. Memory use is about 30 KiB of settings per server and about 400 bytes per user record (`python scripts/bench.py` prints it).

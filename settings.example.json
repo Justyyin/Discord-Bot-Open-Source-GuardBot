@@ -23,6 +23,13 @@
   "health_host": "127.0.0.1",
   "metrics_token": "",
   "music_generic": true,
+  "music_bot": {
+    "enabled": false,
+    "token_env": "MUSIC_TOKEN",
+    "message_content": true,
+    "status": "/play"
+  },
+  "tidal_country": "US",
   "tesseract": null,
   "dashboard": {
     "enabled": false,
@@ -56,5 +63,6 @@
       "threads": 1,
       "limit": 4
     }
-  }
+  },
+  "owner_ids": []
 }

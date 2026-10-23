@@ -69,6 +69,9 @@ Source files are in `guardbot/`: `core.py` (bot and start-up), `store.py` (SQLit
 | `tools/shortcuts.py` | Short top-level commands /security block, /security unblock and /security blocklist for the AutoMod blocklist | `/security` |
 | `server/structure.py` | Server structure: channels and categories by command, archiving of idle channels, timed roles and role templates | `/structure` |
 | `community/tags.py` | Custom commands (tags) that anyone can call, and autoresponders that answer matching messages | `/support` |
+| `tools/skills.py` | Skills: commands, games and automations built from safe building blocks | `/support skill` |
+| `tools/panels.py` | Panels: posts with banner pictures, embeds and role, verify and link buttons | `/panel` |
+| `tools/aicog.py` | AI connection with the key of the server, skills written by the AI | `/support ai` |
 | `server/team.py` | Team: statistics of the moderators, a weekly report, absence and duty roster | `/team` |
 | `moderation/tickets.py` | Ticket system with buttons and transcripts | `/support` |
 | `tools/tools.py` | Moderator tools: purge, slowmode, channel lock, role handling, say and embed | `/access`, `/moderation`, `/post` |
