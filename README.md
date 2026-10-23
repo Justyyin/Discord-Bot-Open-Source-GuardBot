@@ -1,3 +1,5 @@
+<img width="1440" height="900" alt="en_overview_1" src="https://github.com/user-attachments/assets/bc6b3963-01c0-4b8b-a708-4872ed88f3ae" />
+
 # GuardBot
 
 [Deutsch](docs/de/README.md) | **English** | [Français](docs/fr/README.md) | [Español](docs/es/README.md) | [Português](docs/pt/README.md) | [Русский](docs/ru/README.md) | [Українська](docs/uk/README.md) | [Svenska](docs/sv/README.md) | [Dansk](docs/da/README.md) | [中文](docs/zh/README.md) | [日本語](docs/ja/README.md) | [한국어](docs/ko/README.md)
