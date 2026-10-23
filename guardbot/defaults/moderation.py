@@ -20,6 +20,12 @@ SPEC: dict[str, Any] = {
         "channel": None,
         "staff_role": None,
         "notice": None,
+        "security_notice": True,
+        "reminder": True,
+        "reminder_minutes": 10,
+        "release_requests": True,
+        "release_word": "unban",
+        "reminder_message": None,
         "timed": {},
     },
     "tickets": {

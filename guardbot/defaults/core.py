@@ -21,5 +21,6 @@ SPEC: dict[str, Any] = {
     "archive": {"days": 60, "action": "report", "category": None, "report_channel": None, "ignore_channels": [], "ignore_categories": [], "interval_hours": 24, "last_scan": 0, "reported": {}},
     "rules": {"channel": None, "message": None, "role": None, "title": "Server rules", "text": [], "version": 1, "remind": True, "remind_hours": 48, "changed": 0},
     "dashboard_access": {"viewer_roles": [], "mod_roles": []},
+    "look": {"accent": None, "background": None, "surface": None, "text": None, "wallpaper": None, "dim": 55, "blur": 0, "compact": False, "hide_categories": [], "menus": [], "tabs": []},
     "debug": {"error_channel": None, "selftest": True, "usage_stats": True, "last_hash": None, "usage": {}, "errors": 0},
 }
