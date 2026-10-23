@@ -18,6 +18,7 @@
 - [音乐（可选）](#音乐可选)
 - [可选：读取图片与语言](#可选读取图片与语言)
 - [控制面板](#控制面板)
+- [技能、AI 与机器人资料（可选）](#技能ai-与机器人资料可选)
 - [故障排除](#故障排除)
 - [支持](#支持)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music：若要让音乐在可以全天候留在语音频道的独立机器人上运行，请在 Discord Developer Portal 中创建第二个应用，将其令牌以 MUSIC_TOKEN 写入 .env，并在 settings.json 中把 music_bot.enabled 设为 true。重启后，控制面板的“音乐”页面会显示一个将 Guard Music 添加到服务器的按钮。Spotify、Apple Music 和 Tidal 链接通过 YouTube 或 SoundCloud 播放；Tidal 的专辑和播放列表还需要在 .env 中填写 TIDAL_CLIENT_ID 和 TIDAL_CLIENT_SECRET。使用风险自负，请参阅 README 的“音乐”部分。
+
 ## 可选：读取图片与语言
 
 要让反诈骗模块读取图片中的文字，请在运行机器人的电脑上安装 tesseract（Docker 镜像已包含）。然后用 /security antiscam status 检查是否就绪。用 /admin language 选择成员看到的消息语言。
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## 技能、AI 与机器人资料（可选）
+
+技能只需要机器人本身：从 `/support skill create` 开始。使用 AI 需要在 Anthropic、OpenAI 或 Kimi（Moonshot）拥有账号和 API 密钥；运行 `/support ai setup`，把密钥粘贴到私密输入框。请把文件 `data/ai.secret` 与备份一起保存。机器人的名称、头像和横幅可在控制面板的“机器人资料”中更改；若要在所有地方更改，请把你的 Discord ID 加入 `settings.json` 的 `owner_ids`（或成为应用的所有者）。详情见 README 的“技能与 AI”一节。
 
 ## 故障排除
 

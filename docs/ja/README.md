@@ -28,6 +28,7 @@
   - [構成、メンバー、チーム](#構成メンバーチーム)
 - [ダッシュボード](#ダッシュボード)
   - [ダッシュボードの設定](#ダッシュボードの設定)
+  - [コマンド、スキル、AI、ボットのプロフィール](#コマンドスキルaiボットのプロフィール)
   - [セキュリティ](#セキュリティ-1)
   - [VPS でのダッシュボード](#vps-でのダッシュボード)
 - [コマンド](#コマンド)
@@ -66,6 +67,8 @@
   - [アクティビティ、一括操作、ケース検索](#アクティビティ一括操作ケース検索)
   - [詐欺対策・暗号資産対策](#詐欺対策暗号資産対策)
   - [仮参加期間、群れの検出、タイムライン、学習](#仮参加期間群れの検出タイムライン学習)
+  - [パネル](#パネル)
+  - [スキルとAI](#スキルとai)
   - [メッセージビルダーと更新](#メッセージビルダーと更新)
   - [運用](#運用)
   - [管理](#管理-1)
@@ -128,6 +131,7 @@ GuardBot は、多くのサーバーがホスト型ボットで有料利用し�
 - ロールとチャンネル構成のバックアップと復元。
 - ロール、チャンネル、絵文字、Webhook のスケジュール自動バックアップと、足りないものだけを追加する復元コマンド。
 - ダッシュボード：Discord でログインしたあと、ブラウザーで各サーバーの設定を変更できます。対象はサーバーを管理するメンバーのみで、ボットが接続している間だけ使えます。
+- スキル：安全なブロックで作る独自のコマンド、ゲーム、自動化。自分のキー（Anthropic、OpenAI、Kimi）でAIに書かせることもできます。ダッシュボードはすべてのコマンドを一覧表示し、スキル、AI設定、ボットのプロフィールを編集できます。
 
 ## プロジェクトの状況
 
@@ -364,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### コマンド、スキル、AI、ボットのプロフィール
+
+ダッシュボードにはさらに5つのページがあります。Panels（「パネル」の項を参照）と、次の4つです。「コマンド」は、すべてのスラッシュコマンド、プレフィックスコマンド、コンテキストメニューを、モジュール、必要な権限、オンかどうかとともに一覧表示します。管理者はオン・オフの切り替え、ロールの許可や拒否、プレフィックスコマンドの短い名前の設定ができます。プレフィックスも同じページで変更します。「スキル」はすべてのスキルを表示し、コマンドと同じ検査のもとでJSONとして編集します。「AI」はモデルと制限を設定し、キーを保存します（書き込み専用で、ページに返されることはありません）。「ボットのプロフィール」は、このサーバーでのボットの名前、画像、バナー、紹介文を変更します。ボットのアプリケーションの所有者、またはsettings.jsonの `owner_ids` に載っているIDは、すべての場所でも変更できます。Discordは名前と画像の変更頻度を制限しています。すべての変更は監査ログに記録されます。
+
+各モジュールはプラグインとして表示されます。Plugins ページではカテゴリごとにカードで並び、各プラグインには「有効」スイッチ、開閉できるボックスに入った設定、スイッチとロール編集付きのコマンドを備えた専用ページがあります。左のバーはカテゴリごとにプラグインを並べ、点でオンかどうかを示します。ダッシュボードはダークデザインです。
+
+ダッシュボードはボットの 12 言語すべてで表示できます。言語は右上またはログインページで選びます。選択はブラウザに保存され、サーバーの言語は変わりません。ダッシュボードの文章は機械翻訳です。
+
+各プラグインページでは、そのプラグインができることを説明し、すべての機能を個別のスイッチと短い説明付きで一覧にし、その他の設定は下のボックスにまとめます。「プラグイン」ページと概要では、各プラグインを直接オン・オフできます。「設定」の「ダッシュボードの外観」ボックスでは、アクセントカラー、背景、ボックス、文字の色を変え、壁紙 (好みで暗くしたりぼかしたり) を設定し、サイドバーに独自のメニューとタブを追加できます。タブには選んだプラグインをまとめる、ページを開く、https のアドレスにリンクする、メモを表示する、のいずれかを設定できます。外観はサーバーごとに保存され、そのダッシュボードを開く全員に表示されます。フッターには著作権表示と Discord・GitHub へのリンクがあります。公式ロゴを表示するには、Discord と GitHub のブランドページから入手した discord.svg と github.svg を guardbot/web/brand/ に置いてください。
+
 ### セキュリティ
 
 - ログインは Discord のみです（OAuth2、スコープ identify）。アクセストークンはすぐに無効化され、保存されません。
@@ -467,11 +481,14 @@ dashboard.example.com {
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+グラグに入った人は、コマンド、AutoMod、スキャム対策、再参加、または誰かが手動でロールを付けた場合のいずれでも、メンション付きで Account Security Required の通知を受け取ります。グラグに誰かいる間は、チャンネルの一番下に Account Recovery Reminder が置かれ、10分ごとに更新されます。グラグにいるメンバーがグラグのチャンネルでプレフィックスと解放ワード（例：`!unban`）を書くと、スタッフ向けに Release と Keep のボタン付きの解放リクエストが作られます。ボットが自分で誰かを解放することはありません。`/access jailsetup reminder` で各部分のオン・オフ、間隔、ワードを設定できます。
 
 ### 自動モデレーション
 
@@ -973,6 +990,11 @@ dashboard.example.com {
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -982,6 +1004,17 @@ dashboard.example.com {
 ```
 
 ロスレス：自分で追加したファイル（FLAC、WAV、ALAC）やFLACを提供するソースはそのまま再生されます。YouTubeやSoundCloudなどは非可逆音声しか提供しておらず、後からロスレスにすることはできません。Discordは音声をOpusで送信し、ボットはボイスチャンネルのビットレートを使います。責任：コンテンツのダウンロードや再生はサイトの利用規約や著作権法に違反する場合があります。ダウンロードは初期設定でオフで、モジュールも有効にするまでオフです。再生・保存される内容の責任はボットの運営者にあります。
+
+ソース: YouTube と SoundCloud のリンクと検索はそのまま再生されます。Spotify、Apple Music、Tidal のリンクも受け付けますが、これらのサービスは音声を提供しません。ボットは公開ページからタイトルとアーティストを読み取り、検索ソース (YouTube または SoundCloud、/music sources で設定) から同じ曲を再生します。Spotify と Apple Music のアルバムやプレイリストは公開ページから読み取ります。Tidal のアルバムとプレイリストには developer.tidal.com の無料開発者キーを .env に入れる必要があります (TIDAL_CLIENT_ID と TIDAL_CLIENT_SECRET)。音楽フォルダのファイルはそのまま再生されます。保存したプレイリストにはすべてのソースを混ぜられ、/music stay はボットを 24 時間ボイスチャンネルに留め、再起動後もプレイリストを繰り返し再生します。
+
+Guard Music (2 つ目のボット): 音楽を専用のボットアカウントで動かせるので、モデレーションに影響せず常にボイスチャンネルに留まれます。
+
+1. Discord Developer Portal で 2 つ目のアプリケーションを作成し、Guard Music と名付けて、そのボットのトークンをコピーします。
+2. トークンを .env に MUSIC_TOKEN として書き込み、settings.json の music_bot.enabled を true にします。
+3. GuardBot を再起動します。Guard Music は同じプロセスで起動し、同じ設定とデータを使い、音楽コマンドは Guard Music に移ります。
+4. ダッシュボードの「音楽」ページを開き、そこにあるボタンで Guard Music をサーバーに追加します。MUSIC_TOKEN がなければ音楽は GuardBot に残ります。
+
+利用は自己責任です。YouTube などのサービスからのストリーミングは各サービスの利用規約に反する場合があり、再生する内容には著作権が適用されます。Spotify、Apple Music、Tidal からは何もダウンロードせず、保護を回避することもありません。再生内容の責任はボットの運営者にあります。ダッシュボードの「音楽」ページには、プレイヤー、キュー、プレイリスト、24/7 モード、ソース、このガイドが表示されます。
 
 ### セットアップとヘルスチェック
 
@@ -1093,6 +1126,74 @@ dashboard.example.com {
 /security unblock kind:link number:1
 /security antiscam set learn_emoji:X
 ```
+
+### パネル
+
+パネルは、ようこそ投稿、ルール、ロール選択、通知ボタン、認証などの投稿で、バナー画像、テキストボックス、ボタンで構成されます。`/panel` またはダッシュボードの Panels ページで作成します。画像はそこで、またはコマンドのオプションでアップロードし、ボットが `data/panels` に保存するので、リンク切れになりません。
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+テンプレート：empty、welcome、rules、roles、notifications、verify。テキストはサーバーの言語で、変更できます。`/panel section` はタイトル、本文、フッターのフォームを開きます。各セクションは1つのメッセージになり、バナーはボックスの上、大きな画像はボックス内、小さな画像は右上に表示されます。ボタンは最後のセクションの下に1行5個まで並びます。ロールボタンはロールを付与または解除し、`single` がオンならパネルのほかのロールは外されます。verify ボタンは認証モジュールの認証を開始します（ボタン、キャプチャ、計算は `/access verify setup` で選びます）。テキストでは `{server}` と `{count}` を使えます。編集後は `/panel update` で投稿済みのメッセージを更新します。サーバーごとの上限：パネル25個、1パネルにつきセクション5個とボタン20個、8 MBまでの画像40枚。ボットは自分の最上位ロールより下で、危険な権限を持たないロールだけを提供します。
+
+### スキルとAI
+
+スキルは、サーバー自身が安全なブロックから組み立てるコマンド、ゲーム、自動化です。AIは不要で、コードを実行することは決してありません。AIは任意です。自分のキーを使うと、説明からスキルを書いてくれたり、スキャム対策のチェックでセカンドオピニオンを出してくれたりします。
+
+AIなしのスキル：
+
+- `/support skill create kind:command name:hello` は、変更できる小さな例の入った入力欄を開きます。`/support skill edit`、`show`、`import`、`enable`、`disable`、`delete`、`list`、`stats` で管理します。誰でも `/support skill run` またはプレフィックス（例：`!hello`）でスキルを使えます。`/support skill panel` はスキルを実行するボタンを投稿します。
+- 種類：コマンド（アクションの一覧）、ゲーム（サイコロ、選択、スロット、じゃんけん、クイズ）、自動化（メンバーの参加や退出、メッセージに特定の語が含まれたとき、ボタンが押されたときに開始）。
+- アクション：返信、チャンネルへ送信、DM、ログ、ロールの付与や削除、カウンターの変更、コインの付与、ランダム選択。アクションには条件を付けられます：ロールを持つ、確率、カウンターと数値の比較。
+- テキストでは `{user}`、`{user_name}`、`{server}`、`{channel}`、`{count}`、`{arg1}`、`{arg2}`、`{var:name}`、`{uvar:name}`、`{random:1-6}` を使えます。
+- 制限：サーバーあたり50スキル、1スキルあたり10アクション、ロール変更3回、メッセージ4件。ボットは、自身の最上位ロールより下にあり、危険な権限を持たないロールだけを付与します。コインを付与するスキルには60秒以上のクールダウンが必要です。ボットのコマンド、エイリアス、タグの名前は使えません。
+- スキルはJSONとして保存され、設定のエクスポートに含まれます。未知のフィールドは拒否されるため、どこから来たスキルでもブロックが許すことしかできません。
+
+例：ロールを付与して使用回数を数えるコマンド（ロールIDを置き換えてください）：
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+AI接続（任意）：
+
+- `/support ai setup provider:kimi agree:true` は、APIキー用の非公開の入力欄を開きます。プロバイダーはAnthropic、OpenAI、Kimi（Moonshot）です。モデルが提案され、同じコマンドまたはダッシュボードで変更できます。モデル名はプロバイダー側で変わるため、各ドキュメントを確認してください。料金はプロバイダーに支払います。
+- `/support ai make wish:...` はAIにスキルを依頼し、インポートしたスキルと同じ厳しさで回答を検査してプレビューを表示します。保存を押すまで何も保存されません。
+- `/support ai status`、`limits`（1日のリクエスト数、1人あたりのリクエスト間隔の秒数）、`remove` で一式です。キーは暗号化して保存され、その秘密はファイル `data/ai.secret` にあります。このファイルはバックアップと一緒に保管してください。ないと保存したキーは読めず、入力し直す必要があります。キーが表示、記録、エクスポートされることはありません。プロバイダーは新しいキーと一緒にしか変更できないため、キーが別のプロバイダーに送られることはありません。
+- 送信される内容：`/support ai make` の依頼文と、セカンドオピニオンでは疑わしいメッセージのテキストです。それ以外は送信されず、モジュール `ai` がオンの間だけです。[PRIVACY.md](../PRIVACY.md) を参照してください。
+
+スキャム対策の学習：
+
+- 学習フィルター（`/security antiscam set learned:true`）は、サーバーごとの小さな分類器です。モデレーターはコンテキストメニューの「Mark as scam」と「Not a scam」で学習させます。保存するのは語の短いハッシュだけでテキストは保存せず、スキャム8件と通常30件を見てから初めて動作し、その後も95パーセントを超えたときだけ動きます。`ham_sampling` を使うと、通常メッセージの10件に1件からも学習します。
+- 類似画像（`similar`、既定でオン）は、画像のフィンガープリントを既知のスキャム画像と比較するため、保存し直したりサイズを変えたりしたコピーも見つかります。Tesseractなしで動作します。
+- AIのセカンドオピニオン（`/support ai limits second_opinion:true`）：しきい値のすぐ下のケースや、学習フィルターが疑わしいと判断したケースでAIに尋ねます。AIが80パーセント以上の確信度でスキャムと答えたときだけメッセージが削除され、その回答が他のことを引き起こすことはありません。
 
 ### メッセージビルダーと更新
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             スキルエンジン：スキルを検査して実行
+    ai.py                 AIプロバイダー、暗号化されたキー、制限
+    learner.py, imgsim.py スキャム対策の学習フィルター、画像フィンガープリント
+    dashboard_manage.py   コマンド、スキル、AI、プロフィールのダッシュボードページ
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ guardbot/
 - ボットはメンバーからのダイレクトメッセージを無視します。
 - トークンは .env ファイルから読み込まれます。共有したり公開したりしないでください。
 - メンバーは /info mydata で自分のデータをエクスポートおよび削除できます。管理者は、退出したメンバーのデータを保持する期間を設定できます。
+- AI機能は自分のキーを追加するまでオフです。追加後も、選んだプロバイダーに送信されるのは `/support ai make` のテキストと、セカンドオピニオンでの疑わしいメッセージだけです。
 - [PRIVACY.md](../PRIVACY.md)
 
 ## サポート

@@ -57,7 +57,7 @@ Protection against raids, scams and nukes.
 | `/security antinuke status` | Show the anti-nuke settings |  |
 | `/security antinuke whitelist` | Toggle a user who is never checked | `user` |
 | `/security antiscam forget` | Forget all remembered scam images |  |
-| `/security antiscam set` | Change the settings | `action`?, `threshold`?, `text`?, `images`?, `ocr_lang`?, `max_images`?, `learn_emoji`? |
+| `/security antiscam set` | Change the settings | `action`?, `threshold`?, `text`?, `images`?, `ocr_lang`?, `max_images`?, `learn_emoji`?, `learned`?, `similar`?, `ham_sampling`? |
 | `/security antiscam status` | Show the settings |  |
 | `/security antiscam test` | Try a text and see the score | `text` |
 | `/security antiscam testimage` | Read the text of an image and show the score | `image` |
@@ -80,7 +80,8 @@ New members, verification and lockdown.
 | --- | --- | --- |
 | `/access jailsetup apply` | Apply the gulag permissions to all channels again |  |
 | `/access jailsetup notice` | Set a custom notice text (empty = default security steps) | `text`? |
-| `/access jailsetup preview` | Preview the notice |  |
+| `/access jailsetup preview` | Preview the notice and the reminder |  |
+| `/access jailsetup reminder` | Notice, reminder and release requests of the gulag | `notice`?, `reminder`?, `minutes`?, `requests`?, `word`? |
 | `/access jailsetup setup` | Create or select the gulag role, channel and staff role | `role`?, `channel`?, `staff_role`? |
 | `/access lockchannel` | Stop everyone from writing in one channel | `channel`?, `reason`? |
 | `/access lockdown` | Lock the whole server | `mode`?, `reason`? |
@@ -270,13 +271,30 @@ Economy, giveaways, polls, counting and starboard.
 
 ## /support
 
-Tickets, suggestions, tags and automatic replies.
+Tickets, suggestions, tags, skills and automatic replies.
 
 | Command | Description | Options |
 | --- | --- | --- |
+| `/support ai limits` | Set how much the AI may be used | `daily`?, `cooldown`?, `second_opinion`? |
+| `/support ai make` | Let the AI build a skill from your description | `wish` |
+| `/support ai privacy` | What is sent to the provider |  |
+| `/support ai remove` | Delete the stored key |  |
+| `/support ai setup` | Connect a provider with your own API key | `provider`, `agree`, `model`? |
+| `/support ai status` | Show the AI settings and today's use |  |
 | `/support autoresponder add` | Answer messages that match a trigger | `trigger`, `response`, `mode`?, `cooldown`? |
 | `/support autoresponder list` | List all autoresponders |  |
 | `/support autoresponder remove` | Delete an autoresponder | `id` |
+| `/support skill create` | Create a skill from an example you can change | `kind`, `name` |
+| `/support skill delete` | Delete a skill | `name` |
+| `/support skill disable` | Turn a skill off | `name` |
+| `/support skill edit` | Change a skill | `name` |
+| `/support skill enable` | Turn a skill on | `name` |
+| `/support skill import` | Add a skill from JSON text |  |
+| `/support skill list` | List the skills of this server |  |
+| `/support skill panel` | Post a message with buttons for skills | `names`, `text`? |
+| `/support skill run` | Use a skill | `name`, `arg1`?, `arg2`? |
+| `/support skill show` | Show a skill as JSON | `name` |
+| `/support skill stats` | Show how often skills were used |  |
 | `/support suggest` | Post a suggestion | `text` |
 | `/support tag create` | Create a tag | `name`, `text` |
 | `/support tag delete` | Delete a tag | `name` |
@@ -466,11 +484,19 @@ Messages, scheduled posts, feeds and role menus.
 | `/music library info` | Show how big the library is |  |
 | `/music library list` | List artists, or the albums and tracks of one artist | `artist`? |
 | `/music library play` | Play something from the library | `query` |
+| `/music library playall` | Queue all tracks of an artist, album or folder (* for everything) | `query`, `shuffle`? |
 | `/music library scan` | Read the music folder again |  |
 | `/music library search` | Search the library | `query` |
 | `/music loop` | Repeat the track or the queue | `mode` |
 | `/music nowplaying` | Show the current track |  |
 | `/music pause` | Pause the music |  |
+| `/music playlist add` | Add a link or search result to a playlist | `name`, `query` |
+| `/music playlist delete` | Delete a playlist | `name` |
+| `/music playlist list` | List the saved playlists |  |
+| `/music playlist play` | Play a saved playlist | `name`, `shuffle`? |
+| `/music playlist remove` | Remove a track from a playlist by its number | `name`, `number` |
+| `/music playlist save` | Save the current track and the queue as a playlist | `name` |
+| `/music playlist show` | Show the tracks of a playlist | `name`, `page`? |
 | `/music queue` | Show the queue | `page`? |
 | `/music remove` | Remove a waiting track by its number | `number` |
 | `/music resume` | Continue the music |  |
@@ -478,7 +504,9 @@ Messages, scheduled posts, feeds and role menus.
 | `/music settings` | Change the music settings (Manage Server) | `dj_role`?, `volume`?, `max_queue`?, `per_user`?, `max_minutes`?, `idle_leave`?, `allow_links`?, `allow_search`?, `allow_playlists`?, `library`?, `allow_download`?, `download_format`?, `announce`? |
 | `/music shuffle` | Mix the waiting tracks |  |
 | `/music skip` | Skip the current track |  |
+| `/music sources` | Switch music sources on or off (Manage Server) | `youtube`?, `soundcloud`?, `spotify`?, `apple_music`?, `tidal`?, `search`? |
 | `/music status` | Show the music settings and whether this machine is ready |  |
+| `/music stay` | 24/7: stay in a voice channel and play a playlist on repeat (Manage Server) | `enabled`, `channel`?, `playlist`? |
 | `/music stop` | Stop playing and clear the queue |  |
 | `/music volume` | Set the volume (1 to 150 percent) | `percent` |
 | `/notify list` | Show all topics |  |
@@ -487,6 +515,18 @@ Messages, scheduled posts, feeds and role menus.
 | `/notify topic panel` | Post a panel with a button for every topic | `channel`, `title`? |
 | `/notify topic remove` | Delete a notification topic | `key` |
 | `/notify unsubscribe` | Stop notifications for a topic | `topic` |
+| `/panel button` | Add a role, verification or link button | `name`, `kind`, `label`?, `emoji`?, `role`?, `url`?, `style`? |
+| `/panel create` | Create a panel, empty or from a template | `name`, `template`?, `channel`? |
+| `/panel delete` | Delete a panel | `name`, `messages`? |
+| `/panel list` | List the panels |  |
+| `/panel post` | Post the panel, older posts of it are replaced | `name`, `channel`? |
+| `/panel preview` | Show the panel only to you | `name` |
+| `/panel removebutton` | Remove a button | `name`, `number` |
+| `/panel removesection` | Remove a section | `name`, `number` |
+| `/panel section` | Add or change a section with banner, text and pictures | `name`, `number`?, `banner`?, `image`?, `thumbnail`?, `color`?, `remove`? |
+| `/panel show` | Show a panel as JSON | `name` |
+| `/panel single` | Allow only one role of this panel at a time | `name`, `value` |
+| `/panel update` | Change the posted panel in place after an edit | `name` |
 | `/play` | Play a link, or search the library and the web | `query` |
 | `/report send` | Report a message to the staff | `message_link`, `reason`? |
 | `/report setup clearping` | Stop pinging a role for new reports |  |

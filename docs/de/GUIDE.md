@@ -18,6 +18,7 @@ Diese Anleitung zeigt, wie du GuardBot auf deinem eigenen Computer oder auf eine
 - [Musik (optional)](#musik-optional)
 - [Optional: Bilder lesen und Sprachen](#optional-bilder-lesen-und-sprachen)
 - [Dashboard](#dashboard)
+- [Skills, KI und Bot-Profil (optional)](#skills-ki-und-bot-profil-optional)
 - [Fehlerbehebung](#fehlerbehebung)
 - [Support](#support)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: Damit die Musik auf einem eigenen Bot läuft, der rund um die Uhr in einem Sprachkanal bleiben kann, erstelle im Discord Developer Portal eine zweite Anwendung, trage ihr Token in .env als MUSIC_TOKEN ein und setze music_bot.enabled in settings.json auf true. Nach einem Neustart zeigt die Seite Musik im Dashboard einen Button, der Guard Music zum Server hinzufügt. Links von Spotify, Apple Music und Tidal werden über YouTube oder SoundCloud gespielt; Alben und Playlists von Tidal brauchen zusätzlich TIDAL_CLIENT_ID und TIDAL_CLIENT_SECRET in .env. Nutzung auf eigene Gefahr, siehe den Abschnitt Musik in der README.
+
 ## Optional: Bilder lesen und Sprachen
 
 Damit das Anti-Scam-Modul Text in Bildern liest, installiere tesseract auf dem Rechner, auf dem der Bot läuft (das Docker-Image enthält es schon). Prüfe dann mit /security antiscam status, ob es bereit ist. Die Sprache der Nachrichten, die Mitglieder sehen, stellst du mit /admin language ein.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, KI und Bot-Profil (optional)
+
+Skills brauchen nur den Bot: Starte mit `/support skill create`. Für die KI brauchst du ein Konto und einen API-Schlüssel bei Anthropic, OpenAI oder Kimi (Moonshot); führe `/support ai setup` aus und füge den Schlüssel in das private Feld ein. Bewahre die Datei `data/ai.secret` zusammen mit deinen Sicherungen auf. Name, Bild und Banner des Bots änderst du im Dashboard unter Bot-Profil; um sie überall zu ändern, trage deine Discord-ID als `owner_ids` in `settings.json` ein (oder sei der Besitzer der Anwendung). Details stehen in der README im Abschnitt Skills und KI.
 
 ## Fehlerbehebung
 

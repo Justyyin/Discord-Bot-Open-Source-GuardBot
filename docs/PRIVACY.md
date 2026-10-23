@@ -1,12 +1,13 @@
 # Privacy notes for server operators
 
-GuardBot runs on your own machine. The bot does not send data to anyone except Discord. The only other connection is the update check to GitHub, which sends no personal data and can be switched off with `update.enabled` in `settings.json`. This page lists what is stored so you can inform your members.
+GuardBot runs on your own machine. The bot does not send data to anyone except Discord. The other connections are the update check to GitHub, which sends no personal data and can be switched off with `update.enabled` in `settings.json`, and, only if an administrator adds their own AI key, the AI provider they chose (see [AI features](#ai-features)). This page lists what is stored so you can inform your members.
 
 <!-- toc -->
 
 - [What is stored](#what-is-stored)
 - [Rights of members](#rights-of-members)
 - [Rights and tools for administrators](#rights-and-tools-for-administrators)
+- [AI features](#ai-features)
 - [Your responsibility](#your-responsibility)
 
 <!-- tocstop -->
@@ -40,6 +41,11 @@ GuardBot runs on your own machine. The bot does not send data to anyone except D
 | Team statistics (numbers per moderator and week) and duty status | `/team`, no content | `data/guardbot.db` |
 | Settings history (which setting, old and new value, time, a guess of the person) | `/admin history`, the newest entries up to the configured count | `data/guardbot.db` |
 | Timed roles and requests waiting for a second moderator | `/structure temprole`, `/security approval`, removed when done | `data/guardbot.db` |
+| Skills (JSON), their use counts and counters per member | Skills module, counters per member are part of the member export and removed with the deletion of their data | `data/guardbot.db` |
+| AI key of the server (encrypted), provider, model, number of requests today | AI module, the key is never shown, logged or exported, the secret to read it is the file `data/ai.secret` | `data/guardbot.db` and `data/ai.secret` |
+| Learned anti-scam filter (short hashes of words with counts, no text, no user) | Learned filter, trained by moderators and optionally by a sample of normal messages | `data/guardbot.db` |
+| Picture fingerprints (64 bit hash) of scam pictures | Find re-saved or resized copies, no picture is stored | `data/guardbot.db` |
+| Pictures of panels (banners, pictures, thumbnails you upload) | Panels, deleted when no panel uses them any more and when the bot leaves the server with `purge_on_guild_leave` | `data/panels/<server>/` |
 | Copies of the database | Restore after damage, contain everything above | `data/dbbackups` |
 | Music library | Files you add or download | `music/` |
 | Roles of a jailed member | Restore after release | `data/guardbot.db` |
@@ -60,6 +66,15 @@ Message content is not written to disk by the bot. Images are read in memory by 
 - `/server privacy retention days` deletes the profile data of members who left after the given number of days. The default is 0, which keeps the data.
 - Set `purge_on_guild_leave` to `true` in `settings.json` to delete all data of a server when the bot is removed from it.
 - Backups with member roles contain user IDs. Turn this off with `/server backup schedule include_members:False` if you do not need it.
+
+## AI features
+
+The AI features are off until an administrator stores an API key of Anthropic, OpenAI or Kimi (Moonshot) with `/support ai setup` or in the dashboard. Then these texts are sent to that provider, under the administrator's own account:
+
+- the description typed into `/support ai make`, together with the names and IDs of roles the bot can hand out and of text channels, so the AI can use them in the skill;
+- with the second opinion turned on (`/support ai limits second_opinion:true`), the text of messages that the anti-scam check finds suspicious but not clear. Author names and IDs are not sent.
+
+The provider's own terms and privacy rules apply to what it receives. Tell your members in your rules if you turn on the second opinion. `/support ai remove` deletes the key and turns the module off.
 
 ## Your responsibility
 

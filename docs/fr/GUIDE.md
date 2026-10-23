@@ -18,6 +18,7 @@ Ce guide explique comment faire fonctionner GuardBot sur votre ordinateur ou sur
 - [Musique (facultatif)](#musique-facultatif)
 - [Facultatif : lire les images et les langues](#facultatif--lire-les-images-et-les-langues)
 - [Tableau de bord](#tableau-de-bord)
+- [Skills, IA et profil du bot (facultatif)](#skills-ia-et-profil-du-bot-facultatif)
 - [Dépannage](#dépannage)
 - [Assistance](#assistance)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music : pour faire tourner la musique sur un bot à part qui peut rester dans un salon vocal 24 heures sur 24, crée une seconde application dans le Discord Developer Portal, écris son token dans .env sous MUSIC_TOKEN et mets music_bot.enabled à true dans settings.json. Après un redémarrage, la page Musique du tableau de bord affiche un bouton qui ajoute Guard Music au serveur. Les liens Spotify, Apple Music et Tidal sont lus via YouTube ou SoundCloud ; les albums et playlists Tidal demandent aussi TIDAL_CLIENT_ID et TIDAL_CLIENT_SECRET dans .env. Utilisation à tes propres risques, voir la section Musique du README.
+
 ## Facultatif : lire les images et les langues
 
 Pour que le module anti-arnaque lise le texte des images, installez tesseract sur l'ordinateur qui exécute le bot (l'image Docker le contient déjà). Vérifiez ensuite avec /security antiscam status qu'il est prêt. Choisissez la langue des messages que voient les membres avec /admin language.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, IA et profil du bot (facultatif)
+
+Les skills n'ont besoin que du bot : commence avec `/support skill create`. Pour l'IA, il te faut un compte et une clé API chez Anthropic, OpenAI ou Kimi (Moonshot) ; lance `/support ai setup` et colle la clé dans la boîte privée. Conserve le fichier `data/ai.secret` avec tes sauvegardes. Le nom, l'image et la bannière du bot se changent dans le tableau de bord sous Profil du bot ; pour les changer partout, ajoute ton ID Discord dans `owner_ids` de `settings.json` (ou sois le propriétaire de l'application). Les détails sont dans le README, section Skills et IA.
 
 ## Dépannage
 

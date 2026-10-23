@@ -18,6 +18,7 @@ Esta guía muestra cómo ejecutar GuardBot en tu ordenador o en un VPS. Lleva un
 - [Música (opcional)](#música-opcional)
 - [Opcional: leer imágenes e idiomas](#opcional-leer-imágenes-e-idiomas)
 - [Panel de control](#panel-de-control)
+- [Skills, IA y perfil del bot (opcional)](#skills-ia-y-perfil-del-bot-opcional)
 - [Solución de problemas](#solución-de-problemas)
 - [Soporte](#soporte)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: para que la música funcione en un bot propio que pueda quedarse las 24 horas en un canal de voz, crea una segunda aplicación en el Discord Developer Portal, escribe su token en .env como MUSIC_TOKEN y pon music_bot.enabled en true en settings.json. Tras un reinicio, la página Música del panel muestra un botón que añade Guard Music al servidor. Los enlaces de Spotify, Apple Music y Tidal se reproducen mediante YouTube o SoundCloud; los álbumes y listas de Tidal además necesitan TIDAL_CLIENT_ID y TIDAL_CLIENT_SECRET en .env. Uso bajo tu propio riesgo, consulta la sección Música del README.
+
 ## Opcional: leer imágenes e idiomas
 
 Para que el módulo anti-estafa lea el texto de las imágenes, instala tesseract en el equipo que ejecuta el bot (la imagen de Docker ya lo incluye). Después comprueba con /security antiscam status que está listo. Elige el idioma de los mensajes que ven los miembros con /admin language.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, IA y perfil del bot (opcional)
+
+Las skills solo necesitan el bot: empieza con `/support skill create`. Para la IA necesitas una cuenta y una clave de API en Anthropic, OpenAI o Kimi (Moonshot); ejecuta `/support ai setup` y pega la clave en el cuadro privado. Guarda el archivo `data/ai.secret` junto con tus copias de seguridad. El nombre, la imagen y el banner del bot se cambian en el panel, en Perfil del bot; para cambiarlos en todas partes, añade tu ID de Discord como `owner_ids` en `settings.json` (o sé el propietario de la aplicación). Los detalles están en el README, sección Skills e IA.
 
 ## Solución de problemas
 

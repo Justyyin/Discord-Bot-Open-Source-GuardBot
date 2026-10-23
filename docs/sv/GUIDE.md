@@ -18,6 +18,7 @@ Den här guiden visar hur du kör GuardBot på din egen dator eller på en VPS. 
 - [Musik (valfritt)](#musik-valfritt)
 - [Valfritt: läsa bilder och språk](#valfritt-läsa-bilder-och-språk)
 - [Kontrollpanel](#kontrollpanel)
+- [Skills, AI och botprofil (valfritt)](#skills-ai-och-botprofil-valfritt)
 - [Felsökning](#felsökning)
 - [Support](#support)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: för att köra musiken på en egen bot som kan stanna i en röstkanal dygnet runt skapar du en andra applikation i Discord Developer Portal, skriver dess token i .env som MUSIC_TOKEN och sätter music_bot.enabled till true i settings.json. Efter en omstart visar sidan Musik i instrumentpanelen en knapp som lägger till Guard Music på servern. Länkar från Spotify, Apple Music och Tidal spelas via YouTube eller SoundCloud; album och spellistor från Tidal kräver dessutom TIDAL_CLIENT_ID och TIDAL_CLIENT_SECRET i .env. Användning på egen risk, se avsnittet Musik i README.
+
 ## Valfritt: läsa bilder och språk
 
 För att anti-bedrägerimodulen ska läsa text i bilder, installera tesseract på datorn som kör boten (Docker-avbilden innehåller det redan). Kontrollera sedan med /security antiscam status att det är redo. Välj språk för de meddelanden medlemmarna ser med /admin language.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, AI och botprofil (valfritt)
+
+Skills behöver bara boten: börja med `/support skill create`. För AI behöver du ett konto och en API-nyckel hos Anthropic, OpenAI eller Kimi (Moonshot); kör `/support ai setup` och klistra in nyckeln i den privata rutan. Spara filen `data/ai.secret` tillsammans med dina säkerhetskopior. Botens namn, bild och banner ändras i instrumentpanelen under Botprofil; för att ändra dem överallt, lägg till ditt Discord-ID som `owner_ids` i `settings.json` (eller var ägare till applikationen). Detaljer finns i README, avsnittet Skills och AI.
 
 ## Felsökning
 

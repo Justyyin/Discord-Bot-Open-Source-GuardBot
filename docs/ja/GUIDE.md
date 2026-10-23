@@ -18,6 +18,7 @@
 - [音楽（任意）](#音楽任意)
 - [任意：画像の読み取りと言語](#任意画像の読み取りと言語)
 - [ダッシュボード](#ダッシュボード)
+- [スキル、AI、ボットのプロフィール（任意）](#スキルaiボットのプロフィール任意)
 - [トラブルシューティング](#トラブルシューティング)
 - [サポート](#サポート)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: 24 時間ボイスチャンネルに留まれる専用ボットで音楽を動かすには、Discord Developer Portal で 2 つ目のアプリケーションを作成し、そのトークンを .env に MUSIC_TOKEN として書き込み、settings.json の music_bot.enabled を true にします。再起動後、ダッシュボードの「音楽」ページに Guard Music をサーバーに追加するボタンが表示されます。Spotify、Apple Music、Tidal のリンクは YouTube または SoundCloud で再生されます。Tidal のアルバムとプレイリストには .env の TIDAL_CLIENT_ID と TIDAL_CLIENT_SECRET も必要です。利用は自己責任です。README の「音楽」セクションを参照してください。
+
 ## 任意：画像の読み取りと言語
 
 詐欺対策モジュールに画像内の文字を読ませるには、ボットを動かすコンピューターに tesseract をインストールします（Docker イメージには含まれています）。その後 /security antiscam status で準備できているか確認します。メンバーに表示されるメッセージの言語は /admin language で選びます。
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## スキル、AI、ボットのプロフィール（任意）
+
+スキルに必要なのはボットだけです。`/support skill create` から始めてください。AIには、Anthropic、OpenAI、Kimi（Moonshot）のアカウントとAPIキーが必要です。`/support ai setup` を実行し、非公開の入力欄にキーを貼り付けます。ファイル `data/ai.secret` はバックアップと一緒に保管してください。ボットの名前、画像、バナーはダッシュボードの「ボットのプロフィール」で変更できます。すべての場所で変更するには、あなたのDiscord IDを `settings.json` の `owner_ids` に追加してください（またはアプリケーションの所有者になってください）。詳細はREADMEの「スキルとAI」の項にあります。
 
 ## トラブルシューティング
 

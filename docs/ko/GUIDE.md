@@ -18,6 +18,7 @@
 - [음악 (선택)](#음악-선택)
 - [선택: 이미지 읽기와 언어](#선택-이미지-읽기와-언어)
 - [대시보드](#대시보드)
+- [스킬, AI와 봇 프로필(선택)](#스킬-ai와-봇-프로필선택)
 - [문제 해결](#문제-해결)
 - [지원](#지원)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: 24시간 음성 채널에 머물 수 있는 별도의 봇으로 음악을 실행하려면 Discord Developer Portal에서 두 번째 애플리케이션을 만들고, 그 토큰을 .env에 MUSIC_TOKEN으로 적고, settings.json에서 music_bot.enabled를 true로 설정합니다. 다시 시작하면 대시보드의 음악 페이지에 Guard Music을 서버에 추가하는 버튼이 나타납니다. Spotify, Apple Music, Tidal 링크는 YouTube 또는 SoundCloud로 재생됩니다. Tidal 앨범과 재생목록에는 .env의 TIDAL_CLIENT_ID와 TIDAL_CLIENT_SECRET도 필요합니다. 사용에 따른 책임은 본인에게 있으며, README의 음악 섹션을 참고하세요.
+
 ## 선택: 이미지 읽기와 언어
 
 사기 방지 모듈이 이미지 속 글자를 읽게 하려면 봇을 실행하는 컴퓨터에 tesseract를 설치하세요(Docker 이미지에는 이미 들어 있습니다). 그런 다음 /security antiscam status로 준비되었는지 확인합니다. 멤버에게 보이는 메시지의 언어는 /admin language로 고릅니다.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## 스킬, AI와 봇 프로필(선택)
+
+스킬에는 봇만 있으면 됩니다. `/support skill create`로 시작하세요. AI를 쓰려면 Anthropic, OpenAI 또는 Kimi(Moonshot)의 계정과 API 키가 필요합니다. `/support ai setup`을 실행하고 비공개 입력창에 키를 붙여 넣으세요. `data/ai.secret` 파일을 백업과 함께 보관하세요. 봇의 이름, 이미지, 배너는 대시보드의 봇 프로필에서 바꿀 수 있습니다. 모든 곳에서 바꾸려면 본인의 Discord ID를 `settings.json`의 `owner_ids`에 추가하세요(또는 애플리케이션의 소유자가 되세요). 자세한 내용은 README의 스킬과 AI 항목에 있습니다.
 
 ## 문제 해결
 

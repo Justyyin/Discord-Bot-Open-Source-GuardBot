@@ -28,6 +28,7 @@ Bot Discord auto-hébergé pour la modération, la sécurité et la communauté.
   - [Structure, membres et équipe](#structure-membres-et-équipe)
 - [Tableau de bord](#tableau-de-bord)
   - [Configurer le tableau de bord](#configurer-le-tableau-de-bord)
+  - [Commandes, skills, IA et profil du bot](#commandes-skills-ia-et-profil-du-bot)
   - [Sécurité](#sécurité-1)
   - [Tableau de bord sur un VPS](#tableau-de-bord-sur-un-vps)
 - [Commandes](#commandes)
@@ -66,6 +67,8 @@ Bot Discord auto-hébergé pour la modération, la sécurité et la communauté.
   - [Activité, actions groupées et recherche de cas](#activité-actions-groupées-et-recherche-de-cas)
   - [Anti-arnaque et anti-crypto](#anti-arnaque-et-anti-crypto)
   - [Période d'essai, détection d'essaim, chronologie et apprentissage](#période-dessai-détection-dessaim-chronologie-et-apprentissage)
+  - [Panneaux](#panneaux)
+  - [Skills et IA](#skills-et-ia)
   - [Créateur de messages et mises à jour](#créateur-de-messages-et-mises-à-jour)
   - [Exploitation](#exploitation)
   - [Administration](#administration-1)
@@ -128,6 +131,7 @@ Les bots hébergés stockent les données du serveur, les identifiants des membr
 - Sauvegarde et restauration des rôles et de la structure des salons.
 - Sauvegardes automatiques planifiées des rôles, salons, emojis et webhooks, avec une commande de restauration qui n'ajoute que ce qui manque.
 - Tableau de bord : modifier les réglages de chaque serveur dans le navigateur après une connexion Discord, uniquement pour les membres qui gèrent le serveur et seulement tant que le bot est connecté.
+- Skills : commandes, jeux et automatisations personnalisés à partir de blocs sûrs, éventuellement écrits par une IA avec ta propre clé (Anthropic, OpenAI, Kimi). Le tableau de bord liste toutes les commandes et modifie les skills, les réglages d'IA et le profil du bot.
 
 ## État du projet
 
@@ -364,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### Commandes, skills, IA et profil du bot
+
+Le tableau de bord a cinq pages de plus : Panels (voir la section Panneaux) et les quatre suivantes. Commandes liste chaque commande slash, commande à préfixe et menu contextuel avec son module, la permission requise et son état ; les administrateurs les activent ou les désactivent, autorisent ou interdisent des rôles et donnent des noms courts aux commandes à préfixe. Le préfixe se change sur la même page. Skills affiche tous les skills et les modifie en JSON avec les mêmes contrôles que les commandes. IA règle le modèle et les limites et enregistre une clé (écriture seule, elle n'est jamais renvoyée à la page). Profil du bot change le nom, l'image, la bannière et le texte de présentation du bot sur ce serveur ; le propriétaire de l'application du bot, ou un ID listé dans `owner_ids` de settings.json, peut aussi les changer partout. Discord limite la fréquence des changements de nom et d'image. Chaque modification est écrite dans le journal d'audit.
+
+Chaque module apparaît comme un plugin : la page Plugins les affiche sous forme de cartes par catégorie, et chaque plugin a sa propre page avec l'interrupteur Actif, ses réglages dans des encadrés repliables et ses commandes avec un interrupteur et un éditeur de rôles. La barre de gauche liste les plugins par catégorie, avec un point qui indique s'ils sont activés. Le tableau de bord utilise un thème sombre.
+
+Le tableau de bord peut s'afficher dans les 12 langues du bot. Choisis la langue en haut à droite ou sur la page de connexion ; le choix est conservé dans le navigateur et ne change pas la langue du serveur. Les textes du tableau de bord sont traduits automatiquement.
+
+Chaque page de plugin explique ce que fait le plugin, liste toutes ses fonctions avec leur propre interrupteur et une courte explication, et garde les autres réglages dans des encadrés en dessous. Sur la page Plugins et l'aperçu, chaque plugin s'active ou se désactive directement. Dans Réglages, l'encadré Apparence du tableau de bord change la couleur d'accent, l'arrière-plan, les encadrés et le texte, définit un fond d'écran (assombri et flouté au choix) et ajoute des menus et onglets personnels à la barre latérale : un onglet peut regrouper des plugins choisis, ouvrir une page, renvoyer vers une adresse https ou afficher une note. L'apparence est enregistrée par serveur et visible par tous ceux qui ouvrent son tableau de bord. Le pied de page affiche le copyright et des liens vers Discord et GitHub ; pour y afficher les logos officiels, place discord.svg et github.svg issus des pages de marque de Discord et GitHub dans guardbot/web/brand/.
+
 ### Sécurité
 
 - Connexion uniquement avec Discord (OAuth2, portée identify). Le jeton d'accès est révoqué aussitôt et jamais stocké.
@@ -467,11 +481,14 @@ Les membres au compte piraté sont déplacés dans un seul salon avec des consig
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+Toute personne envoyée au goulag, par commande, par l'AutoMod, par l'anti-scam, en revenant sur le serveur ou parce que quelqu'un a donné le rôle à la main, reçoit l'avis Account Security Required avec une mention. Tant que quelqu'un est au goulag, un Account Recovery Reminder reste en bas du salon et est renouvelé toutes les 10 minutes. Un membre au goulag qui écrit le préfixe suivi du mot de libération (par exemple `!unban`) dans le salon du goulag crée une demande de libération avec les boutons Release et Keep pour l'équipe ; le bot ne libère jamais personne de lui-même. `/access jailsetup reminder` active ou désactive chaque partie et règle l'intervalle et le mot.
 
 ### Modération automatique
 
@@ -973,6 +990,11 @@ Lit des liens et des fichiers du dossier music dans un salon vocal. Les téléch
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -982,6 +1004,17 @@ Lit des liens et des fichiers du dossier music dans un salon vocal. Les téléch
 ```
 
 Sans perte : vos propres fichiers (FLAC, WAV, ALAC) et les sources qui proposent du FLAC sont lus tels quels. YouTube, SoundCloud et les sites similaires ne proposent que de l'audio avec perte, qu'on ne peut pas rendre sans perte après coup. Discord transmet la voix en Opus, le bot utilise le débit du salon vocal. Responsabilité : télécharger et lire des contenus peut enfreindre les conditions d'un site ou le droit d'auteur. Les téléchargements sont désactivés par défaut et le module reste désactivé tant que vous ne l'activez pas. L'exploitant du bot est responsable de ce qui est lu et enregistré.
+
+Sources : les liens et recherches YouTube et SoundCloud sont lus directement. Les liens Spotify, Apple Music et Tidal sont aussi acceptés, mais ces services ne fournissent pas leur audio : le bot lit le titre et l'artiste sur la page publique et joue la même chanson depuis la source de recherche (YouTube ou SoundCloud, réglable avec /music sources). Les albums et playlists Spotify et Apple Music sont lus depuis leurs pages publiques ; les albums et playlists Tidal demandent une clé développeur gratuite de developer.tidal.com dans .env (TIDAL_CLIENT_ID et TIDAL_CLIENT_SECRET). Les fichiers de ton dossier de musique sont lus tels quels. Les playlists enregistrées peuvent mélanger toutes les sources, et /music stay garde le bot dans un salon vocal 24 heures sur 24 et joue une playlist en boucle, même après un redémarrage.
+
+Guard Music, le second bot : la musique peut tourner sur son propre compte de bot, pour rester en permanence dans un salon vocal sans toucher à la modération.
+
+1. Crée une seconde application dans le Discord Developer Portal, nomme-la Guard Music et copie le token de son bot.
+2. Écris le token dans .env sous MUSIC_TOKEN et mets music_bot.enabled à true dans settings.json.
+3. Redémarre GuardBot. Guard Music démarre dans le même processus, utilise les mêmes réglages et données, et les commandes de musique passent sur lui.
+4. Ouvre la page Musique du tableau de bord et ajoute Guard Music au serveur avec le bouton qui s'y trouve. Sans MUSIC_TOKEN, la musique reste dans GuardBot.
+
+Utilisation à tes propres risques : diffuser depuis YouTube et d'autres services peut enfreindre leurs conditions d'utilisation, et le droit d'auteur s'applique à ce qui est joué. Rien n'est téléchargé depuis Spotify, Apple Music ou Tidal et aucune protection n'est contournée. L'exploitant du bot est responsable de ce qui est joué. La page Musique du tableau de bord affiche le lecteur, la file, les playlists, le mode 24/7, les sources et ce guide.
 
 ### Configuration et état de santé
 
@@ -1093,6 +1126,74 @@ La période d'essai place les nouveaux membres dans un rôle. Tant qu'ils n'ont 
 /security unblock kind:link number:1
 /security antiscam set learn_emoji:X
 ```
+
+### Panneaux
+
+Les panneaux sont des publications comme un message de bienvenue, des règles, un choix de rôle, des boutons de notification ou une vérification, avec des bannières, des encadrés de texte et des boutons. On les crée avec `/panel` ou dans le tableau de bord, page Panels. Les images sont envoyées là-bas ou comme options de la commande, et le bot les conserve dans `data/panels` pour qu'elles restent valables.
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+Modèles : empty, welcome, rules, roles, notifications et verify ; leurs textes sont dans la langue du serveur et modifiables. `/panel section` ouvre un formulaire pour le titre, le texte et le pied de page. Chaque section devient un message : la bannière au-dessus de l'encadré, la grande image dedans, la petite image en haut à droite. Les boutons se trouvent sous la dernière section, cinq par ligne. Un bouton de rôle donne le rôle ou le retire ; avec `single`, les autres rôles du panneau sont retirés. Le bouton verify lance la vérification du module de vérification (`/access verify setup` choisit entre bouton, captcha et calcul). Les textes peuvent utiliser `{server}` et `{count}`. `/panel update` modifie les messages publiés après une modification. Limites par serveur : 25 panneaux, 5 sections et 20 boutons par panneau, 40 images de 8 Mo maximum. Le bot ne propose que des rôles situés sous son propre rôle le plus élevé et sans permission dangereuse.
+
+### Skills et IA
+
+Les skills sont des commandes, des jeux et des automatisations qu'un serveur construit lui-même à partir de blocs sûrs. Ils n'ont pas besoin d'IA et ne peuvent jamais exécuter de code. Une IA est facultative : avec ta propre clé, elle écrit un skill à partir d'une description et donne un avis complémentaire dans la vérification anti-scam.
+
+Skills sans IA :
+
+- `/support skill create kind:command name:hello` ouvre une boîte avec un petit exemple à modifier. `/support skill edit`, `show`, `import`, `enable`, `disable`, `delete`, `list` et `stats` les gèrent. Tout le monde utilise un skill avec `/support skill run` ou avec le préfixe, par exemple `!hello`. `/support skill panel` publie des boutons qui lancent des skills.
+- Types : commande (une liste d'actions), jeu (dé, choix, machine à sous, pierre-feuille-ciseaux, quiz) et automatisation (démarre quand un membre arrive ou part, quand un message contient certains mots ou quand un bouton est pressé).
+- Actions : répondre, envoyer dans un salon, message privé, journal, ajouter ou retirer un rôle, modifier un compteur, donner des pièces, choisir au hasard. Une action peut avoir des conditions : possède un rôle, probabilité, compteur comparé à un nombre.
+- Les textes peuvent utiliser `{user}`, `{user_name}`, `{server}`, `{channel}`, `{count}`, `{arg1}`, `{arg2}`, `{var:name}`, `{uvar:name}` et `{random:1-6}`.
+- Limites : 50 skills par serveur, 10 actions par skill, 3 changements de rôle et 4 messages par skill. Le bot n'attribue que des rôles situés sous son propre rôle le plus élevé et sans permission dangereuse. Un skill qui donne des pièces exige un délai d'au moins 60 secondes. Les noms de commandes du bot, d'alias et de tags sont interdits.
+- Les skills sont stockés en JSON et font partie de l'export des paramètres. Les champs inconnus sont refusés : un skill venu de n'importe où ne peut faire que ce que les blocs permettent.
+
+Exemple, une commande qui donne un rôle et compte les utilisations (remplace l'ID du rôle) :
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+Connexion à une IA (facultative) :
+
+- `/support ai setup provider:kimi agree:true` ouvre une boîte privée pour ta clé API. Les fournisseurs sont Anthropic, OpenAI et Kimi (Moonshot). Un modèle est proposé et peut être changé dans la même commande ou dans le tableau de bord ; les noms de modèles évoluent chez les fournisseurs, consulte donc leur documentation. Tu paies ton fournisseur.
+- `/support ai make wish:...` demande un skill à l'IA, vérifie la réponse aussi strictement qu'un skill importé et affiche un aperçu. Rien n'est enregistré avant que tu appuies sur Enregistrer.
+- `/support ai status`, `limits` (requêtes par jour, secondes entre deux requêtes par personne) et `remove` complètent l'ensemble. La clé est stockée chiffrée, le secret se trouve dans le fichier `data/ai.secret`. Conserve ce fichier avec tes sauvegardes ; sans lui, une clé enregistrée est illisible et doit être saisie à nouveau. La clé n'est jamais affichée, journalisée ni exportée. Le fournisseur ne peut changer qu'avec une nouvelle clé : une clé n'est donc jamais envoyée à un autre fournisseur.
+- Ce qui est envoyé : le souhait de `/support ai make` et, pour l'avis complémentaire, le texte d'un message suspect. Rien d'autre, et seulement tant que le module `ai` est activé. Voir [PRIVACY.md](../PRIVACY.md).
+
+Apprentissage de l'anti-scam :
+
+- Le filtre appris (`/security antiscam set learned:true`) est un petit classificateur par serveur. Les modérateurs l'entraînent avec les entrées de menu contextuel « Mark as scam » et « Not a scam ». Il ne stocke que de courts hachages de mots, jamais le texte, n'agit qu'après avoir vu 8 exemples de scam et 30 exemples normaux, puis seulement au-dessus de 95 pour cent. Avec `ham_sampling`, il apprend aussi d'un message normal sur dix.
+- Les images similaires (`similar`, activé par défaut) comparent une empreinte d'image avec des images de scam connues, si bien qu'une copie réenregistrée ou redimensionnée est retrouvée. Cela fonctionne sans Tesseract.
+- Avis complémentaire de l'IA (`/support ai limits second_opinion:true`) : pour les cas juste sous le seuil ou que le filtre appris juge suspects, l'IA est consultée. Un message n'est supprimé que si l'IA répond scam avec au moins 80 pour cent de confiance, et sa réponse ne peut rien déclencher d'autre.
 
 ### Créateur de messages et mises à jour
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             moteur de skills : vérifie et exécute les skills
+    ai.py                 fournisseurs d'IA, clés chiffrées, limites
+    learner.py, imgsim.py filtre appris de l'anti-scam, empreintes d'images
+    dashboard_manage.py   pages du tableau de bord pour commandes, skills, IA et profil
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ L'anglais est la langue d'origine du projet. Toutes les traductions de la docume
 - Le bot ignore les messages privés des membres.
 - Le jeton est lu depuis le fichier .env. Ne le partagez jamais et ne le publiez pas.
 - Les membres peuvent exporter et supprimer leurs propres données avec /info mydata. Les administrateurs définissent combien de temps les données des membres partis sont conservées.
+- Les fonctions d'IA sont désactivées tant que tu n'ajoutes pas ta propre clé. Ensuite, seuls le texte de `/support ai make` et, pour l'avis complémentaire, les messages suspects sont envoyés au fournisseur choisi.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Assistance

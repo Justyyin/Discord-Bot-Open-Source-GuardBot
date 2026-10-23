@@ -25,6 +25,8 @@ Every command name can be changed in `settings.json` under `command_names`, and 
 - [Role menus, scheduled messages and feeds](#role-menus-scheduled-messages-and-feeds)
 - [Activity and bulk moderation](#activity-and-bulk-moderation)
 - [Anti-scam](#anti-scam)
+- [Panels](#panels)
+- [Skills and AI](#skills-and-ai)
 - [Probation and blocklist](#probation-and-blocklist)
 - [Message builder and updates](#message-builder-and-updates)
 - [Privacy](#privacy)
@@ -48,7 +50,7 @@ To save slash command slots (Discord allows 100 top-level commands per bot), rel
 | `/info` | `about`, `avatar`, `botinfo`, `ping`, `userinfo`, `mydata`, `leaderboard`, `rank`, `find` |
 | `/community` | `welcome`, `booster`, `afk`, `remind`, `activity`, `tempvoice`, `voice` |
 | `/engage` | `economy`, `giveaway`, `poll`, `counting`, `starboard` |
-| `/support` | `ticket`, `suggest`, `tag`, `autoresponder` |
+| `/support` | `ticket`, `suggest`, `tag`, `autoresponder`, `skill`, `ai` |
 | `/members` | `stickyroles`, `nickname`, `watch`, `reason` |
 | `/structure` | `channel`, `category`, `archive`, `temprole`, `roletemplate`, `rules` |
 | `/team` | `teamstats`, `weekly`, `duty`, `apply`, `modwatch`, `permaudit` |
@@ -90,7 +92,8 @@ Who may use these commands can be changed with `/admin perms allow`, `/admin per
 | `/access jailsetup setup` | Create or select role, channel and staff role |
 | `/access jailsetup apply` | Apply the channel permissions again |
 | `/access jailsetup notice` | Set a custom notice, empty restores the default security steps |
-| `/access jailsetup preview` | Show the notice |
+| `/access jailsetup preview` | Show the notice and the reminder |
+| `/access jailsetup reminder` | Notice with mention for everyone in the gulag, reminder every few minutes, release requests with the release word |
 
 ## Auto-moderation
 
@@ -245,7 +248,27 @@ Actions: `log`, `delete`, `warn`, `timeout`, `jail`.
 | `/security antiscam status`, `set`, `words`, `forget` | Settings, word lists and remembered scam images | Manage server |
 | `/security antiscam test text` and `/security antiscam testimage image` | See the score of a text or the text read from an image | Manage server |
 | `/security antiscam set learn_emoji` | Emoji with which a moderator reacts to a message to teach it as scam | Manage server |
+| `/security antiscam set learned`, `similar`, `ham_sampling` | Learned filter, similar images and learning from normal messages | Manage server |
 | Context menu `Mark as scam` | Delete the message and remember its images and text | Manage messages |
+| Context menu `Not a scam` | Teach the learned filter that a message is fine | Manage messages |
+
+## Panels
+
+| Command | Description | Default permission |
+| --- | --- | --- |
+| `/panel create` | New panel, empty or from a template (welcome, rules, roles, notifications, verify) | Manage server |
+| `/panel section`, `removesection` | Banner, title, text, colour, pictures and footer of a section | Manage server |
+| `/panel button`, `removebutton`, `single` | Role, verify and link buttons, one role at a time | Manage server |
+| `/panel post`, `update`, `preview`, `list`, `show`, `delete` | Post, change in place, look at and manage panels | Manage server |
+
+## Skills and AI
+
+| Command | Description | Default permission |
+| --- | --- | --- |
+| `/support skill run`, `list` | Use a skill, list the skills | Everyone |
+| `/support skill create`, `edit`, `show`, `import`, `enable`, `disable`, `delete`, `panel`, `stats` | Build and manage skills | Manage server |
+| `/support ai setup`, `status`, `limits`, `remove`, `privacy` | Connect a provider with your own key and set limits | Manage server |
+| `/support ai make wish` | Let the AI build a skill, with a preview before saving | Manage server |
 
 ## Probation and blocklist
 

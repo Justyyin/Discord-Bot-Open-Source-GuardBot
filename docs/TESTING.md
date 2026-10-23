@@ -37,6 +37,12 @@ The automated tests (`python -m unittest discover -s tests`) use real discord.py
 | Data | `/server privacy export` and `/server privacy delete` with the ID of the second account | Data is exported, then deleted |
 | Metrics | Set `health_port` and `metrics_token`, open the page /metrics of the status server with and without the token | 401 without the token, series with it |
 | Restore | Stop the bot, run `python scripts/restore_db.py` with a backup, start again | Data of the backup is back, the old database is kept as before-restore |
+| Skills | `/support skill create kind:command name:hello`, save, then `!hello` and `/support skill run name:hello` as member | Reply appears; a skill that names a role above the bot is refused |
+| Skill panel | `/support skill panel names:hello`, press the button as member, restart the bot, press again | Works before and after the restart |
+| AI | `/support ai setup` with a real key, `/support ai status`, `/support ai make wish:a dice game with 20 sides` | Status shows provider and use without the key; a preview appears and is saved only after Save |
+| Anti-scam learning | Mark three scam messages with `Mark as scam`, re-post one of their pictures resized | The picture is removed even without Tesseract; `/security antiscam status` counts the examples |
+| Dashboard pages | Open Commands, Skills, AI and Bot profile, switch a command off, change the server nickname of the bot | Command is off in Discord, the nickname changes, both appear in the log channel |
+| Panels | `/panel create name:origin template:roles`, add two role buttons, `/panel single`, `/panel section` with a banner, `/panel post`, press both buttons as member | Banner above the box, buttons below; the second role replaces the first; after editing, `/panel update` changes the post in place |
 | Restart | Stop with Ctrl+C, start again | Runtime state (reminders, timed roles) is still there |
 
 ## Reporting problems

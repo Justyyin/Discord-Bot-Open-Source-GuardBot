@@ -18,6 +18,7 @@ Este guia mostra como executar o GuardBot no seu computador ou em um VPS. Leva c
 - [Música (opcional)](#música-opcional)
 - [Opcional: ler imagens e idiomas](#opcional-ler-imagens-e-idiomas)
 - [Painel](#painel)
+- [Skills, IA e perfil do bot (opcional)](#skills-ia-e-perfil-do-bot-opcional)
 - [Solução de problemas](#solução-de-problemas)
 - [Suporte](#suporte)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: para rodar a música em um bot próprio que pode ficar o tempo todo em um canal de voz, crie uma segunda aplicação no Discord Developer Portal, escreva o token dela no .env como MUSIC_TOKEN e defina music_bot.enabled como true no settings.json. Após reiniciar, a página Música do painel mostra um botão que adiciona o Guard Music ao servidor. Links do Spotify, Apple Music e Tidal tocam pelo YouTube ou SoundCloud; álbuns e playlists do Tidal também precisam de TIDAL_CLIENT_ID e TIDAL_CLIENT_SECRET no .env. Uso por sua conta e risco, veja a seção Música do README.
+
 ## Opcional: ler imagens e idiomas
 
 Para que o módulo anti-burla leia o texto das imagens, instale o tesseract no computador onde o bot corre (a imagem Docker já o inclui). Depois verifique com /security antiscam status se está pronto. Escolha o idioma das mensagens que os membros veem com /admin language.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, IA e perfil do bot (opcional)
+
+As skills só precisam do bot: comece com `/support skill create`. Para a IA você precisa de uma conta e de uma chave de API na Anthropic, OpenAI ou Kimi (Moonshot); execute `/support ai setup` e cole a chave na caixa privada. Guarde o arquivo `data/ai.secret` junto com os seus backups. O nome, a imagem e o banner do bot são alterados no painel, em Perfil do bot; para alterá-los em todos os lugares, adicione o seu ID do Discord como `owner_ids` em `settings.json` (ou seja o proprietário do aplicativo). Os detalhes estão no README, seção Skills e IA.
 
 ## Solução de problemas
 

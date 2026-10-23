@@ -28,6 +28,7 @@ Self-hosted Discord bot for moderation, security and community. Open source, fre
   - [Structure, members and team](#structure-members-and-team)
 - [Dashboard](#dashboard)
   - [Set up the dashboard](#set-up-the-dashboard)
+  - [Commands, skills, AI and bot profile](#commands-skills-ai-and-bot-profile)
   - [Security](#security-1)
   - [Dashboard on a VPS](#dashboard-on-a-vps)
 - [Commands](#commands)
@@ -66,6 +67,8 @@ Self-hosted Discord bot for moderation, security and community. Open source, fre
   - [Activity, bulk actions and case search](#activity-bulk-actions-and-case-search)
   - [Anti-scam and anti-crypto](#anti-scam-and-anti-crypto)
   - [Probation, swarm detection, timeline and learning](#probation-swarm-detection-timeline-and-learning)
+  - [Panels](#panels)
+  - [Skills and AI](#skills-and-ai)
   - [Message builder and updates](#message-builder-and-updates)
   - [Operations](#operations)
   - [Administration](#administration-1)
@@ -128,6 +131,7 @@ Hosted bots store your server data, member IDs and sometimes e-mail addresses wi
 - Backup and restore for roles and channel structure.
 - Scheduled automatic backups of roles, channels, emojis and webhooks, with a restore command that only adds what is missing.
 - Dashboard: change the settings of every server in the browser after a Discord login, only for members who manage the server and only while the bot is connected.
+- Skills: custom commands, games and automations from safe building blocks, optionally written by an AI with your own key (Anthropic, OpenAI, Kimi). The dashboard lists every command and edits skills, AI settings and the bot profile.
 
 ## Project status
 
@@ -364,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### Commands, skills, AI and bot profile
+
+The dashboard has five more pages: Panels (see the section Panels) and the following four. Commands lists every slash command, prefix command and context menu with its module, the permission it needs and whether it is on; administrators switch them on or off, allow or deny roles, and give prefix commands short names. The prefix is changed on the same page. Skills shows all skills and edits them as JSON with the same checks as the commands. AI sets model and limits and stores a key (write only, it is never sent back to the page). Bot profile changes the name, picture, banner and about text of the bot on this server; the owner of the bot application, or an ID listed in `owner_ids` in settings.json, can also change them everywhere. Discord limits how often the name and picture may change. Every change is written to the audit log.
+
+Every module appears as a plugin: the page Plugins shows them as cards by category, and each plugin has its own page with the switch Active, its settings in boxes that open and close, and its commands with a switch and a role editor. The left bar lists the plugins by category with a dot that shows whether they are on. The dashboard uses a dark design.
+
+The dashboard can be shown in all 12 languages of the bot. Pick the language at the top right or on the sign-in page; the choice is kept in the browser and does not change the language of the server. The dashboard texts are machine translated.
+
+Every plugin page explains what the plugin does, lists all of its functions with their own switch and a short explanation, and keeps the other settings in boxes below. On the Plugins page and the overview every plugin can be switched on or off directly. In Settings, the box Dashboard appearance changes the accent colour, background, boxes and text, sets a wallpaper (darkened and blurred as you like) and adds own menus and tabs to the side bar: a tab can collect chosen plugins, open a page, link to an https address or show a note. The look is stored per server and seen by everyone who opens its dashboard. The footer shows the copyright and links to Discord and GitHub; to show the official logos there, put discord.svg and github.svg from the brand pages of Discord and GitHub into guardbot/web/brand/.
+
 ### Security
 
 - Login only with Discord (OAuth2, scope identify). The access token is revoked at once and never stored.
@@ -467,11 +481,14 @@ Members with a hacked account are moved to one channel with security instruction
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+Everyone who comes into the gulag, by command, by AutoMod, by the anti-scam check, by rejoining or because someone gave the gulag role by hand, gets the Account Security Required notice with a mention. While someone is in the gulag, an Account Recovery Reminder stays at the bottom of the channel and is renewed every 10 minutes. A member in the gulag who writes the prefix and the release word (for example `!unban`) in the gulag channel creates a release request with Release and Keep buttons for the staff; the bot never releases anyone on its own. `/access jailsetup reminder` switches each part on or off and sets the interval and the word.
 
 ### Auto-moderation
 
@@ -973,6 +990,11 @@ Plays links and files from the music folder in a voice channel. Downloads are sa
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -982,6 +1004,17 @@ Plays links and files from the music folder in a voice channel. Downloads are sa
 ```
 
 Lossless: files you add yourself (FLAC, WAV, ALAC) and sources that offer FLAC are played unchanged. YouTube, SoundCloud and similar sites only offer lossy audio, and nothing can make that lossless afterwards. Discord transmits voice as Opus, the bot uses the bitrate of the voice channel. Responsibility: downloading and playing content can violate the terms of a website or copyright law. Downloads are off by default and the module is off until you enable it. The operator of the bot is responsible for what is played and saved.
+
+Sources: YouTube and SoundCloud links and searches are played directly. Spotify, Apple Music and Tidal links are accepted too, but these services do not hand out their audio: the bot reads title and artist from the public page and plays the same song from the search source (YouTube or SoundCloud, set with /music sources). Albums and playlists of Spotify and Apple Music are read from their public pages; Tidal albums and playlists need a free developer key from developer.tidal.com in .env (TIDAL_CLIENT_ID and TIDAL_CLIENT_SECRET). Files in your music folder are played as they are. Saved playlists can mix all sources, and /music stay keeps the bot in a voice channel around the clock and plays a playlist on repeat, also after a restart.
+
+Guard Music, the second bot: the music can run on its own bot account, so it can stay in a voice channel all the time and moderation is not affected by it.
+
+1. Create a second application in the Discord Developer Portal, name it Guard Music and copy the token of its bot.
+2. Write the token into .env as MUSIC_TOKEN and set music_bot.enabled to true in settings.json.
+3. Restart GuardBot. Guard Music starts in the same process, uses the same settings and data, and the music commands move to it.
+4. Open the page Music in the dashboard and add Guard Music to the server with the button there. Without MUSIC_TOKEN the music stays inside GuardBot.
+
+Use at your own risk: streaming from YouTube and other services can break their terms of use, and copyright applies to what is played. Nothing is downloaded from Spotify, Apple Music or Tidal and no protection is bypassed. The operator of the bot is responsible for what is played. The dashboard page Music shows the player, the queue, the playlists, the 24/7 mode, the sources and this guide.
 
 ### Setup and health
 
@@ -1093,6 +1126,74 @@ Probation puts new members into a role. Until they wrote the set number of norma
 /security unblock kind:link number:1
 /security antiscam set learn_emoji:X
 ```
+
+### Panels
+
+Panels are posts such as a welcome post, rules, a role choice, notification buttons or a verification gate, with banner pictures, text boxes and buttons. They are built with `/panel` or in the dashboard on the page Panels. Pictures are uploaded there or as options of the command and stored by the bot in `data/panels`, so they keep working.
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+Templates: empty, welcome, rules, roles, notifications and verify; their texts are in the language of the server and can be changed. `/panel section` opens a form for title, text and footer. Each section becomes one message: the banner above the box, the large picture inside it, the small picture at the top right. Buttons sit under the last section, five per row. A role button gives the role or takes it back; with `single` on, the other roles of the panel are taken away. The verify button starts the verification of the verification module (`/access verify setup` decides between button, captcha and math). Texts can use `{server}` and `{count}`. `/panel update` changes the posted messages after an edit. Limits per server: 25 panels, 5 sections and 20 buttons per panel, 40 pictures of up to 8 MB. The bot only offers roles that are below its own highest role and have no dangerous permission.
+
+### Skills and AI
+
+Skills are commands, games and automations that a server builds itself from safe building blocks. They need no AI and can never run code. An AI is optional: with your own key it writes a skill from a description and gives a second opinion in the anti-scam check.
+
+Skills without AI:
+
+- `/support skill create kind:command name:hello` opens a box with a small example that you change. `/support skill edit`, `show`, `import`, `enable`, `disable`, `delete`, `list` and `stats` manage them. Everyone uses a skill with `/support skill run` or with the prefix, for example `!hello`. `/support skill panel` posts buttons that run skills.
+- Kinds: command (a list of actions), game (dice, choice, slots, rock paper scissors, quiz) and automation (starts when a member joins or leaves, when a message contains words, or when a button is pressed).
+- Actions: reply, send to a channel, direct message, log, add or remove a role, change a counter, give coins, choose at random. An action can have conditions: has a role, chance, a counter compared with a number.
+- Texts can use `{user}`, `{user_name}`, `{server}`, `{channel}`, `{count}`, `{arg1}`, `{arg2}`, `{var:name}`, `{uvar:name}` and `{random:1-6}`.
+- Limits: 50 skills per server, 10 actions per skill, 3 role changes and 4 messages per skill. The bot only hands out roles that are below its own highest role and have no dangerous permission. A skill that gives coins needs a cooldown of at least 60 seconds. Names of bot commands, aliases and tags cannot be used.
+- Skills are stored as JSON and are part of the settings export. Unknown fields are refused, so a skill from anywhere can do only what the building blocks allow.
+
+Example, a command that gives a role and counts uses (replace the role ID):
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+AI connection (optional):
+
+- `/support ai setup provider:kimi agree:true` opens a private box for your API key. Providers are Anthropic, OpenAI and Kimi (Moonshot). A model is suggested and can be changed in the same command or in the dashboard; model names change at the providers, so check their documentation. You pay your provider.
+- `/support ai make wish:...` asks the AI for a skill, checks the answer as strictly as an imported skill and shows a preview. Nothing is saved before you press Save.
+- `/support ai status`, `limits` (requests per day, seconds between requests per person) and `remove` finish the set. The key is stored encrypted, with the file `data/ai.secret` as secret. Keep that file with your backups; without it a stored key cannot be read and has to be entered again. The key is never shown, logged or exported. The provider can only change together with a new key, so a key never goes to another provider.
+- What is sent: the wish of `/support ai make`, and with the second opinion the text of a suspicious message. Nothing else, and only while the module `ai` is on. See [PRIVACY.md](../PRIVACY.md).
+
+Anti-scam learning:
+
+- The learned filter (`/security antiscam set learned:true`) is a small classifier per server. Moderators train it with the context menu entries "Mark as scam" and "Not a scam". It stores only short hashes of words, never the text, acts only after it has seen 8 scam and 30 normal examples, and then only above 95 percent. With `ham_sampling` it also learns from a tenth of the normal messages.
+- Similar images (`similar`, on by default) compare a picture fingerprint with known scam pictures, so a re-saved or resized copy is found. This works without Tesseract.
+- AI second opinion (`/support ai limits second_opinion:true`): for cases just under the threshold, or that the learned filter finds suspicious, the AI is asked. A message is only removed when the AI answers scam with at least 80 percent confidence, and its answer cannot do anything else.
 
 ### Message builder and updates
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             skills engine: checks and runs skills
+    ai.py                 AI providers, encrypted keys, limits
+    learner.py, imgsim.py learned anti-scam filter, picture fingerprints
+    dashboard_manage.py   dashboard pages for commands, skills, AI and profile
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ English is the original language of the project. All translations of the documen
 - The bot ignores direct messages from members.
 - The token is read from the .env file. Never share it and never commit it.
 - Members can export and delete their own data with /info mydata. Administrators can set how long data of members who left is kept.
+- AI features are off until you add your own key. Then only the text of `/support ai make` and, with the second opinion, suspicious messages are sent to the provider you chose.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Support

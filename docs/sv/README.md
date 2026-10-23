@@ -28,6 +28,7 @@ Självhostad Discord-bot för moderering, säkerhet och community. Öppen källk
   - [Struktur, medlemmar och team](#struktur-medlemmar-och-team)
 - [Kontrollpanel](#kontrollpanel)
   - [Ställ in kontrollpanelen](#ställ-in-kontrollpanelen)
+  - [Kommandon, skills, AI och botprofil](#kommandon-skills-ai-och-botprofil)
   - [Säkerhet](#säkerhet-1)
   - [Kontrollpanel på en VPS](#kontrollpanel-på-en-vps)
 - [Kommandon](#kommandon)
@@ -66,6 +67,8 @@ Självhostad Discord-bot för moderering, säkerhet och community. Öppen källk
   - [Aktivitet, massåtgärder och ärendesökning](#aktivitet-massåtgärder-och-ärendesökning)
   - [Anti-bedrägeri och anti-krypto](#anti-bedrägeri-och-anti-krypto)
   - [Prövotid, svärmigenkänning, tidslinje och inlärning](#prövotid-svärmigenkänning-tidslinje-och-inlärning)
+  - [Paneler](#paneler)
+  - [Skills och AI](#skills-och-ai)
   - [Meddelandebyggare och uppdateringar](#meddelandebyggare-och-uppdateringar)
   - [Drift](#drift)
   - [Administration](#administration-1)
@@ -128,6 +131,7 @@ Hostade botar lagrar serverdata, medlems-ID och ibland e-postadresser hos en tre
 - Säkerhetskopiering och återställning av roller och kanalstruktur.
 - Schemalagda automatiska säkerhetskopior av roller, kanaler, emojis och webhooks, med ett återställningskommando som bara lägger till det som saknas.
 - Kontrollpanel: ändra inställningarna för varje server i webbläsaren efter inloggning med Discord, bara för medlemmar som hanterar servern och bara medan boten är ansluten.
+- Skills: egna kommandon, spel och automatiseringar av säkra byggstenar, valfritt skrivna av en AI med din egen nyckel (Anthropic, OpenAI, Kimi). Instrumentpanelen listar alla kommandon och redigerar skills, AI-inställningar och botprofilen.
 
 ## Projektstatus
 
@@ -364,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### Kommandon, skills, AI och botprofil
+
+Instrumentpanelen har fem sidor till: Panels (se avsnittet Paneler) och följande fyra. Kommandon listar varje snedstreckskommando, prefixkommando och snabbmeny med modul, behörighet som krävs och om det är på; administratörer slår på eller av dem, tillåter eller nekar roller och ger prefixkommandon korta namn. Prefixet ändras på samma sida. Skills visar alla skills och redigerar dem som JSON med samma kontroller som kommandona. AI anger modell och gränser och sparar en nyckel (endast skrivning, den skickas aldrig tillbaka till sidan). Botprofil ändrar botens namn, bild, banner och beskrivning på den här servern; ägaren till botens applikation, eller ett ID i `owner_ids` i settings.json, kan också ändra dem överallt. Discord begränsar hur ofta namn och bild får ändras. Varje ändring skrivs i granskningsloggen.
+
+Varje modul visas som ett plugin: sidan Plugins visar dem som kort per kategori, och varje plugin har en egen sida med reglaget Aktiv, sina inställningar i rutor som fälls ut och ihop och sina kommandon med reglage och rollredigerare. Vänsterfältet listar plugins per kategori med en punkt som visar om de är på. Instrumentpanelen har en mörk design.
+
+Instrumentpanelen kan visas på botens alla 12 språk. Välj språk uppe till höger eller på inloggningssidan; valet sparas i webbläsaren och ändrar inte serverns språk. Instrumentpanelens texter är maskinöversatta.
+
+Varje pluginsida förklarar vad pluginet gör, listar alla dess funktioner med eget reglage och en kort förklaring och visar övriga inställningar i rutor nedanför. På sidan Plugins och i översikten kan varje plugin slås på eller av direkt. I Inställningar ändrar rutan Instrumentpanelens utseende accentfärg, bakgrund, rutor och text, sätter en bakgrundsbild (mörkare och suddigare efter smak) och lägger till egna menyer och flikar i sidofältet: en flik kan samla valda plugins, öppna en sida, länka till en https-adress eller visa en anteckning. Utseendet sparas per server och syns för alla som öppnar dess instrumentpanel. Sidfoten visar upphovsrätten och länkar till Discord och GitHub; för att visa de officiella logotyperna där lägger du discord.svg och github.svg från varumärkessidorna för Discord och GitHub i guardbot/web/brand/.
+
 ### Säkerhet
 
 - Inloggning endast med Discord (OAuth2, omfång identify). Åtkomsttoken återkallas direkt och sparas aldrig.
@@ -467,11 +481,14 @@ Medlemmar med kapat konto flyttas till en enda kanal med säkerhetsanvisningar. 
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+Alla som hamnar i gulag, via kommando, AutoMod, anti-scam, när de går med igen eller för att någon gav rollen för hand, får meddelandet Account Security Required med en omnämning. Så länge någon är i gulag ligger en Account Recovery Reminder längst ned i kanalen och förnyas var 10:e minut. En medlem i gulag som skriver prefixet och frisläppningsordet (till exempel `!unban`) i gulag-kanalen skapar en begäran om frisläppning med knapparna Release och Keep för personalen; boten släpper aldrig ut någon på egen hand. `/access jailsetup reminder` slår på eller av varje del och ställer in intervall och ord.
 
 ### Automoderering
 
@@ -973,6 +990,11 @@ Spelar länkar och filer från mappen music i en röstkanal. Nedladdningar spara
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -982,6 +1004,17 @@ Spelar länkar och filer från mappen music i en röstkanal. Nedladdningar spara
 ```
 
 Förlustfritt: egna filer (FLAC, WAV, ALAC) och källor som erbjuder FLAC spelas upp oförändrade. YouTube, SoundCloud och liknande sajter erbjuder bara ljud med förlust, och det kan inte göras förlustfritt i efterhand. Discord överför röst som Opus, boten använder röstkanalens bitrate. Ansvar: att ladda ner och spela upp innehåll kan strida mot en webbplats villkor eller upphovsrätten. Nedladdningar är avstängda som standard och modulen är av tills du slår på den. Den som driver boten ansvarar för det som spelas och sparas.
+
+Källor: länkar och sökningar från YouTube och SoundCloud spelas direkt. Länkar från Spotify, Apple Music och Tidal tas också emot, men de tjänsterna lämnar inte ut sitt ljud: boten läser titel och artist från den offentliga sidan och spelar samma låt från sökkällan (YouTube eller SoundCloud, ställs in med /music sources). Album och spellistor från Spotify och Apple Music läses från deras offentliga sidor; album och spellistor från Tidal kräver en gratis utvecklarnyckel från developer.tidal.com i .env (TIDAL_CLIENT_ID och TIDAL_CLIENT_SECRET). Filer i din musikmapp spelas som de är. Sparade spellistor kan blanda alla källor, och /music stay håller boten i en röstkanal dygnet runt och spelar en spellista i repris, även efter en omstart.
+
+Guard Music, den andra boten: musiken kan köras på ett eget botkonto, så att den kan stanna i en röstkanal hela tiden utan att påverka modereringen.
+
+1. Skapa en andra applikation i Discord Developer Portal, döp den till Guard Music och kopiera token för dess bot.
+2. Skriv token i .env som MUSIC_TOKEN och sätt music_bot.enabled till true i settings.json.
+3. Starta om GuardBot. Guard Music startar i samma process, använder samma inställningar och data, och musikkommandona flyttar till den.
+4. Öppna sidan Musik i instrumentpanelen och lägg till Guard Music på servern med knappen där. Utan MUSIC_TOKEN stannar musiken i GuardBot.
+
+Användning på egen risk: strömning från YouTube och andra tjänster kan bryta mot deras användarvillkor, och upphovsrätt gäller för det som spelas. Inget laddas ner från Spotify, Apple Music eller Tidal och inget skydd kringgås. Den som driver boten ansvarar för det som spelas. Instrumentpanelens sida Musik visar spelaren, kön, spellistorna, 24/7-läget, källorna och den här guiden.
 
 ### Installation och hälsokontroll
 
@@ -1093,6 +1126,74 @@ Prövotiden placerar nya medlemmar i en roll. Tills de har skrivit det inställd
 /security unblock kind:link number:1
 /security antiscam set learn_emoji:X
 ```
+
+### Paneler
+
+Paneler är inlägg som ett välkomstinlägg, regler, ett rollval, aviseringsknappar eller en verifiering, med bannerbilder, textrutor och knappar. De byggs med `/panel` eller i instrumentpanelen på sidan Panels. Bilder laddas upp där eller som alternativ i kommandot och sparas av boten i `data/panels`, så att de fortsätter att fungera.
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+Mallar: empty, welcome, rules, roles, notifications och verify; texterna är på serverns språk och kan ändras. `/panel section` öppnar ett formulär för rubrik, text och sidfot. Varje avsnitt blir ett meddelande: bannern ovanför rutan, den stora bilden i den, den lilla bilden uppe till höger. Knapparna ligger under det sista avsnittet, fem per rad. En rollknapp ger rollen eller tar bort den; med `single` tas panelens andra roller bort. Knappen verify startar verifieringen i verifieringsmodulen (`/access verify setup` väljer knapp, captcha eller räkneuppgift). Texter kan använda `{server}` och `{count}`. `/panel update` ändrar de postade meddelandena efter en redigering. Gränser per server: 25 paneler, 5 avsnitt och 20 knappar per panel, 40 bilder på högst 8 MB. Boten erbjuder bara roller som ligger under dess egen högsta roll och saknar farliga behörigheter.
+
+### Skills och AI
+
+Skills är kommandon, spel och automatiseringar som en server bygger själv av säkra byggstenar. De behöver ingen AI och kan aldrig köra kod. En AI är valfri: med din egen nyckel skriver den en skill utifrån en beskrivning och ger en andra åsikt i anti-scam-kontrollen.
+
+Skills utan AI:
+
+- `/support skill create kind:command name:hello` öppnar en ruta med ett litet exempel som du ändrar. `/support skill edit`, `show`, `import`, `enable`, `disable`, `delete`, `list` och `stats` hanterar dem. Alla använder en skill med `/support skill run` eller med prefixet, till exempel `!hello`. `/support skill panel` postar knappar som kör skills.
+- Typer: kommando (en lista med åtgärder), spel (tärning, val, spelautomat, sten sax påse, frågesport) och automatisering (startar när en medlem går med eller lämnar, när ett meddelande innehåller ord eller när en knapp trycks).
+- Åtgärder: svara, skicka till en kanal, direktmeddelande, logga, ge eller ta bort en roll, ändra en räknare, ge mynt, välja slumpmässigt. En åtgärd kan ha villkor: har en roll, chans, en räknare jämförd med ett tal.
+- Texter kan använda `{user}`, `{user_name}`, `{server}`, `{channel}`, `{count}`, `{arg1}`, `{arg2}`, `{var:name}`, `{uvar:name}` och `{random:1-6}`.
+- Gränser: 50 skills per server, 10 åtgärder per skill, 3 rolländringar och 4 meddelanden per skill. Boten delar bara ut roller som ligger under dess egen högsta roll och saknar farliga behörigheter. En skill som ger mynt behöver en väntetid på minst 60 sekunder. Namn på botkommandon, alias och taggar kan inte användas.
+- Skills lagras som JSON och ingår i exporten av inställningar. Okända fält avvisas, så en skill från var som helst kan bara göra det byggstenarna tillåter.
+
+Exempel, ett kommando som ger en roll och räknar användningar (byt ut roll-ID:t):
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+AI-anslutning (valfritt):
+
+- `/support ai setup provider:kimi agree:true` öppnar en privat ruta för din API-nyckel. Leverantörer är Anthropic, OpenAI och Kimi (Moonshot). En modell föreslås och kan ändras i samma kommando eller i instrumentpanelen; modellnamn ändras hos leverantörerna, så kontrollera deras dokumentation. Du betalar din leverantör.
+- `/support ai make wish:...` ber AI:n om en skill, kontrollerar svaret lika strikt som en importerad skill och visar en förhandsvisning. Inget sparas innan du trycker på Spara.
+- `/support ai status`, `limits` (förfrågningar per dag, sekunder mellan förfrågningar per person) och `remove` kompletterar uppsättningen. Nyckeln lagras krypterad, med filen `data/ai.secret` som hemlighet. Spara den filen tillsammans med dina säkerhetskopior; utan den går en lagrad nyckel inte att läsa och måste anges på nytt. Nyckeln visas, loggas eller exporteras aldrig. Leverantören kan bara ändras tillsammans med en ny nyckel, så en nyckel går aldrig till en annan leverantör.
+- Det som skickas: önskemålet från `/support ai make` och, vid andra åsikten, texten i ett misstänkt meddelande. Inget annat, och bara medan modulen `ai` är på. Se [PRIVACY.md](../PRIVACY.md).
+
+Inlärning i anti-scam:
+
+- Det inlärda filtret (`/security antiscam set learned:true`) är en liten klassificerare per server. Moderatorer tränar det med snabbmenyposterna "Mark as scam" och "Not a scam". Det lagrar bara korta hashar av ord, aldrig texten, agerar först efter att ha sett 8 scam- och 30 vanliga exempel, och då bara över 95 procent. Med `ham_sampling` lär det sig också av vart tionde vanligt meddelande.
+- Liknande bilder (`similar`, på som standard) jämför ett bildfingeravtryck med kända scam-bilder, så att även en omsparad eller förminskad kopia hittas. Det fungerar utan Tesseract.
+- AI:ns andra åsikt (`/support ai limits second_opinion:true`): för fall strax under tröskeln eller som det inlärda filtret tycker är misstänkta tillfrågas AI:n. Ett meddelande tas bara bort när AI:n svarar scam med minst 80 procents säkerhet, och dess svar kan inte utlösa något annat.
 
 ### Meddelandebyggare och uppdateringar
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             skillmotor: kontrollerar och kör skills
+    ai.py                 AI-leverantörer, krypterade nycklar, gränser
+    learner.py, imgsim.py inlärt anti-scam-filter, bildfingeravtryck
+    dashboard_manage.py   panelsidor för kommandon, skills, AI och profil
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ Engelska är projektets originalspråk. Alla översättningar av dokumentationen
 - Boten ignorerar direktmeddelanden från medlemmar.
 - Token läses från filen .env. Dela den aldrig och ladda inte upp den.
 - Medlemmar kan exportera och radera sina egna data med /info mydata. Administratörer bestämmer hur länge data från medlemmar som lämnat sparas.
+- AI-funktionerna är av tills du lägger till din egen nyckel. Därefter skickas bara texten från `/support ai make` och, vid andra åsikten, misstänkta meddelanden till den valda leverantören.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## Support

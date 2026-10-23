@@ -28,6 +28,7 @@
   - [结构、成员与团队](#结构成员与团队)
 - [控制面板](#控制面板)
   - [设置控制面板](#设置控制面板)
+  - [指令、技能、AI 与机器人资料](#指令技能ai-与机器人资料)
   - [安全](#安全-1)
   - [在 VPS 上使用控制面板](#在-vps-上使用控制面板)
 - [命令](#命令)
@@ -66,6 +67,8 @@
   - [活跃度、批量操作与案件搜索](#活跃度批量操作与案件搜索)
   - [反诈骗与反加密货币](#反诈骗与反加密货币)
   - [试用期、集群检测、时间线与学习](#试用期集群检测时间线与学习)
+  - [面板](#面板)
+  - [技能与 AI](#技能与-ai)
   - [消息构建器与更新](#消息构建器与更新)
   - [运行](#运行)
   - [运维](#运维-1)
@@ -128,6 +131,7 @@ GuardBot 集成了许多服务器在托管机器人上付费使用的功能：�
 - 身份组和频道结构的备份与恢复。
 - 按计划自动备份身份组、频道、表情和 Webhook，并提供只补充缺失内容的恢复命令。
 - 控制面板：用 Discord 登录后在浏览器中修改每个服务器的设置，仅限管理该服务器的成员，且仅在机器人已连接时可用。
+- 技能：用安全模块搭建的自定义指令、游戏和自动化，也可以由 AI 用你自己的密钥编写（Anthropic、OpenAI、Kimi）。控制面板列出所有指令，并可编辑技能、AI 设置和机器人资料。
 
 ## 项目状态
 
@@ -364,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### 指令、技能、AI 与机器人资料
+
+控制面板另有五个页面：Panels（见“面板”一节）以及下面四个。“指令”列出每个斜杠指令、前缀指令和右键菜单，并显示其模块、所需权限和是否开启；管理员可以开启或关闭它们、允许或拒绝身份组，并为前缀指令设置短名称。前缀在同一页面更改。“技能”显示所有技能，并以 JSON 编辑，检查与指令相同。“AI”设置模型和限制并保存密钥（只写，永远不会回传到页面）。“机器人资料”更改机器人在本服务器的名称、头像、横幅和简介；机器人应用的所有者，或 settings.json 中 `owner_ids` 列出的 ID，还可以在所有地方更改。Discord 限制名称和头像的更改频率。每次更改都会写入审计日志。
+
+每个模块都以插件形式显示：Plugins 页面按类别以卡片展示，每个插件都有自己的页面，包含“启用”开关、可展开收起的设置框，以及带开关和身份组编辑器的指令。左侧栏按类别列出插件，圆点表示是否已启用。控制面板采用深色设计。
+
+控制面板可以使用机器人的全部 12 种语言显示。在右上角或登录页面选择语言；该选择保存在浏览器中，不会更改服务器的语言。控制面板的文字为机器翻译。
+
+每个插件页面都会说明插件的作用，列出其所有功能及各自的开关和简短说明，其余设置放在下方的框中。在“插件”页面和概览中，每个插件都可以直接开启或关闭。在“设置”中，“控制面板外观”框可以更改强调色、背景、框和文字，设置壁纸（可按需调暗和模糊），并在侧边栏添加自定义菜单和标签页：标签页可以汇集所选插件、打开某个页面、链接到 https 地址或显示一条笔记。外观按服务器保存，所有打开该服务器控制面板的人都能看到。页脚显示版权信息以及指向 Discord 和 GitHub 的链接；若要在那里显示官方标志，请将从 Discord 和 GitHub 品牌页面获取的 discord.svg 和 github.svg 放入 guardbot/web/brand/。
+
 ### 安全
 
 - 只能通过 Discord 登录（OAuth2，范围 identify）。访问令牌会立即被撤销，从不保存。
@@ -467,11 +481,14 @@ dashboard.example.com {
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+任何进入劳改营的人，无论是通过指令、AutoMod、反诈骗检查、重新加入，还是有人手动授予了劳改营身份组，都会收到带提及的 Account Security Required 提示。只要劳改营里有人，频道底部就会保留一条 Account Recovery Reminder，每 10 分钟刷新一次。劳改营中的成员在劳改营频道发送前缀加释放词（例如 `!unban`）后，会为管理人员生成一个带 Release 和 Keep 按钮的释放请求；机器人绝不会自行释放任何人。`/access jailsetup reminder` 可以单独开关每个部分，并设置间隔和释放词。
 
 ### 自动管理
 
@@ -973,6 +990,11 @@ dashboard.example.com {
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -982,6 +1004,17 @@ dashboard.example.com {
 ```
 
 无损：您自己添加的文件（FLAC、WAV、ALAC）以及提供 FLAC 的来源会原样播放。YouTube、SoundCloud 等网站只提供有损音频，事后无法变成无损。Discord 以 Opus 传输语音，机器人使用语音频道的比特率。责任：下载和播放内容可能违反网站的服务条款或著作权法。下载默认关闭，模块在您启用之前也是关闭的。机器人的运营者对播放和保存的内容负责。
+
+来源：YouTube 和 SoundCloud 的链接与搜索会直接播放。也接受 Spotify、Apple Music 和 Tidal 链接，但这些服务不提供其音频：机器人从公开页面读取标题和艺术家，然后从搜索来源（YouTube 或 SoundCloud，用 /music sources 设置）播放同一首歌。Spotify 和 Apple Music 的专辑与播放列表从其公开页面读取；Tidal 的专辑和播放列表需要在 .env 中填写来自 developer.tidal.com 的免费开发者密钥（TIDAL_CLIENT_ID 和 TIDAL_CLIENT_SECRET）。音乐文件夹中的文件按原样播放。已保存的播放列表可以混合所有来源，/music stay 会让机器人全天候留在语音频道中并循环播放一个播放列表，重启后也是如此。
+
+Guard Music，第二个机器人：音乐可以在独立的机器人账号上运行，这样它可以一直留在语音频道中，而不影响管理功能。
+
+1. 在 Discord Developer Portal 中创建第二个应用，命名为 Guard Music，并复制其机器人的令牌。
+2. 将令牌以 MUSIC_TOKEN 写入 .env，并在 settings.json 中把 music_bot.enabled 设为 true。
+3. 重启 GuardBot。Guard Music 会在同一进程中启动，使用相同的设置和数据，音乐指令会转到它上面。
+4. 在控制面板中打开“音乐”页面，用那里的按钮把 Guard Music 添加到服务器。没有 MUSIC_TOKEN 时，音乐仍留在 GuardBot 中。
+
+使用风险自负：从 YouTube 和其他服务串流可能违反其使用条款，播放的内容受版权保护。不会从 Spotify、Apple Music 或 Tidal 下载任何内容，也不会绕过任何保护。机器人的运营者对播放的内容负责。控制面板的“音乐”页面显示播放器、队列、播放列表、24/7 模式、来源以及本指南。
 
 ### 设置与健康检查
 
@@ -1093,6 +1126,74 @@ dashboard.example.com {
 /security unblock kind:link number:1
 /security antiscam set learn_emoji:X
 ```
+
+### 面板
+
+面板是带横幅图片、文字框和按钮的帖子，例如欢迎帖、规则、身份组选择、通知按钮或验证入口。可以用 `/panel` 或在控制面板的 Panels 页面创建。图片可在那里上传，或作为指令选项上传，机器人会把它们保存在 `data/panels` 中，因此不会失效。
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+模板：empty、welcome、rules、roles、notifications 和 verify；文字使用服务器语言，可以修改。`/panel section` 会打开填写标题、正文和页脚的表单。每个部分成为一条消息：横幅在框上方，大图在框内，小图在右上角。按钮位于最后一个部分下方，每行五个。身份组按钮会授予或收回身份组；开启 `single` 时会移除该面板的其他身份组。verify 按钮会启动验证模块的验证（`/access verify setup` 决定使用按钮、验证码还是算术题）。文字可使用 `{server}` 和 `{count}`。修改后用 `/panel update` 更新已发布的消息。每个服务器的限制：25 个面板，每个面板 5 个部分和 20 个按钮，40 张不超过 8 MB 的图片。机器人只提供低于其最高身份组且没有危险权限的身份组。
+
+### 技能与 AI
+
+技能是服务器用安全的模块自行搭建的指令、游戏和自动化。它们不需要 AI，也绝不会执行代码。AI 是可选的：使用你自己的密钥，它可以根据描述编写技能，并在反诈骗检查中给出第二意见。
+
+不使用 AI 的技能：
+
+- `/support skill create kind:command name:hello` 会打开一个带小示例的输入框，供你修改。`/support skill edit`、`show`、`import`、`enable`、`disable`、`delete`、`list` 和 `stats` 用于管理技能。所有人都可以用 `/support skill run` 或前缀使用技能，例如 `!hello`。`/support skill panel` 会发布可运行技能的按钮。
+- 类型：指令（一组动作）、游戏（骰子、选择、老虎机、剪刀石头布、问答）和自动化（成员加入或离开时、消息包含某些词时或按下按钮时启动）。
+- 动作：回复、发送到频道、私信、写入日志、添加或移除身份组、修改计数器、发放金币、随机选择。动作可以带条件：拥有某身份组、概率、计数器与数字比较。
+- 文本可使用 `{user}`、`{user_name}`、`{server}`、`{channel}`、`{count}`、`{arg1}`、`{arg2}`、`{var:name}`、`{uvar:name}` 和 `{random:1-6}`。
+- 限制：每个服务器 50 个技能，每个技能 10 个动作、3 次身份组变更和 4 条消息。机器人只会授予低于自己最高身份组且没有危险权限的身份组。发放金币的技能需要至少 60 秒的冷却时间。不能使用机器人指令、别名和标签的名称。
+- 技能以 JSON 保存，并包含在设置导出中。未知字段会被拒绝，因此来自任何地方的技能都只能做模块允许的事。
+
+示例：一个授予身份组并统计使用次数的指令（请替换身份组 ID）：
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+AI 连接（可选）：
+
+- `/support ai setup provider:kimi agree:true` 会打开一个私密输入框，用于填写你的 API 密钥。服务提供商有 Anthropic、OpenAI 和 Kimi（Moonshot）。系统会建议一个模型，可在同一指令或控制面板中更改；各服务商的模型名称会变化，请查看其文档。费用由你支付给服务提供商。
+- `/support ai make wish:...` 请 AI 编写技能，对结果的检查与导入的技能一样严格，并显示预览。在你点击保存之前不会保存任何内容。
+- `/support ai status`、`limits`（每天的请求数、每人两次请求之间的秒数）和 `remove` 完善了这套功能。密钥以加密方式保存，密钥的密钥存放在文件 `data/ai.secret` 中。请把该文件与备份放在一起；没有它，已保存的密钥无法读取，必须重新输入。密钥绝不会被显示、记录或导出。服务提供商只能与新密钥一起更换，因此密钥不会发送给其他服务提供商。
+- 发送的内容：`/support ai make` 的需求描述，以及在第二意见中可疑消息的文字。除此之外不发送任何内容，并且仅在模块 `ai` 开启时才会发送。参见 [PRIVACY.md](../PRIVACY.md)。
+
+反诈骗学习：
+
+- 学习型过滤器（`/security antiscam set learned:true`）是每个服务器一个的小型分类器。管理员通过右键菜单项“Mark as scam”和“Not a scam”来训练它。它只保存词的短哈希，绝不保存文本；只有看过 8 个诈骗样本和 30 个正常样本后才开始工作，并且只在超过 95% 时才采取行动。开启 `ham_sampling` 后，它还会从每十条正常消息中学习一条。
+- 相似图片（`similar`，默认开启）会把图片指纹与已知诈骗图片比较，因此重新保存或缩放后的副本也能被发现。无需 Tesseract 即可使用。
+- AI 第二意见（`/support ai limits second_opinion:true`）：对略低于阈值的情况，或学习型过滤器认为可疑的情况，会询问 AI。只有当 AI 以至少 80% 的把握回答“诈骗”时才会删除消息，并且它的回答不会触发其他任何操作。
 
 ### 消息构建器与更新
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             技能引擎：检查并运行技能
+    ai.py                 AI 服务提供商、加密密钥、限制
+    learner.py, imgsim.py 反诈骗学习过滤器、图片指纹
+    dashboard_manage.py   指令、技能、AI 和资料的控制面板页面
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ guardbot/
 - 机器人会忽略成员发来的私信。
 - 令牌从 .env 文件读取。切勿分享或上传。
 - 成员可以用 /info mydata 导出并删除自己的数据。管理员可设置已离开成员的数据保留多久。
+- 在你添加自己的密钥之前，AI 功能处于关闭状态。之后只有 `/support ai make` 的文字，以及第二意见中的可疑消息，会被发送给你选择的服务提供商。
 - [PRIVACY.md](../PRIVACY.md)
 
 ## 支持

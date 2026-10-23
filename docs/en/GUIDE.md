@@ -18,6 +18,7 @@ This guide shows how to run GuardBot on your own computer or on a VPS. It takes 
 - [Music (optional)](#music-optional)
 - [Optional: reading images and languages](#optional-reading-images-and-languages)
 - [Dashboard](#dashboard)
+- [Skills, AI and bot profile (optional)](#skills-ai-and-bot-profile-optional)
 - [Troubleshooting](#troubleshooting)
 - [Support](#support)
 
@@ -173,6 +174,8 @@ sudo apt install -y ffmpeg libopus0
 /music settings allow_download:True
 ```
 
+Guard Music: to run the music on its own bot that can stay in a voice channel around the clock, create a second application in the Discord Developer Portal, write its token into .env as MUSIC_TOKEN and set music_bot.enabled to true in settings.json. After a restart the page Music in the dashboard shows a button that adds Guard Music to the server. Spotify, Apple Music and Tidal links are played through YouTube or SoundCloud; Tidal albums and playlists also need TIDAL_CLIENT_ID and TIDAL_CLIENT_SECRET in .env. Use at your own risk, see the section Music of the README.
+
 ## Optional: reading images and languages
 
 To let the anti-scam module read text in images, install tesseract on the computer that runs the bot (the Docker image already contains it). Then check with /security antiscam status that it is ready. Choose the language of the messages that members see with /admin language.
@@ -240,6 +243,10 @@ dashboard.example.com {
   }
 }
 ```
+
+## Skills, AI and bot profile (optional)
+
+Skills need nothing but the bot: start with `/support skill create`. For the AI you need an account and an API key at Anthropic, OpenAI or Kimi (Moonshot); run `/support ai setup` and paste the key into the private box. Keep the file `data/ai.secret` together with your backups. The name, picture and banner of the bot can be changed in the dashboard under Bot profile; to change them everywhere, add your Discord ID as `owner_ids` in `settings.json` (or be the owner of the application). Details are in the README, section Skills and AI.
 
 ## Troubleshooting
 

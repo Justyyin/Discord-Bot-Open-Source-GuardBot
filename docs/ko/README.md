@@ -14,9 +14,7 @@
   - [관리](#관리)
   - [로그](#로그)
   - [커뮤니티](#커뮤니티)
-  - [수습 기간, 무리 탐지, 타임라인, 학습](#수습-기간-무리-탐지-타임라인-학습)
-  - [메시지 빌더와 업데이트](#메시지-빌더와-업데이트)
-  - [운영](#운영)
+  - [서버 관리](#서버-관리)
 - [프로젝트 상태](#프로젝트-상태)
 - [요구 사항](#요구-사항)
 - [빠른 시작](#빠른-시작)
@@ -30,6 +28,7 @@
   - [구조, 멤버, 팀](#구조-멤버-팀)
 - [대시보드](#대시보드)
   - [대시보드 설정](#대시보드-설정)
+  - [명령어, 스킬, AI와 봇 프로필](#명령어-스킬-ai와-봇-프로필)
   - [보안](#보안-1)
   - [VPS에서 대시보드 사용](#vps에서-대시보드-사용)
 - [명령어](#명령어)
@@ -67,8 +66,12 @@
   - [역할 메뉴, 예약 메시지, 피드](#역할-메뉴-예약-메시지-피드)
   - [활동, 일괄 작업, 케이스 검색](#활동-일괄-작업-케이스-검색)
   - [사기 방지 및 암호화폐 방지](#사기-방지-및-암호화폐-방지)
-  - [운영](#운영-1)
-  - [운영](#운영-2)
+  - [수습 기간, 무리 탐지, 타임라인, 학습](#수습-기간-무리-탐지-타임라인-학습)
+  - [패널](#패널)
+  - [스킬과 AI](#스킬과-ai)
+  - [메시지 빌더와 업데이트](#메시지-빌더와-업데이트)
+  - [운영](#운영)
+  - [서버 관리](#서버-관리-1)
 - [메시지 자리표시자](#메시지-자리표시자)
 - [설정](#설정)
 - [데이터와 저장 위치](#데이터와-저장-위치)
@@ -121,71 +124,14 @@ GuardBot은 많은 서버가 호스팅 봇에 비용을 내고 쓰는 기능을 
 - 기간이 있는 감금, 복수 선택 투표, 이미지 형태의 랭크 카드, 역할별 XP 부스트.
 - 상점이 있는 경제, 버튼 또는 드롭다운 역할 메뉴, 예약 메시지, YouTube·Twitch·RSS 피드, 활동 통계, 안내형 /admin setup. 멤버에게 보이는 메시지는 12개 언어로 제공됩니다.
 
-### 수습 기간, 무리 탐지, 타임라인, 학습
-
-수습 기간은 새 멤버를 하나의 역할에 넣습니다. 설정한 수의 일반 메시지를 쓰거나 설정한 분이 지나기 전까지 링크, 초대, 파일은 짧은 안내와 함께 삭제됩니다. 레이드 방어는 무리도 알아봅니다. 이름 패턴이 같거나, 프로필 사진이 같거나, 몇 분 안에 만들어진 새 계정이 여럿인 경우입니다. 타임라인(/moderation case timeline)은 한 사용자의 계정 생성, 가입과 초대, 수습 기간, 케이스, 이의 신청을 시간순으로 모아 보여 줍니다. 메시지는 저장되지 않으므로 포함되지 않습니다. /security block, /security unblock, /security blocklist는 짧은 명령어로 AutoMod 차단 목록을 관리합니다. 운영진은 메시지의 컨텍스트 메뉴 항목 Mark as scam 또는 learn_emoji로 정한 이모지 반응으로 사기 방지 모듈을 학습시킬 수 있습니다. 메시지는 삭제되고, 그 이미지와 텍스트는 이후 즉시 삭제됩니다. 각 기능은 해당 모듈이나 설정에서 끌 수 있습니다.
-
-```
-/admin module enable name:probation
-/access probation setup minutes:10 messages:1 block_links:True block_files:True
-/access probation status
-/access probation release member:@User
-/access probation add member:@User
-
-/security raid swarm enabled:True minimum:4 minutes:10
-/moderation case timeline user:@User
-
-/security block kind:link value:evil.example
-/security blocklist
-/security unblock kind:link number:1
-/security antiscam set learn_emoji:X
-```
-- 대시보드: Discord로 로그인한 뒤 브라우저에서 각 서버의 설정을 바꿉니다. 서버를 관리하는 멤버만, 봇이 연결되어 있는 동안에만 사용할 수 있습니다.
-
-### 메시지 빌더와 업데이트
-
-메시지 빌더는 JSON으로 여러 임베드와 링크 버튼이 있는 메시지를 게시합니다. Embed Generator 같은 임베드 생성기가 내보내는 JSON을 읽으므로, 그곳에서 메시지를 디자인하고 봇으로 게시할 수 있습니다. JSON은 텍스트, .json 파일, 또는 JSON을 바로 가리키는 https 링크(예: 저장소의 원본 파일)로 전달하세요. 리디렉션되는 링크는 거부됩니다. 링크 버튼만 만들어지고, 상호작용이 필요한 버튼은 건너뜁니다. 모든 링크는 http 또는 https여야 하고, 텍스트의 멘션은 알림을 보내지 않으며, Discord의 제한이 적용됩니다. /post message copy는 기존 메시지를 JSON으로 내보내고, /post message edit는 봇의 메시지를 수정하며, /post message preview는 결과를 나에게만 보여 줍니다. 웹 편집기의 공유 링크는 형식이 공개되어 있지 않으므로 열지 않습니다.
-
-```json
-{
-  "content": "Rules were updated",
-  "embeds": [{"title": "Rules", "description": "Read them here.", "color": "#5865f2"}],
-  "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "Open rules", "url": "https://example.com/rules"}]}]
-}
-```
-
-봇은 12시간마다 update.repo(scripts/set_repo_url.py로 설정)의 GitHub 저장소에 더 새로운 릴리스가 있는지 확인합니다. 있으면 봇 소유자에게 릴리스 노트가 담긴 개인 메시지가 가고, 릴리스를 내려받아 검사합니다. 검사 항목은 릴리스의 SHA-256 체크섬, 압축 파일 안의 안전한 경로, 태그와 일치하는 버전입니다. 설치는 /server debug update action:install로 하거나, auto_install이 켜져 있으면 자동으로 이루어집니다. 설치 전에 교체될 파일이 data/update에 저장되고, 새 패키지가 설치되며, 새 코드를 시험 삼아 불러옵니다. 어느 단계든 실패하면 이전 파일이 복원됩니다. .env, settings.json, data, music은 절대 건드리지 않습니다. 이후 봇이 스스로 다시 시작합니다. Docker에서는 제자리 설치를 하지 않으니 이미지를 업데이트하세요. 업데이트는 저장소의 코드를 실행하므로 신뢰하는 저장소만 지정하세요. enabled를 false로 하면 끌 수 있습니다.
-
-```json
-{
-  "update": {
-    "enabled": true,
-    "repo": "NAME/guardbot",
-    "check_hours": 12,
-    "auto_install": false,
-    "require_checksum": false
-  }
-}
-```
-
-```
-/post message send channel:#news url:https://example.com/message.json
-/post message send channel:#news file:message.json
-/post message preview url:https://example.com/message.json
-/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
-/post message copy message:https://discord.com/channels/1/2/3
-/admin module disable name:builder
-/server debug update action:status
-/server debug update action:check
-/server debug update action:install
-```
-
-### 운영
+### 서버 관리
 
 - 모든 모듈과 개별 명령어를 서버별로 켜고 끌 수 있습니다.
 - 사용자 지정 접두사, 명령어 별칭, 이름을 바꿀 수 있는 명령어.
 - 역할과 채널 구조의 백업 및 복원.
 - 역할, 채널, 이모지, 웹훅의 예약 자동 백업과 부족한 것만 추가하는 복원 명령어.
+- 대시보드: Discord로 로그인한 뒤 브라우저에서 각 서버의 설정을 바꿉니다. 서버를 관리하는 멤버만, 봇이 연결되어 있는 동안에만 사용할 수 있습니다.
+- 스킬: 안전한 블록으로 만드는 나만의 명령어, 게임, 자동화. 본인의 키(Anthropic, OpenAI, Kimi)로 AI가 작성하게 할 수도 있습니다. 대시보드는 모든 명령어를 보여 주고 스킬, AI 설정, 봇 프로필을 편집합니다.
 
 ## 프로젝트 상태
 
@@ -422,6 +368,16 @@ DISCORD_CLIENT_SECRET=your-oauth2-client-secret
 }
 ```
 
+### 명령어, 스킬, AI와 봇 프로필
+
+대시보드에는 다섯 개의 페이지가 더 있습니다. Panels(패널 항목 참고)와 다음 네 가지입니다. 명령어는 모든 슬래시 명령어, 접두사 명령어, 컨텍스트 메뉴를 모듈, 필요한 권한, 켜짐 여부와 함께 보여 줍니다. 관리자는 이를 켜고 끄고, 역할을 허용하거나 거부하며, 접두사 명령어에 짧은 이름을 붙일 수 있습니다. 접두사는 같은 페이지에서 바꿉니다. 스킬은 모든 스킬을 보여 주고 명령어와 같은 검사를 거쳐 JSON으로 편집합니다. AI는 모델과 제한을 설정하고 키를 저장합니다(쓰기 전용이며 페이지로 다시 보내지 않습니다). 봇 프로필은 이 서버에서 봇의 이름, 이미지, 배너, 소개 글을 바꿉니다. 봇 애플리케이션의 소유자 또는 settings.json의 `owner_ids`에 적힌 ID는 모든 곳에서도 바꿀 수 있습니다. Discord는 이름과 이미지를 바꿀 수 있는 빈도를 제한합니다. 모든 변경은 감사 로그에 기록됩니다.
+
+모든 모듈은 플러그인으로 표시됩니다. Plugins 페이지는 카테고리별 카드로 보여 주고, 각 플러그인에는 활성 스위치, 열고 닫을 수 있는 상자 안의 설정, 스위치와 역할 편집기가 있는 명령어가 담긴 전용 페이지가 있습니다. 왼쪽 바는 카테고리별로 플러그인을 나열하며 점으로 켜짐 여부를 표시합니다. 대시보드는 어두운 디자인입니다.
+
+대시보드는 봇의 12개 언어 모두로 표시할 수 있습니다. 언어는 오른쪽 위나 로그인 페이지에서 고릅니다. 선택은 브라우저에 저장되며 서버 언어는 바뀌지 않습니다. 대시보드 텍스트는 기계 번역입니다.
+
+각 플러그인 페이지는 플러그인이 하는 일을 설명하고, 모든 기능을 개별 스위치와 짧은 설명과 함께 나열하며, 나머지 설정은 아래 상자에 둡니다. 플러그인 페이지와 개요에서 각 플러그인을 바로 켜고 끌 수 있습니다. 설정의 대시보드 모양 상자에서는 강조 색상, 배경, 상자, 글자 색을 바꾸고, 배경화면(원하는 만큼 어둡게, 흐리게)을 설정하며, 사이드바에 사용자 메뉴와 탭을 추가할 수 있습니다. 탭은 고른 플러그인을 모으거나, 페이지를 열거나, https 주소로 연결하거나, 메모를 보여 줄 수 있습니다. 모양은 서버별로 저장되며 그 서버의 대시보드를 여는 모든 사람에게 보입니다. 바닥글에는 저작권 표시와 Discord, GitHub 링크가 있습니다. 공식 로고를 표시하려면 Discord와 GitHub의 브랜드 페이지에서 받은 discord.svg와 github.svg를 guardbot/web/brand/에 넣으세요.
+
 ### 보안
 
 - 로그인은 Discord로만 가능합니다(OAuth2, 범위 identify). 액세스 토큰은 즉시 폐기되며 저장되지 않습니다.
@@ -525,11 +481,14 @@ dashboard.example.com {
 /access jailsetup apply                                   # apply the channel permissions again
 /access jailsetup notice text:Custom text for {staff}     # empty text restores the security steps
 /access jailsetup preview
+/access jailsetup reminder notice:True reminder:True minutes:10 requests:True word:unban
 
 /moderation jail member:@User reason:Hacked account           # also: !jail @User Hacked account
 /moderation jail member:@User duration:2h                     # released automatically after 2 hours
 /moderation unjail member:@User reason:Account secured
 ```
+
+명령어, AutoMod, 스캠 방지, 재참가, 또는 누군가 역할을 직접 부여한 경우 등 어떤 방식으로든 굴라그에 들어온 사람은 멘션과 함께 Account Security Required 안내를 받습니다. 굴라그에 누군가 있는 동안 채널 맨 아래에 Account Recovery Reminder가 유지되며 10분마다 새로 고쳐집니다. 굴라그에 있는 멤버가 굴라그 채널에 접두사와 해제 단어(예: `!unban`)를 쓰면 스태프용 Release, Keep 버튼이 있는 해제 요청이 만들어집니다. 봇이 스스로 누군가를 해제하지는 않습니다. `/access jailsetup reminder`로 각 부분을 켜고 끄며 간격과 단어를 정합니다.
 
 ### 자동 관리
 
@@ -1031,6 +990,11 @@ dashboard.example.com {
 /music library info
 /music library download url:https://example.com/track format:best
 
+/music sources spotify:True apple_music:True tidal:True search:youtube
+/music playlist save name:Evening
+/music playlist play name:Evening shuffle:True
+/music stay enabled:True channel:#Lounge playlist:Evening
+
 /music settings dj_role:@DJ volume:50 max_queue:100 per_user:25 max_minutes:60 idle_leave:120
 /music settings allow_links:True allow_search:True allow_playlists:True library:True
 /music settings allow_download:True download_format:best announce:True
@@ -1040,6 +1004,17 @@ dashboard.example.com {
 ```
 
 무손실: 직접 추가한 파일(FLAC, WAV, ALAC)과 FLAC을 제공하는 출처는 그대로 재생됩니다. YouTube, SoundCloud 등은 손실 오디오만 제공하며 나중에 무손실로 만들 수 없습니다. Discord는 음성을 Opus로 전송하며 봇은 음성 채널의 비트레이트를 사용합니다. 책임: 콘텐츠 다운로드와 재생은 사이트 약관이나 저작권법을 위반할 수 있습니다. 다운로드는 기본적으로 꺼져 있고 모듈도 활성화하기 전까지 꺼져 있습니다. 재생되고 저장되는 내용에 대한 책임은 봇 운영자에게 있습니다.
+
+소스: YouTube와 SoundCloud의 링크와 검색은 바로 재생됩니다. Spotify, Apple Music, Tidal 링크도 받지만, 이 서비스들은 오디오를 제공하지 않습니다. 봇은 공개 페이지에서 제목과 아티스트를 읽고 검색 소스(YouTube 또는 SoundCloud, /music sources로 설정)에서 같은 곡을 재생합니다. Spotify와 Apple Music의 앨범과 재생목록은 공개 페이지에서 읽습니다. Tidal 앨범과 재생목록에는 developer.tidal.com의 무료 개발자 키를 .env에 넣어야 합니다(TIDAL_CLIENT_ID와 TIDAL_CLIENT_SECRET). 음악 폴더의 파일은 그대로 재생됩니다. 저장된 재생목록은 모든 소스를 섞을 수 있고, /music stay는 봇을 24시간 음성 채널에 머물게 하며 다시 시작한 뒤에도 재생목록을 반복 재생합니다.
+
+Guard Music, 두 번째 봇: 음악을 별도의 봇 계정으로 실행할 수 있어서, 관리 기능에 영향을 주지 않고 항상 음성 채널에 머물 수 있습니다.
+
+1. Discord Developer Portal에서 두 번째 애플리케이션을 만들고 이름을 Guard Music으로 정한 뒤 그 봇의 토큰을 복사합니다.
+2. 토큰을 .env에 MUSIC_TOKEN으로 적고 settings.json에서 music_bot.enabled를 true로 설정합니다.
+3. GuardBot을 다시 시작합니다. Guard Music은 같은 프로세스에서 시작되고 같은 설정과 데이터를 쓰며, 음악 명령어는 Guard Music으로 옮겨집니다.
+4. 대시보드의 음악 페이지를 열고 그곳의 버튼으로 Guard Music을 서버에 추가합니다. MUSIC_TOKEN이 없으면 음악은 GuardBot에 남습니다.
+
+사용에 따른 책임은 본인에게 있습니다. YouTube 등 서비스에서 스트리밍하면 해당 서비스의 이용 약관을 위반할 수 있으며, 재생되는 내용에는 저작권이 적용됩니다. Spotify, Apple Music, Tidal에서는 아무것도 다운로드하지 않으며 어떤 보호 장치도 우회하지 않습니다. 재생되는 내용에 대한 책임은 봇 운영자에게 있습니다. 대시보드의 음악 페이지에는 플레이어, 대기열, 재생목록, 24/7 모드, 소스와 이 안내가 표시됩니다.
 
 ### 설정과 상태 점검
 
@@ -1132,6 +1107,132 @@ dashboard.example.com {
 /automod dryrun rule:antiscam enabled:True                     # only report, do not remove
 ```
 
+### 수습 기간, 무리 탐지, 타임라인, 학습
+
+수습 기간은 새 멤버를 하나의 역할에 넣습니다. 설정한 수의 일반 메시지를 쓰거나 설정한 분이 지나기 전까지 링크, 초대, 파일은 짧은 안내와 함께 삭제됩니다. 레이드 방어는 무리도 알아봅니다. 이름 패턴이 같거나, 프로필 사진이 같거나, 몇 분 안에 만들어진 새 계정이 여럿인 경우입니다. 타임라인(/moderation case timeline)은 한 사용자의 계정 생성, 가입과 초대, 수습 기간, 케이스, 이의 신청을 시간순으로 모아 보여 줍니다. 메시지는 저장되지 않으므로 포함되지 않습니다. /security block, /security unblock, /security blocklist는 짧은 명령어로 AutoMod 차단 목록을 관리합니다. 운영진은 메시지의 컨텍스트 메뉴 항목 Mark as scam 또는 learn_emoji로 정한 이모지 반응으로 사기 방지 모듈을 학습시킬 수 있습니다. 메시지는 삭제되고, 그 이미지와 텍스트는 이후 즉시 삭제됩니다. 각 기능은 해당 모듈이나 설정에서 끌 수 있습니다.
+
+```
+/admin module enable name:probation
+/access probation setup minutes:10 messages:1 block_links:True block_files:True
+/access probation status
+/access probation release member:@User
+/access probation add member:@User
+
+/security raid swarm enabled:True minimum:4 minutes:10
+/moderation case timeline user:@User
+
+/security block kind:link value:evil.example
+/security blocklist
+/security unblock kind:link number:1
+/security antiscam set learn_emoji:X
+```
+
+### 패널
+
+패널은 환영 글, 규칙, 역할 선택, 알림 버튼, 인증처럼 배너 이미지, 텍스트 상자, 버튼으로 이루어진 게시물입니다. `/panel` 또는 대시보드의 Panels 페이지에서 만듭니다. 이미지는 그곳이나 명령어 옵션으로 올리며, 봇이 `data/panels`에 저장하므로 계속 작동합니다.
+
+```
+/panel create name:welcome template:welcome channel:#welcome
+/panel section name:welcome banner:image.png
+/panel section name:welcome number:1 color:#5865f2 thumbnail:logo.png
+/panel create name:origin template:roles
+/panel button name:origin kind:role label:KL role:@KL
+/panel button name:origin kind:role label:Kreis role:@Kreis
+/panel single name:origin value:True
+/panel create name:check template:verify
+/panel button name:welcome kind:link label:Website url:https://example.com
+/panel preview name:welcome
+/panel post name:welcome
+/panel update name:welcome
+/panel list
+/panel show name:welcome
+/panel removesection name:welcome number:2
+/panel removebutton name:origin number:1
+/panel delete name:welcome messages:True
+```
+
+템플릿: empty, welcome, rules, roles, notifications, verify. 텍스트는 서버 언어로 되어 있고 바꿀 수 있습니다. `/panel section`은 제목, 본문, 바닥글 입력 양식을 엽니다. 각 섹션은 하나의 메시지가 됩니다. 배너는 상자 위, 큰 이미지는 상자 안, 작은 이미지는 오른쪽 위에 표시됩니다. 버튼은 마지막 섹션 아래에 한 줄에 다섯 개씩 놓입니다. 역할 버튼은 역할을 주거나 다시 가져가며, `single`을 켜면 패널의 다른 역할은 제거됩니다. verify 버튼은 인증 모듈의 인증을 시작합니다(`/access verify setup`에서 버튼, 캡차, 계산 중에서 고릅니다). 텍스트에는 `{server}`와 `{count}`를 쓸 수 있습니다. 수정한 뒤 `/panel update`로 게시된 메시지를 바꿉니다. 서버당 한도: 패널 25개, 패널당 섹션 5개와 버튼 20개, 8 MB 이하 이미지 40장. 봇은 자신의 최고 역할보다 낮고 위험한 권한이 없는 역할만 제공합니다.
+
+### 스킬과 AI
+
+스킬은 서버가 안전한 블록으로 직접 만드는 명령어, 게임, 자동화입니다. AI가 필요 없고 코드를 실행하는 일도 결코 없습니다. AI는 선택 사항입니다. 본인의 키로 설명을 바탕으로 스킬을 작성하게 하거나, 스캠 방지 검사에서 2차 의견을 받을 수 있습니다.
+
+AI 없는 스킬:
+
+- `/support skill create kind:command name:hello`는 수정할 수 있는 작은 예시가 담긴 입력창을 엽니다. `/support skill edit`, `show`, `import`, `enable`, `disable`, `delete`, `list`, `stats`로 관리합니다. 누구나 `/support skill run` 또는 접두사(예: `!hello`)로 스킬을 사용합니다. `/support skill panel`은 스킬을 실행하는 버튼을 게시합니다.
+- 종류: 명령어(동작 목록), 게임(주사위, 선택, 슬롯, 가위바위보, 퀴즈), 자동화(멤버가 들어오거나 나갈 때, 메시지에 특정 단어가 있을 때, 버튼을 누를 때 시작).
+- 동작: 답장, 채널로 보내기, 개인 메시지, 로그, 역할 추가 또는 제거, 카운터 변경, 코인 지급, 무작위 선택. 동작에는 조건을 둘 수 있습니다: 역할 보유, 확률, 카운터와 숫자의 비교.
+- 텍스트에는 `{user}`, `{user_name}`, `{server}`, `{channel}`, `{count}`, `{arg1}`, `{arg2}`, `{var:name}`, `{uvar:name}`, `{random:1-6}`을 쓸 수 있습니다.
+- 제한: 서버당 스킬 50개, 스킬당 동작 10개, 역할 변경 3회, 메시지 4개. 봇은 자신의 최고 역할보다 낮고 위험한 권한이 없는 역할만 부여합니다. 코인을 지급하는 스킬은 최소 60초의 쿨다운이 필요합니다. 봇 명령어, 별칭, 태그의 이름은 사용할 수 없습니다.
+- 스킬은 JSON으로 저장되며 설정 내보내기에 포함됩니다. 알 수 없는 필드는 거부되므로, 어디서 온 스킬이든 블록이 허용하는 일만 할 수 있습니다.
+
+예시: 역할을 부여하고 사용 횟수를 세는 명령어(역할 ID를 바꾸세요):
+
+```json
+{
+  "name": "join-team",
+  "kind": "command",
+  "description": "Join the team once",
+  "cooldown": 60,
+  "actions": [
+    {"do": "add_role", "role": 123456789012345678, "if": [{"not": {"has_role": 123456789012345678}}]},
+    {"do": "add_var", "name": "joined", "amount": 1},
+    {"do": "reply", "text": "Welcome, {user}! {var:joined} members joined so far."}
+  ]
+}
+```
+
+AI 연결(선택):
+
+- `/support ai setup provider:kimi agree:true`는 API 키를 입력하는 비공개 입력창을 엽니다. 제공업체는 Anthropic, OpenAI, Kimi(Moonshot)입니다. 모델이 제안되며 같은 명령어나 대시보드에서 바꿀 수 있습니다. 모델 이름은 제공업체에서 바뀌므로 해당 문서를 확인하세요. 비용은 제공업체에 직접 지불합니다.
+- `/support ai make wish:...`는 AI에게 스킬을 요청하고, 가져온 스킬과 똑같이 엄격하게 응답을 검사한 뒤 미리보기를 보여 줍니다. 저장을 누르기 전에는 아무것도 저장되지 않습니다.
+- `/support ai status`, `limits`(하루 요청 수, 사람당 요청 간격 초), `remove`로 구성이 완성됩니다. 키는 암호화되어 저장되며 비밀 값은 `data/ai.secret` 파일에 있습니다. 이 파일을 백업과 함께 보관하세요. 없으면 저장된 키를 읽을 수 없어 다시 입력해야 합니다. 키는 표시, 기록, 내보내기가 되지 않습니다. 제공업체는 새 키와 함께만 바꿀 수 있으므로 키가 다른 제공업체로 전송되는 일은 없습니다.
+- 전송되는 내용: `/support ai make`의 요청 내용과, 2차 의견에서는 의심스러운 메시지의 텍스트입니다. 그 외에는 전송되지 않으며, `ai` 모듈이 켜져 있는 동안에만 해당합니다. [PRIVACY.md](../PRIVACY.md)를 참고하세요.
+
+스캠 방지 학습:
+
+- 학습 필터(`/security antiscam set learned:true`)는 서버마다 하나인 작은 분류기입니다. 관리자는 컨텍스트 메뉴 항목 "Mark as scam"과 "Not a scam"으로 학습시킵니다. 단어의 짧은 해시만 저장하고 텍스트는 저장하지 않으며, 스캠 8개와 정상 30개를 본 뒤에야 동작하고 그때도 95퍼센트를 넘을 때만 작동합니다. `ham_sampling`을 켜면 정상 메시지 열 개 중 하나에서도 학습합니다.
+- 유사 이미지(`similar`, 기본 켜짐)는 이미지 지문을 알려진 스캠 이미지와 비교하므로, 다시 저장하거나 크기를 바꾼 사본도 찾아냅니다. Tesseract 없이 동작합니다.
+- AI 2차 의견(`/support ai limits second_opinion:true`): 기준 바로 아래인 경우나 학습 필터가 의심스럽다고 본 경우에 AI에게 묻습니다. AI가 80퍼센트 이상의 확신으로 스캠이라고 답할 때만 메시지가 삭제되며, AI의 응답이 다른 일을 일으킬 수는 없습니다.
+
+### 메시지 빌더와 업데이트
+
+메시지 빌더는 JSON으로 여러 임베드와 링크 버튼이 있는 메시지를 게시합니다. Embed Generator 같은 임베드 생성기가 내보내는 JSON을 읽으므로, 그곳에서 메시지를 디자인하고 봇으로 게시할 수 있습니다. JSON은 텍스트, .json 파일, 또는 JSON을 바로 가리키는 https 링크(예: 저장소의 원본 파일)로 전달하세요. 리디렉션되는 링크는 거부됩니다. 링크 버튼만 만들어지고, 상호작용이 필요한 버튼은 건너뜁니다. 모든 링크는 http 또는 https여야 하고, 텍스트의 멘션은 알림을 보내지 않으며, Discord의 제한이 적용됩니다. /post message copy는 기존 메시지를 JSON으로 내보내고, /post message edit는 봇의 메시지를 수정하며, /post message preview는 결과를 나에게만 보여 줍니다. 웹 편집기의 공유 링크는 형식이 공개되어 있지 않으므로 열지 않습니다.
+
+```json
+{
+  "content": "Rules were updated",
+  "embeds": [{"title": "Rules", "description": "Read them here.", "color": "#5865f2"}],
+  "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "Open rules", "url": "https://example.com/rules"}]}]
+}
+```
+
+봇은 12시간마다 update.repo(scripts/set_repo_url.py로 설정)의 GitHub 저장소에 더 새로운 릴리스가 있는지 확인합니다. 있으면 봇 소유자에게 릴리스 노트가 담긴 개인 메시지가 가고, 릴리스를 내려받아 검사합니다. 검사 항목은 릴리스의 SHA-256 체크섬, 압축 파일 안의 안전한 경로, 태그와 일치하는 버전입니다. 설치는 /server debug update action:install로 하거나, auto_install이 켜져 있으면 자동으로 이루어집니다. 설치 전에 교체될 파일이 data/update에 저장되고, 새 패키지가 설치되며, 새 코드를 시험 삼아 불러옵니다. 어느 단계든 실패하면 이전 파일이 복원됩니다. .env, settings.json, data, music은 절대 건드리지 않습니다. 이후 봇이 스스로 다시 시작합니다. Docker에서는 제자리 설치를 하지 않으니 이미지를 업데이트하세요. 업데이트는 저장소의 코드를 실행하므로 신뢰하는 저장소만 지정하세요. enabled를 false로 하면 끌 수 있습니다.
+
+```json
+{
+  "update": {
+    "enabled": true,
+    "repo": "NAME/guardbot",
+    "check_hours": 12,
+    "auto_install": false,
+    "require_checksum": false
+  }
+}
+```
+
+```
+/post message send channel:#news url:https://example.com/message.json
+/post message send channel:#news file:message.json
+/post message preview url:https://example.com/message.json
+/post message edit message:https://discord.com/channels/1/2/3 url:https://example.com/message.json
+/post message copy message:https://discord.com/channels/1/2/3
+/admin module disable name:builder
+/server debug update action:status
+/server debug update action:check
+/server debug update action:install
+```
+
 ### 운영
 
 봇은 몇 초마다 데이터를 저장하고 data/dbbackups에 데이터베이스 백업을 보관합니다(데이터 형식 변경 전 1개, 하루 1개). 음악 대기열, 고정 메시지, 관리자 카운터는 재시작 후에도 유지됩니다. 대형 봇은 여러 샤드로 실행할 수 있습니다. heartbeat 파일과 선택 사항인 상태 페이지는 모니터링 도구에 도움이 됩니다. 이 옵션은 settings.json에서 설정합니다:
@@ -1170,7 +1271,7 @@ python scripts/restore_db.py BACKUPFILE --check          # only check a backup
 
 현재 데이터베이스는 before-restore 라는 이름의 백업으로 보관됩니다.
 
-### 운영
+### 서버 관리
 
 모듈과 명령어를 켜고 끄고, 접두사를 바꾸고, 별칭을 정하고, 명령어를 역할로 제한합니다.
 
@@ -1271,6 +1372,10 @@ guardbot/
     utils.py              helpers
     images.py             rank cards and captcha images
     cogs/                 one file per feature, in the folders security, moderation, server, community, tools
+    skills.py             스킬 엔진: 스킬을 검사하고 실행
+    ai.py                 AI 제공업체, 암호화된 키, 제한
+    learner.py, imgsim.py 스캠 방지 학습 필터, 이미지 지문
+    dashboard_manage.py   명령어, 스킬, AI, 프로필용 대시보드 페이지
   docs/                   documentation in 12 languages, COMMANDS.md, PRIVACY.md
   deploy/                 systemd service, Dockerfile, compose file
   scripts/                maintenance scripts
@@ -1295,6 +1400,7 @@ guardbot/
 - 봇은 멤버가 보내는 다이렉트 메시지를 무시합니다.
 - 토큰은 .env 파일에서 읽습니다. 절대 공유하거나 업로드하지 마세요.
 - 멤버는 /info mydata로 자신의 데이터를 내보내고 삭제할 수 있습니다. 관리자는 떠난 멤버의 데이터를 얼마나 보관할지 정할 수 있습니다.
+- AI 기능은 본인의 키를 추가하기 전까지 꺼져 있습니다. 추가한 뒤에도 선택한 제공업체로 전송되는 것은 `/support ai make`의 텍스트와 2차 의견의 의심스러운 메시지뿐입니다.
 - [PRIVACY.md](../PRIVACY.md)
 
 ## 지원
