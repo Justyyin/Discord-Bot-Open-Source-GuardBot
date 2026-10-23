@@ -20,6 +20,7 @@ from . import __version__, i18n
 from . import layout
 from .dashboard import Dashboard
 from .health import StatusServer, write_heartbeat
+from .ai import AI
 from .checks import Checks
 from .logsetup import CONTEXT
 from .metrics import Metrics
@@ -51,6 +52,9 @@ EXTENSIONS = (
     "tools.tools",
     "tools.info",
     "community.tags",
+    "tools.skills",
+    "tools.aicog",
+    "tools.panels",
     "tools.utility",
     "moderation.modmail",
     "moderation.appeals",
@@ -120,6 +124,7 @@ class Bot(Checks, commands.AutoShardedBot):
         self.settings = settings
         self.store = Store(settings.get("data_dir", "data"))
         self.work = Workers(settings)
+        self.ai = AI(self)
         self.metrics = Metrics()
         self.session = None
         self.queue = None
@@ -130,6 +135,7 @@ class Bot(Checks, commands.AutoShardedBot):
         self._state_seen = {}
         self.closing = False
         self.restart_requested = False
+        self.music_bot = None
         self.layout = {}
         self.actors = {}
         self.status_server = StatusServer(self)
@@ -191,6 +197,11 @@ class Bot(Checks, commands.AutoShardedBot):
 
     async def get_context(self, message, *, cls=commands.Context):
         """Resolve per-server aliases before the command is looked up."""
+        jail = self.get_cog("Jail")
+        if jail is not None and message.guild and jail.claims(message):
+            message = _copy.copy(message)
+            message.content = ""
+            return await super().get_context(message, cls=cls)
         if message.guild and message.content:
             g = self.cfg(message.guild.id)
             p = self.prefix_for(message.guild.id)
@@ -324,6 +335,8 @@ class Bot(Checks, commands.AutoShardedBot):
         self.queue = asyncio.Queue()
         self._jobs = [asyncio.create_task(self._log_worker()), asyncio.create_task(self._autosave()), asyncio.create_task(self._housekeeping())]
         for ext in EXTENSIONS:
+            if ext == "community.music" and self.music_bot is not None:
+                continue
             await self.load_extension(f"guardbot.cogs.{ext}")
         self.arrange_commands()
         await self.status_server.start()
@@ -341,6 +354,8 @@ class Bot(Checks, commands.AutoShardedBot):
         """Save the data and close the connections."""
         self.save_states()
         self.closing = True
+        if self.music_bot is not None and not self.music_bot.is_closed():
+            await self.music_bot.close()
         await self.status_server.stop()
         await self.dashboard.stop()
         self.store.close()
@@ -360,6 +375,12 @@ class Bot(Checks, commands.AutoShardedBot):
         start = getattr(ctx, "gb_start", None)
         if start is not None:
             self.metrics.observe(self.prefix_for(ctx.guild.id) + ctx.command.qualified_name, time.perf_counter() - start)
+
+    def music_cog(self):
+        """The music cog, on Guard Music when the second bot runs, otherwise on this bot."""
+        if self.music_bot is not None:
+            return self.music_bot.get_cog("Music")
+        return self.get_cog("Music")
 
     async def on_ready(self):
         """Log that the bot is online."""

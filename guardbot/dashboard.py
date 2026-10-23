@@ -18,8 +18,10 @@ import aiohttp
 import discord
 from aiohttp import web
 
-from . import __version__, configio, i18n, layout
+from . import __version__, configio, dashhelp, dashtexts, i18n, layout, plugins
 from .defaults import DEFAULTS, MODULES, PROTECTED_COMMANDS
+from .dashboard_extra import Extra
+from .dashboard_manage import MAX_IMAGE_BODY, Manage
 
 log = logging.getLogger(__name__)
 
@@ -35,9 +37,34 @@ MAX_LIST = 500
 COOKIE = "gb_session"
 STATE_COOKIE = "gb_state"
 # Settings that are state of the bot, not choices of the administrator
-HIDDEN_LEAVES = {"items", "next", "last", "hits", "saved", "active", "role_saved", "counter", "pending", "open", "hashes", "texts", "members"}
-HIDDEN_TOP = {"aliases", "perms", "case_counter", "reaction_roles", "chanlocks", "notify", "tags", "polls", "giveaways", "reminders", "autoresponder", "sticky", "rolemenus", "schedule", "feeds", "activity", "stats", "disabled_commands", "prefix", "language", "modules", "history", "roletemplates", "temproles", "exceptions", "reasons", "dashboard_access"}
-SECRET_WORDS = ("token", "secret", "webhook", "password")
+HIDDEN_LEAVES = {"model", "ihashes", "hashes", "items", "next", "last", "hits", "saved", "active", "role_saved", "counter", "pending", "open", "hashes", "texts", "members"}
+HIDDEN_TOP = {"aliases", "perms", "case_counter", "reaction_roles", "chanlocks", "notify", "tags", "polls", "giveaways", "reminders", "autoresponder", "sticky", "rolemenus", "schedule", "feeds", "activity", "stats", "disabled_commands", "prefix", "language", "modules", "history", "roletemplates", "temproles", "exceptions", "reasons", "dashboard_access", "skills", "ai", "panels", "look"}
+SECRET_WORDS = ("token", "secret", "webhook", "password", "key_enc")
+# Single settings that are state or unused, by their full path
+HIDDEN_PATHS = {"lockdown.active_mode", "economy.next_item", "nicknames.action"}
+# Settings whose type cannot be read from the default value
+KIND_OVERRIDE = {f"log.{k}": "channel" for k in ("main", "messages", "voice", "server", "moderation", "security")}
+_ACT = (("log", "Only log"), ("delete", "Delete the message"), ("warn", "Warn"), ("timeout", "Timeout"), ("jail", "Gulag"))
+# Settings with a fixed set of values, shown as a menu
+CHOICES = {
+    "antiscam.action": _ACT,
+    **{f"automod.{rule}.action": _ACT for rule in ("words", "caps", "mentions", "invites", "phishing", "pii", "doxxing", "threats", "shortlinks", "newlinks")},
+    "antinuke.action": (("alert", "Only alert"), ("strip", "Remove roles"), ("kick", "Kick"), ("ban", "Ban")),
+    "raid.action": (("alert", "Only alert"), ("timeout", "Timeout"), ("kick", "Kick")),
+    "lockdown.mode": (("channels", "Close every channel"), ("role", "Take the right to write from roles")),
+    "xp.announce": (("same", "In the same channel"), ("channel", "In an own channel"), ("off", "Not at all")),
+    "verify.mode": (("button", "Button"), ("captcha", "Captcha picture"), ("math", "Math question")),
+    "modwatch.action": (("alert", "Only alert"), ("timeout", "Timeout"), ("strip", "Remove roles"), ("none", "Nothing")),
+    "archive.action": (("report", "Only report"), ("move", "Move into the archive"), ("lock", "Lock")),
+    "music.download_format": (("best", "Original quality"), ("flac", "FLAC"), ("mp3", "MP3"), ("opus", "Opus"), ("m4a", "M4A")),
+    "music.search_source": (("youtube", "YouTube"), ("soundcloud", "SoundCloud")),
+}
+# Readable names for single settings, by their full path
+PATH_LABELS = {
+    "xp.card": "Rank card", "log.main": "Main channel", "log.messages": "Messages", "log.voice": "Voice", "music.stay": "24/7 mode",
+    "music.home_channel": "24/7 channel", "music.autoplay": "24/7 playlist", "music.youtube": "YouTube", "music.soundcloud": "SoundCloud",
+    "music.spotify": "Spotify", "music.apple_music": "Apple Music", "music.tidal": "Tidal", "music.search_source": "Search source",
+}
 # Access levels: viewers read, moderators change the settings of these sections, administrators change everything
 LEVELS = {"none": 0, "viewer": 1, "mod": 2, "admin": 3}
 MOD_SECTIONS = {"mod", "automod", "antiscam", "raid", "jail", "probation", "watchlist", "nicknames", "stickyroles", "exceptions", "welcome", "verify", "tickets", "reports", "suggestions", "modmail", "appeals"}
@@ -58,6 +85,7 @@ TITLES = {
     "xp": "XP and levels", "antiscam": "Anti-scam", "automod": "AutoMod", "antinuke": "Anti-nuke", "mod": "Moderation", "jail": "Gulag", "raid": "Raid protection",
     "modwatch": "Moderator limits", "permaudit": "Permission audit", "tempvoice": "Temporary voice", "log": "Log channels", "log_options": "Log options", "debug": "Diagnostics",
     "welcome": "Welcome and goodbye", "boosters": "Boosters", "verify": "Verification", "modmail": "Mod-mail", "appeals": "Ban appeals", "reports": "Reports",
+    "stickyroles": "Sticky roles", "watchlist": "Watch list", "approval": "Four-eyes approval",
 }
 
 
@@ -140,9 +168,21 @@ def build_stats(cfg, cases, count=30, today=None):
     }
 
 
+# Readable names for keys whose plain form is unclear
+LABELS = {
+    "min": "Minimum", "max": "Maximum", "min_len": "Minimum length", "max_mb": "Largest file (MB)", "max_images": "Pictures per message", "ocr_lang": "OCR language",
+    "dm": "Direct message", "dm_user": "Direct message to the member", "pii": "Personal data", "ip": "IP address", "iban": "IBAN", "card": "Card number",
+    "newlinks": "Links of new members", "shortlinks": "Short links", "ghostping": "Ghost pings", "learned": "Learned filter", "ham_sampling": "Learn from normal messages",
+    "similar": "Similar pictures", "celeb": "Celebrity names", "bait": "Bait words", "crypto": "Crypto words", "instant": "Removed at once", "dj_role": "DJ role",
+    "voice_xp": "Voice XP", "desc": "Description", "hub": "Hub channel", "selftest": "Self test", "work_min": "Work reward minimum", "work_max": "Work reward maximum",
+    "next_item": "Next shop number", "swarm_min": "Swarm size", "self_star": "Own messages count", "main_guild": "Main server", "lookalike": "Look-alike domains",
+    "dry_run": "Test mode (no action)", "auto": "Automatic",
+}
+
+
 def label(key):
     """Readable name of a setting key."""
-    return key.replace("_", " ").capitalize()
+    return LABELS.get(key) or key.replace("_", " ").capitalize()
 
 
 def id_kind(leaf, default):
@@ -164,22 +204,25 @@ def id_kind(leaf, default):
 def field_spec(path, default):
     """Describe one setting that the dashboard may edit, or None when it is internal or not a simple value."""
     leaf = path.rsplit(".", 1)[-1]
-    if leaf in HIDDEN_LEAVES or any(w in leaf for w in SECRET_WORDS) or path in configio.RUNTIME or ".limits" in path:
+    if path in HIDDEN_PATHS or any(part in HIDDEN_LEAVES for part in path.split(".")) or any(w in leaf for w in SECRET_WORDS) or path in configio.RUNTIME or ".limits" in path:
         return None
-    kind = id_kind(leaf, default)
+    name = PATH_LABELS.get(path) or label(leaf)
+    if path in CHOICES:
+        return {"path": path, "label": name, "type": "choice", "choices": [list(c) for c in CHOICES[path]]}
+    kind = KIND_OVERRIDE.get(path) or id_kind(leaf, default)
     if kind:
-        return {"path": path, "label": label(leaf), "type": kind}
+        return {"path": path, "label": name, "type": kind}
     if isinstance(default, bool):
-        return {"path": path, "label": label(leaf), "type": "bool"}
+        return {"path": path, "label": name, "type": "bool"}
     if isinstance(default, int):
-        return {"path": path, "label": label(leaf), "type": "int"}
+        return {"path": path, "label": name, "type": "int"}
     if isinstance(default, float):
-        return {"path": path, "label": label(leaf), "type": "float"}
+        return {"path": path, "label": name, "type": "float"}
     if isinstance(default, str) or default is None:
-        return {"path": path, "label": label(leaf), "type": "text", "long": isinstance(default, str) and len(default) > 40}
+        return {"path": path, "label": name, "type": "text", "long": isinstance(default, str) and len(default) > 40}
     if isinstance(default, list) and not (default and isinstance(default[0], (list, dict))):
         numbers = bool(default) and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in default)
-        return {"path": path, "label": label(leaf), "type": "numbers" if numbers else "list"}
+        return {"path": path, "label": name, "type": "numbers" if numbers else "list"}
     return None
 
 
@@ -253,6 +296,10 @@ def to_id(value, valid):
 def coerce(spec, value, channels, roles, default):
     """Check a value from the page against the type of the setting and return what is stored."""
     t = spec["type"]
+    if t == "choice":
+        if value not in [c[0] for c in spec["choices"]]:
+            raise ValueError("unknown choice")
+        return value
     if t == "bool":
         if not isinstance(value, bool):
             raise ValueError("true or false is needed")
@@ -290,9 +337,9 @@ def describe(cfg, commands):
     """Build the settings page of a server: list of sections with fields and current values."""
     sections = []
     general = [
-        {"path": "prefix", "label": "Command prefix", "type": "text", "value": cfg["prefix"]},
-        {"path": "language", "label": "Language of replies", "type": "choice", "value": cfg["language"], "choices": [[k, v] for k, v in i18n.LANGUAGES.items()]},
-        {"path": "disabled_commands", "label": "Turned off commands", "type": "commands", "value": list(cfg["disabled_commands"]), "choices": [c for c in commands if c not in PROTECTED_COMMANDS]},
+        {"path": "prefix", "label": "Command prefix", "type": "text", "value": cfg["prefix"], "help": dashhelp.HELP["prefix"]},
+        {"path": "language", "label": "Language of replies", "type": "choice", "value": cfg["language"], "choices": [[k, v] for k, v in i18n.LANGUAGES.items()], "help": dashhelp.HELP["language"]},
+        {"path": "disabled_commands", "label": "Turned off commands", "type": "commands", "value": list(cfg["disabled_commands"]), "choices": [c for c in commands if c not in PROTECTED_COMMANDS], "help": dashhelp.HELP["disabled_commands"]},
     ]
     sections.append({"key": "general", "title": "General", "fields": general})
     sections.append({"key": "modules", "title": "Modules", "fields": [{"path": f"modules.{k}", "label": label(k), "type": "bool", "value": bool(cfg["modules"].get(k, v))} for k, v in MODULES.items()]})
@@ -306,7 +353,7 @@ def describe(cfg, commands):
                 value = show(spec, get_path(cfg, spec["path"]))
             except KeyError:
                 continue
-            fields.append(dict(spec, value=value, group=" / ".join(label(p) for p in spec["path"].split(".")[1:-1])))
+            fields.append(dict(spec, value=value, group=" / ".join(label(p) for p in spec["path"].split(".")[1:-1]), help=dashhelp.HELP.get(spec["path"], "")))
         if fields:
             sections.append({"key": top, "title": TITLES.get(top, label(top)), "fields": fields})
     for s in sections:
@@ -422,7 +469,7 @@ class Dashboard:
 
     def make_app(self):
         """Create the web application with its routes and the security middleware."""
-        app = web.Application(middlewares=[self.guard], client_max_size=MAX_BODY)
+        app = web.Application(middlewares=[self.guard], client_max_size=MAX_IMAGE_BODY)
         app.router.add_get("/", self.page)
         for path in STATIC:
             app.router.add_get(path, self.static)
@@ -430,12 +477,15 @@ class Dashboard:
         app.router.add_get("/callback", self.callback)
         app.router.add_post("/api/logout", self.logout)
         app.router.add_get("/api/me", self.me)
+        app.router.add_get("/api/texts/{lang:[a-z]{2}}", self.texts)
         app.router.add_get("/api/guild/{gid:\\d+}", self.guild_info)
         app.router.add_post("/api/guild/{gid:\\d+}/set", self.guild_set)
         app.router.add_get("/api/guild/{gid:\\d+}/cases", self.guild_cases)
         app.router.add_get("/api/guild/{gid:\\d+}/stats", self.guild_stats)
         app.router.add_get("/api/guild/{gid:\\d+}/export", self.guild_export)
         app.router.add_post("/api/guild/{gid:\\d+}/import", self.guild_import)
+        Manage(self).routes(app)
+        Extra(self).routes(app)
         return app
 
     # ---- security
@@ -650,6 +700,10 @@ class Dashboard:
         """Names of the top-level commands the bot has."""
         return sorted(layout.all_keys(self.bot.tree))
 
+    async def texts(self, request):
+        """The translations of the dashboard for one language. Public, they contain no data of any server."""
+        return web.json_response(dashtexts.table(request.match_info["lang"]), headers={"Cache-Control": "public, max-age=3600"})
+
     async def me(self, request):
         """The user and the servers they may manage. Only servers where the bot is connected are listed."""
         s = self.require(request)
@@ -673,13 +727,17 @@ class Dashboard:
         channels = [{"id": str(c.id), "name": c.name, "kind": "category" if isinstance(c, discord.CategoryChannel) else "voice" if isinstance(c, (discord.VoiceChannel, discord.StageChannel)) else "text"} for c in sorted(guild.channels, key=lambda c: (c.position, c.id))]
         roles = [{"id": str(r.id), "name": r.name} for r in sorted(guild.roles, key=lambda r: -r.position) if not r.is_default()]
         modules = cfg["modules"]
+        sections = self.mark_editable(describe(cfg, self.commands()), level)
         return web.json_response({
+            "plugins": plugins.catalog(modules, MODULES, {x["key"] for x in sections}),
+            "categories": [{"key": k, "title": t, "title_de": d} for k, t, d in plugins.CATEGORIES],
             "id": str(guild.id), "name": guild.name, "icon": guild.icon.with_size(128).url if guild.icon else None,
             "members": guild.member_count, "cases": len(self.bot.store.cases(guild.id)), "modules_on": sum(1 for k in MODULES if modules.get(k, MODULES[k])), "modules_total": len(MODULES),
             "latency_ms": round(self.bot.latency * 1000) if math.isfinite(self.bot.latency) else None,
-            "channels": channels, "roles": roles, "sections": self.mark_editable(describe(cfg, self.commands()), level),
+            "channels": channels, "roles": roles, "sections": sections,
             "level": next(k for k, v in LEVELS.items() if v == level),
             "module_status": [{"name": k, "on": on, "setup": setup} for k, (on, setup) in sorted(configio.module_status(cfg).items())],
+            "look": cfg["look"],
         })
 
     @staticmethod
@@ -689,12 +747,17 @@ class Dashboard:
             s["editable"] = level >= LEVELS["admin"] or (level >= LEVELS["mod"] and s["key"] in MOD_SECTIONS)
         return sections
 
-    async def read_json(self, request):
-        """Read a JSON object from the body."""
+    async def read_json(self, request, limit=MAX_BODY):
+        """Read a JSON object from the body. Bodies larger than the limit are refused before they are read."""
         if request.content_type != "application/json":
             raise web.HTTPUnsupportedMediaType(text="JSON is needed")
+        if request.content_length is not None and request.content_length > limit:
+            raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=request.content_length)
+        raw = await request.content.read(limit + 1)
+        if len(raw) > limit:
+            raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(raw))
         try:
-            data = await request.json()
+            data = json.loads(raw)
         except ValueError:
             raise web.HTTPBadRequest(text="invalid JSON")
         if not isinstance(data, dict):
@@ -770,6 +833,8 @@ class Dashboard:
         s = self.require(request, change=True)
         guild = self.guild_for(request, s, change=True)
         raw = await request.read()
+        if len(raw) > MAX_BODY:
+            raise web.HTTPRequestEntityTooLarge(max_size=MAX_BODY, actual_size=len(raw))
         payload, problems = configio.parse(raw)
         if problems:
             return web.json_response({"errors": problems[:10]}, status=422)

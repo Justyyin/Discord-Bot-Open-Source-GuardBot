@@ -53,8 +53,10 @@ class Player:
             self.idle_task = None
 
     def schedule_idle(self, seconds=None):
-        """Leave the voice channel after some time without playback or listeners."""
+        """Leave the voice channel after some time without playback or listeners. Never in 24/7 mode."""
         self.cancel_idle()
+        if self.conf.get("stay"):
+            return
         seconds = self.conf["idle_leave"] if seconds is None else seconds
         if seconds > 0:
             self.idle_task = asyncio.create_task(self._idle(seconds))
@@ -78,6 +80,8 @@ class Player:
     async def next(self, skipped=False):
         """Move to the next track and start it, or go idle when the queue is empty."""
         track = self.queue.advance(skipped)
+        if track is None and await self.cog.autoplay(self):
+            track = self.queue.advance(False)
         if track is None:
             self.offset = 0.0
             self.schedule_idle()

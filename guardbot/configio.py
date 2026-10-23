@@ -16,6 +16,7 @@ RUNTIME = (
     "counting.record", "automod.hits", "reports.seen", "reports.next", "debug.usage", "debug.errors", "debug.last_hash", "activity.days",
     "approval.items", "approval.next", "watchlist.items", "archive.reported", "archive.last_scan", "temproles.items", "history", "team.stats",
     "team.week", "team.last_report", "team.away", "team.assigned", "applications.items", "applications.next", "applications.last", "rules.message", "rules.changed",
+    "jail.reminder_message", "look.wallpaper", "ai.key_enc", "ai.day", "ai.used", "ai.errors", "skills.vars", "skills.meta",
 )
 
 

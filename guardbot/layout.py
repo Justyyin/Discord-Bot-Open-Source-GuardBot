@@ -23,7 +23,7 @@ GROUPS = {
     "info": ("Information about you, members and the bot", ["about", "avatar", "botinfo", "ping", "userinfo", "mydata", "leaderboard", "rank", "find"]),
     "community": ("Welcome, boosters, reminders, statistics and voice rooms", ["welcome", "booster", "afk", "remind", "activity", "tempvoice", "voice"]),
     "engage": ("Economy, giveaways, polls, counting and starboard", ["economy", "giveaway", "poll", "counting", "starboard"]),
-    "support": ("Tickets, suggestions, tags and automatic replies", ["ticket", "suggest", "tag", "autoresponder"]),
+    "support": ("Tickets, suggestions, tags, skills and automatic replies", ["ticket", "suggest", "tag", "autoresponder", "skill", "ai"]),
     "members": ("Returning members, names, watch list and reason templates", ["stickyroles", "nickname", "watch", "reason"]),
     "structure": ("Channels, categories, archive, timed roles, role templates and rules", ["channel", "category", "archive", "temprole", "roletemplate", "rules"]),
     "team": ("Statistics, weekly report, duty roster and applications", ["teamstats", "weekly", "duty", "apply", "modwatch", "permaudit"]),
