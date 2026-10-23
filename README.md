@@ -84,7 +84,7 @@ Self-hosted Discord bot for moderation, security and community. Open source, fre
 - [Support](#support)
 - [Credits](#credits)
 - [License](#license)
-
+- [Pictures](#Pictures)
 <!-- tocstop -->
 
 ## About
@@ -1418,6 +1418,9 @@ GuardBot is inspired by [Embed Generator](https://github.com/merlinfuchs/embed-g
 Released under the MIT License. See [LICENSE](LICENSE).
 
 Copyright (c) Justyn - made in Germany
+
+### Pictures
+
 <img width="1440" height="900" alt="en_login_1" src="https://github.com/user-attachments/assets/179c9526-2231-49a6-8941-d0171f0202a4" />
 <img width="1440" height="900" alt="en_overview_1" src="https://github.com/user-attachments/assets/4b1ea7aa-4ab9-42a5-8440-e893a33fcb24" />
 <img width="1440" height="900" alt="en_plugins_1" src="https://github.com/user-attachments/assets/99731048-adf7-4cb1-a3b9-bc8a4387337f" />
