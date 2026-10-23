@@ -3,13 +3,14 @@
 import io
 import json
 import logging
+import shutil
 import time
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from ... import i18n
+from ... import dashlook, i18n, panels
 from ...utils import CREDIT
 
 log = logging.getLogger(__name__)
@@ -56,6 +57,8 @@ class Privacy(commands.Cog):
                 item["name"], item["answers"] = "deleted user", []
                 n += 1
         cfg["applications"]["last"].pop(str(uid), None)
+        if cfg["skills"]["vars"]["users"].pop(str(uid), None) is not None:
+            n += 1
         return n
 
     @commands.Cog.listener()
@@ -77,6 +80,8 @@ class Privacy(commands.Cog):
         """Runs when the bot is removed from a server."""
         if self.bot.settings.get("purge_on_guild_leave"):
             self.bot.store.drop_guild(guild.id)
+            shutil.rmtree(panels.image_dir(self.bot.store.dir, guild.id), ignore_errors=True)
+            shutil.rmtree(dashlook.folder(self.bot.store.dir, guild.id), ignore_errors=True)
 
     @tasks.loop(hours=6)
     async def purge_loop(self):
@@ -109,7 +114,8 @@ class Privacy(commands.Cog):
         reminders = [i for i in cfg["reminders"]["items"] if i["user"] == int(uid)]
         appeals = [i for i in cfg["appeals"]["items"].values() if i.get("user") == int(uid)]
         applications = [i for i in cfg["applications"]["items"].values() if i.get("user") == int(uid)]
-        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases, "reminders": reminders, "ban_appeals": appeals, "applications": applications}
+        skill_counters = cfg["skills"]["vars"]["users"].get(str(uid), {})
+        return {"generator": CREDIT, "server": gid, "user": uid, "stored_profile": rec, "moderation_cases_about_you": cases, "reminders": reminders, "ban_appeals": appeals, "applications": applications, "skill_counters": skill_counters}
 
     @md.command(name="export", description="Download the data this bot stores about you on this server")
     async def md_export(self, it: discord.Interaction):

@@ -1,7 +1,14 @@
-"""Music: plays links and files of the local library in voice channels and downloads into a structured library."""
+"""Music: plays links, searches, saved playlists and files of the local library in voice channels and downloads into a structured library.
+
+Spotify, Apple Music and Tidal links are read as title and artist and played from the search source (YouTube or SoundCloud).
+With 24/7 mode the bot stays in a home channel and plays a saved playlist on repeat.
+"""
 
 import asyncio
 import logging
+import os
+import random
+import re
 import shlex
 import shutil
 import time
@@ -11,12 +18,13 @@ from pathlib import Path
 from typing import Literal, Optional
 from urllib.parse import urlparse
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from ...cog import BaseCog
-from ... import i18n, musiclib as ml
+from ... import i18n, musiclib as ml, musicsources as ms
 from ...linkcheck import public_host, url_problem
 from ...utils import emb, trim
 
@@ -24,6 +32,20 @@ from ...musicdl import FORMATS, GENERIC, INDEX_TTL, LOSSLESS_CODECS, NET_INPUT, 
 from ...musicplayer import Player
 
 log = logging.getLogger(__name__)
+
+MAX_LISTS = 50
+MAX_LIST_ITEMS = 500
+REJOIN_SECONDS = 15
+
+
+def list_name(name):
+    """A playlist name: one line, at most 40 characters."""
+    return re.sub(r"\s+", " ", str(name or "")).strip()[:40]
+
+
+def saved_track(t):
+    """The part of a track that a playlist keeps."""
+    return {"title": t.title[:200], "artist": t.artist[:200], "kind": t.kind, "ref": t.ref[:500], "length": float(t.length or 0)}
 
 
 class Music(BaseCog):
@@ -39,6 +61,8 @@ class Music(BaseCog):
         self.indexed = 0.0
         self.index_lock = asyncio.Lock()
         self.restored = False
+        self.rejoin = {}
+        self.resolver = ms.Resolver(lambda: self.bot.session, bot.settings, os.environ)
         GENERIC["on"] = bool(bot.settings.get("music_generic", True))
 
     def export_state(self):
@@ -64,6 +88,11 @@ class Music(BaseCog):
                 await self.restore(int(gid), data)
             except (discord.DiscordException, asyncio.TimeoutError, KeyError, TypeError, ValueError) as exc:
                 log.warning("could not resume the music of %s: %s", gid, exc)
+        for guild in list(self.bot.guilds):
+            try:
+                await self.ensure_home(guild)
+            except (discord.DiscordException, asyncio.TimeoutError) as exc:
+                log.warning("could not join the 24/7 channel of %s: %s", guild.id, exc)
 
     async def restore(self, gid, data):
         """Rebuild the player of one server from saved state."""
@@ -71,7 +100,7 @@ class Music(BaseCog):
         channel = guild.get_channel(data["channel"]) if guild else None
         if channel is None or time.time() - data["saved"] > RESUME_WITHIN or not self.bot.module_on(gid, "music") or self.not_ready():
             return
-        if not [m for m in channel.members if not m.bot]:
+        if not [m for m in channel.members if not m.bot] and not self.conf(gid)["stay"]:
             return
         player = Player(self, guild)
         player.text_channel, player.volume = data.get("text"), int(data["volume"])
@@ -89,8 +118,118 @@ class Music(BaseCog):
 
     async def cog_unload(self):
         """Disconnect everywhere."""
+        for task in self.rejoin.values():
+            task.cancel()
         for gid in list(self.players):
             await self.destroy(gid)
+
+    async def connect_to(self, guild, channel):
+        """Connect or move the player of a server to a voice channel. Returns (player, problem)."""
+        problem = self.not_ready()
+        if problem:
+            return None, problem
+        perms = channel.permissions_for(guild.me)
+        if not (perms.connect and perms.speak):
+            return None, i18n.say(self.bot, guild, "I need the Connect and Speak permissions in your voice channel.")
+        player = self.players.get(guild.id)
+        if player and player.vc and player.vc.is_connected():
+            if player.vc.channel != channel:
+                await player.vc.move_to(channel)
+            return player, None
+        if player is None:
+            player = self.players[guild.id] = Player(self, guild)
+        try:
+            player.vc = await channel.connect(self_deaf=True)
+        except (discord.DiscordException, asyncio.TimeoutError) as exc:
+            self.players.pop(guild.id, None)
+            log.warning("voice connect failed: %s", exc)
+            return None, i18n.say(self.bot, guild, "I could not join the voice channel: {exc}", exc=exc)
+        return player, None
+
+    async def ensure_home(self, guild):
+        """In 24/7 mode, join the home channel and start the 24/7 playlist when the bot is not in a voice channel yet."""
+        conf = self.conf(guild.id)
+        if not self.bot.module_on(guild.id, "music") or not conf["stay"] or not conf["home_channel"]:
+            return
+        player = self.players.get(guild.id)
+        if player and player.vc and player.vc.is_connected():
+            return
+        channel = guild.get_channel(conf["home_channel"])
+        if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+            return
+        player, problem = await self.connect_to(guild, channel)
+        if problem:
+            log.info("24/7 channel of %s not joined: %s", guild.id, problem)
+            return
+        if not player.playing:
+            await player.next()
+
+    def schedule_rejoin(self, guild):
+        """Join the 24/7 channel again a few seconds after the bot was disconnected."""
+        old = self.rejoin.pop(guild.id, None)
+        if old:
+            old.cancel()
+
+        async def later():
+            await asyncio.sleep(REJOIN_SECONDS)
+            self.rejoin.pop(guild.id, None)
+            try:
+                await self.ensure_home(guild)
+            except (discord.DiscordException, asyncio.TimeoutError) as exc:
+                log.warning("could not rejoin the 24/7 channel of %s: %s", guild.id, exc)
+
+        self.rejoin[guild.id] = asyncio.create_task(later())
+
+    async def autoplay(self, player):
+        """In 24/7 mode with a 24/7 playlist, fill the empty queue with that playlist. Returns True when tracks were added."""
+        conf = player.conf
+        if not conf["stay"] or not conf["autoplay"]:
+            return False
+        _, data = self.find_list(player.guild.id, conf["autoplay"])
+        if not data:
+            return False
+        for t in self.list_tracks(data, self.bot.user.id if self.bot.user else 0)[: conf["max_queue"]]:
+            player.queue.add(t)
+        return len(player.queue) > 0
+
+    def playlists(self, gid):
+        """The saved playlists of a server as {name: {"tracks": [...], "by": user id, "updated": time}}."""
+        return self.conf(gid).setdefault("playlists", {})
+
+    def find_list(self, gid, name):
+        """(stored name, playlist) for a name in any letter case, or (None, None)."""
+        want = list_name(name).casefold()
+        for key, data in self.playlists(gid).items():
+            if key.casefold() == want:
+                return key, data
+        return None, None
+
+    @staticmethod
+    def list_tracks(data, uid):
+        """The tracks of a saved playlist as queue entries."""
+        out = []
+        for t in data.get("tracks", []):
+            try:
+                out.append(ml.Track(title=str(t["title"]), artist=str(t.get("artist", "")), kind=t["kind"], ref=str(t["ref"]), length=float(t.get("length") or 0), requester=uid))
+            except (KeyError, TypeError, ValueError):
+                continue
+        return [t for t in out if t.kind in ("local", "web", "search")]
+
+    def store_list(self, gid, name, tracks, uid, append):
+        """Save tracks under a playlist name, new or appended. Returns (name, number of tracks, problem)."""
+        name = list_name(name)
+        if not name:
+            return None, 0, "Give the playlist a name."
+        lists = self.playlists(gid)
+        key, data = self.find_list(gid, name)
+        if data is None:
+            if len(lists) >= MAX_LISTS:
+                return None, 0, f"A server can keep at most {MAX_LISTS} playlists."
+            key, data = name, {"tracks": [], "by": uid, "updated": 0}
+            lists[key] = data
+        items = (data["tracks"] if append else []) + [saved_track(t) for t in tracks]
+        data["tracks"], data["by"], data["updated"] = items[:MAX_LIST_ITEMS], uid, int(time.time())
+        return key, len(data["tracks"]), None
 
     @property
     def root(self):
@@ -153,10 +292,23 @@ class Music(BaseCog):
         if yt_dlp is None:
             raise RuntimeError("yt-dlp is not installed")
         conf = self.conf(gid)
-        problem = url_problem(track.ref, conf["allowed_hosts"], conf["blocked_hosts"])
-        if problem:
-            raise RuntimeError(problem)
-        info = await self.bot.work.run("music", extract, track.ref, self.ffmpeg)
+        if track.kind == "search":
+            if not track.ref.startswith(tuple(ms.SEARCH.values())):
+                raise RuntimeError("unknown search")
+            found = await self.bot.work.run("music", extract, track.ref, self.ffmpeg, False, 1, True)
+            entries = [e for e in (found or {}).get("entries") or [] if e]
+            if not entries:
+                raise RuntimeError("no matching song was found")
+            info = entries[0]
+            page = info.get("webpage_url") or info.get("original_url") or ""
+            problem = url_problem(page, conf["allowed_hosts"], conf["blocked_hosts"]) if page else None
+            if problem:
+                raise RuntimeError(problem)
+        else:
+            problem = url_problem(track.ref, conf["allowed_hosts"], conf["blocked_hosts"])
+            if problem:
+                raise RuntimeError(problem)
+            info = await self.bot.work.run("music", extract, track.ref, self.ffmpeg)
         stream = info.get("url") or next((f["url"] for f in reversed(info.get("formats") or []) if f.get("url") and f.get("vcodec") in (None, "none")), None)
         if not stream:
             raise RuntimeError("no audio stream found")
@@ -192,31 +344,62 @@ class Music(BaseCog):
         """Build a queue entry from a library entry."""
         return ml.Track(title=entry["title"], artist=entry["artist"], kind="local", ref=entry["path"], length=entry["length"], requester=user_id, lossless=entry["lossless"], detail=ml.quality(entry))
 
-    async def find_tracks(self, ctx, query, local_only=False):
+    @staticmethod
+    def search_prefix(conf):
+        """The yt-dlp search of the search source, falling back to the other one, or None when both are switched off."""
+        for src in (conf.get("search_source", "youtube"), "youtube", "soundcloud"):
+            if src in ms.SEARCH and conf.get(src, True):
+                return ms.SEARCH[src]
+        return None
+
+    async def find_tracks(self, gid, uid, query, local_only=False):
         """Turn a link or a search text into tracks. Returns (tracks, error)."""
-        conf = self.conf(ctx.guild.id)
+        conf = self.conf(gid)
         query = query.strip()
         if query.startswith(("http://", "https://")) and not local_only:
             if not conf["allow_links"]:
-                return [], "Playing links is turned off on this server."
-            if yt_dlp is None:
-                return [], "Link playback needs yt-dlp. Install it with: pip install yt-dlp"
+                return [], i18n.say(self.bot, gid, "Playing links is turned off on this server.")
             problem = url_problem(query, conf["allowed_hosts"], conf["blocked_hosts"])
             if problem or not await public_host(urlparse(query).hostname or ""):
-                return [], f"I cannot open this link: {problem or 'it does not resolve to a public address'}."
-            return await self.from_web(ctx, query, conf, playlist=conf["allow_playlists"])
+                return [], i18n.say(self.bot, gid, "I cannot open this link: {value}.", value=problem or "it does not resolve to a public address")
+            src = ms.service(query)
+            if src and not conf.get(src, True):
+                return [], i18n.say(self.bot, gid, "{service} links are turned off on this server.", service=ms.NAMES[src])
+            if yt_dlp is None:
+                return [], i18n.say(self.bot, gid, "Link playback needs yt-dlp. Install it with: pip install yt-dlp")
+            if src in ms.MIRRORED:
+                return await self.from_service(gid, uid, query, conf)
+            return await self.from_web(gid, uid, query, conf, playlist=conf["allow_playlists"])
         if conf["library"]:
             hits = ml.search(await self.index(), query, 1)
             if hits:
-                return [self.track_from_entry(hits[0], ctx.author.id)], None
-        if local_only or not conf["allow_search"] or yt_dlp is None:
-            return [], "Nothing found in the library." if local_only or yt_dlp is None else "Searching the web is turned off on this server."
-        return await self.from_web(ctx, f"ytsearch1:{query}", conf, playlist=False)
+                return [self.track_from_entry(hits[0], uid)], None
+        prefix = self.search_prefix(conf)
+        if local_only or yt_dlp is None:
+            return [], i18n.say(self.bot, gid, "Nothing found in the library.")
+        if not conf["allow_search"] or prefix is None:
+            return [], i18n.say(self.bot, gid, "Searching the web is turned off on this server.")
+        return await self.from_web(gid, uid, f"{prefix}{query}", conf, playlist=False)
 
-    async def from_web(self, ctx, target, conf, playlist):
+    async def from_service(self, gid, uid, url, conf):
+        """Read the songs of a Spotify, Apple Music or Tidal link and queue them as searches on the search source."""
+        prefix = self.search_prefix(conf)
+        if prefix is None:
+            return [], i18n.say(self.bot, gid, "Songs from this service are played through YouTube or SoundCloud. Switch one of them on.")
+        try:
+            songs = await self.resolver.songs(url, conf["playlist_limit"] if conf["allow_playlists"] else 1)
+        except (ValueError, aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            log.info("could not read %s: %s", urlparse(url).hostname, exc)
+            return [], i18n.say(self.bot, gid, "I could not read this link: {reason}", reason=trim(str(exc) or type(exc).__name__, 200))
+        tracks = [ml.Track(title=s.title, artist=s.artist, kind="search", ref=prefix + s.query(), length=s.length, requester=uid) for s in songs if not (s.length and s.length > conf["max_minutes"] * 60)]
+        if not tracks:
+            return [], i18n.say(self.bot, gid, "No playable result (tracks longer than {minutes} minutes are skipped).", minutes=conf["max_minutes"])
+        return tracks, None
+
+    async def from_web(self, gid, uid, target, conf, playlist):
         """Read a link or search result with yt-dlp and build the tracks."""
         try:
-            info = await self.bot.work.run("music", extract, target, self.ffmpeg, playlist, conf["playlist_limit"], target.startswith("ytsearch"))
+            info = await self.bot.work.run("music", extract, target, self.ffmpeg, playlist, conf["playlist_limit"], target.startswith(tuple(ms.SEARCH.values())))
         except yt_dlp.utils.DownloadError as exc:
             log.info("yt-dlp could not read %s: %s", urlparse(target).hostname, exc)
             return [], f"I could not read that: {trim(str(exc).replace('ERROR: ', ''), 300)}"
@@ -226,7 +409,7 @@ class Music(BaseCog):
         items = [e for e in entries if e] if entries is not None else [info]
         tracks = []
         for e in items[: conf["playlist_limit"]]:
-            t = self.track_from_info(e, ctx.author.id)
+            t = self.track_from_info(e, uid)
             if t is None or url_problem(t.ref, conf["allowed_hosts"], conf["blocked_hosts"]):
                 continue
             if t.length and t.length > conf["max_minutes"] * 60:
@@ -257,27 +440,16 @@ class Music(BaseCog):
             await ctx.send(i18n.say(ctx.bot, ctx.guild, "Join a voice channel first."), ephemeral=True)
             return None
         channel = voice.channel
-        perms = channel.permissions_for(ctx.guild.me)
-        if not (perms.connect and perms.speak):
-            await ctx.send(i18n.say(ctx.bot, ctx.guild, "I need the Connect and Speak permissions in your voice channel."), ephemeral=True)
-            return None
         player = self.players.get(ctx.guild.id)
         if player and player.vc and player.vc.is_connected() and player.vc.channel != channel:
             others = [m for m in player.vc.channel.members if not m.bot]
             if others and not self.is_dj(ctx.author):
                 await ctx.send(i18n.say(ctx.bot, ctx.guild, "I am already playing in {mention}.", mention=player.vc.channel.mention), ephemeral=True)
                 return None
-            await player.vc.move_to(channel)
-        if player is None:
-            player = self.players[ctx.guild.id] = Player(self, ctx.guild)
-        if not player.vc or not player.vc.is_connected():
-            try:
-                player.vc = await channel.connect(self_deaf=True)
-            except (discord.DiscordException, asyncio.TimeoutError) as exc:
-                self.players.pop(ctx.guild.id, None)
-                log.warning("voice connect failed: %s", exc)
-                await ctx.send(i18n.say(ctx.bot, ctx.guild, "I could not join the voice channel: {exc}", exc=exc), ephemeral=True)
-                return None
+        player, problem = await self.connect_to(ctx.guild, channel)
+        if problem:
+            await ctx.send(problem, ephemeral=True)
+            return None
         player.text_channel = ctx.channel.id
         return player
 
@@ -300,15 +472,19 @@ class Music(BaseCog):
         player = await self.join(ctx)
         if player is None:
             return 0
-        conf = player.conf
-        room = min(conf["max_queue"] - len(player.queue), conf["per_user"] - player.queue.count_by(ctx.author.id))
-        tracks = tracks[: max(room, 0)]
-        if not tracks:
+        added = await self.add_tracks(player, tracks, ctx.author.id)
+        if not added:
             await ctx.send(i18n.say(ctx.bot, ctx.guild, "The queue is full for you or for the server."), ephemeral=True)
-            return 0
+        return added
+
+    async def add_tracks(self, player, tracks, uid):
+        """Add tracks within the limits of the queue and start playing if idle. Returns how many were added."""
+        conf = player.conf
+        room = min(conf["max_queue"] - len(player.queue), conf["per_user"] - player.queue.count_by(uid))
+        tracks = tracks[: max(room, 0)]
         for t in tracks:
             player.queue.add(t)
-        if not player.playing:
+        if tracks and not player.playing:
             await player.next()
         return len(tracks)
 
@@ -318,7 +494,7 @@ class Music(BaseCog):
     async def play(self, ctx, *, query: str):
         """Play a link, or search the library and the web."""
         await ctx.defer()
-        tracks, error = await self.find_tracks(ctx, query)
+        tracks, error = await self.find_tracks(ctx.guild.id, ctx.author.id, query)
         if error:
             return await ctx.send(error, ephemeral=True)
         waiting = len(self.players[ctx.guild.id].queue) if ctx.guild.id in self.players else 0
@@ -507,7 +683,7 @@ class Music(BaseCog):
     async def lib_play(self, ctx, *, query: str):
         """Play something from the library."""
         await ctx.defer()
-        tracks, error = await self.find_tracks(ctx, query, local_only=True)
+        tracks, error = await self.find_tracks(ctx.guild.id, ctx.author.id, query, local_only=True)
         if error:
             return await ctx.send(error, ephemeral=True)
         if await self.enqueue(ctx, tracks):
@@ -572,6 +748,184 @@ class Music(BaseCog):
         note = "\nThe source was lossy. Converting to FLAC does not add quality." if lossy_source and fmt == "flac" else ""
         await ctx.send(embed=emb(f"Saved {len(saved)} file(s)", trim("\n".join(lines), 3500) + note))
 
+    @library.command(name="playall", description="Queue all tracks of an artist, album or folder (* for everything)")
+    @app_commands.describe(query="Artist, album or folder name, or * for the whole library", shuffle="Mix the order")
+    async def lib_playall(self, ctx, query: str, shuffle: bool = False):
+        """Queue all tracks of an artist, album or folder."""
+        if not self.conf(ctx.guild.id)["library"]:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "The music folder is turned off on this server."), ephemeral=True)
+        await ctx.defer()
+        tracks = self.folder_tracks(await self.index(), query, ctx.author.id, shuffle)
+        if not tracks:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Nothing found in the library."), ephemeral=True)
+        added = await self.enqueue(ctx, tracks)
+        if added:
+            await ctx.send(i18n.say(ctx.bot, ctx.guild, "Added {count} tracks from the library.", count=added))
+
+    def folder_tracks(self, entries, query, uid, shuffle=False):
+        """Library tracks whose artist, album or folder contains the words, or all for *."""
+        q = (query or "").strip().casefold()
+        hits = entries if q == "*" else [e for e in entries if q and (q in e["artist"].casefold() or q in (e["album"] or "").casefold() or q in e["path"].casefold())]
+        tracks = [self.track_from_entry(e, uid) for e in hits]
+        if shuffle:
+            random.shuffle(tracks)
+        return tracks
+
+    @music.group(name="playlist", description="Saved playlists of this server")
+    async def playlist(self, ctx):
+        """Commands for saved playlists."""
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Use save, add, play, list, show, remove or delete."), ephemeral=True)
+
+    async def list_complete(self, it: discord.Interaction, current: str):
+        """Suggest saved playlists while typing."""
+        if not it.guild_id:
+            return []
+        return [app_commands.Choice(name=k[:100], value=k[:100]) for k in self.playlists(it.guild_id) if current.casefold() in k.casefold()][:25]
+
+    def may_edit_lists(self, member):
+        """DJs, or everyone when no DJ role is set, may change playlists."""
+        return self.is_dj(member)
+
+    @playlist.command(name="save", description="Save the current track and the queue as a playlist")
+    @app_commands.describe(name="Name of the playlist")
+    async def pl_save(self, ctx, *, name: str):
+        """Save the current track and the queue as a playlist."""
+        if not self.may_edit_lists(ctx.author):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Only members with the DJ role can do this."), ephemeral=True)
+        player = self.players.get(ctx.guild.id)
+        tracks = ([player.queue.current] if player and player.queue.current else []) + (list(player.queue.items) if player else [])
+        if not tracks:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "The queue is empty."), ephemeral=True)
+        key, count, problem = self.store_list(ctx.guild.id, name, tracks, ctx.author.id, append=False)
+        if problem:
+            return await ctx.send(problem, ephemeral=True)
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Saved {count} tracks as playlist {name}.", count=count, name=key), ephemeral=True)
+
+    @playlist.command(name="add", description="Add a link or search result to a playlist")
+    @app_commands.describe(name="Name of the playlist", query="Link, or words from the artist or title")
+    @app_commands.autocomplete(name=list_complete)
+    async def pl_add(self, ctx, name: str, *, query: str):
+        """Add a link or search result to a playlist."""
+        if not self.may_edit_lists(ctx.author):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Only members with the DJ role can do this."), ephemeral=True)
+        await ctx.defer(ephemeral=True)
+        tracks, error = await self.find_tracks(ctx.guild.id, ctx.author.id, query)
+        if error:
+            return await ctx.send(error, ephemeral=True)
+        key, count, problem = self.store_list(ctx.guild.id, name, tracks, ctx.author.id, append=True)
+        if problem:
+            return await ctx.send(problem, ephemeral=True)
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Added {added} tracks, playlist {name} has {count} now.", added=len(tracks), name=key, count=count), ephemeral=True)
+
+    @playlist.command(name="play", description="Play a saved playlist")
+    @app_commands.describe(name="Name of the playlist", shuffle="Mix the order")
+    @app_commands.autocomplete(name=list_complete)
+    async def pl_play(self, ctx, name: str, shuffle: bool = False):
+        """Play a saved playlist."""
+        key, data = self.find_list(ctx.guild.id, name)
+        if data is None:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "No playlist with this name."), ephemeral=True)
+        tracks = self.list_tracks(data, ctx.author.id)
+        if shuffle:
+            random.shuffle(tracks)
+        added = await self.enqueue(ctx, tracks)
+        if added:
+            await ctx.send(i18n.say(ctx.bot, ctx.guild, "Added {count} tracks from playlist {name}.", count=added, name=key))
+
+    @playlist.command(name="list", description="List the saved playlists")
+    async def pl_list(self, ctx):
+        """List the saved playlists."""
+        lists = self.playlists(ctx.guild.id)
+        lines = [f"**{trim(k, 40)}** ({len(v.get('tracks', []))})" for k, v in sorted(lists.items(), key=lambda kv: kv[0].casefold())]
+        await ctx.send(embed=emb("Playlists", "\n".join(lines) or i18n.say(ctx.bot, ctx.guild, "No playlists yet.")), ephemeral=True)
+
+    @playlist.command(name="show", description="Show the tracks of a playlist")
+    @app_commands.describe(name="Name of the playlist", page="Page")
+    @app_commands.autocomplete(name=list_complete)
+    async def pl_show(self, ctx, name: str, page: int = 1):
+        """Show the tracks of a playlist."""
+        key, data = self.find_list(ctx.guild.id, name)
+        if data is None:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "No playlist with this name."), ephemeral=True)
+        items = data.get("tracks", [])
+        pages = max(1, -(-len(items) // PAGE))
+        page = min(max(page, 1), pages)
+        lines = [f"{i}. {trim(t.get('artist') + ' - ' if t.get('artist') else '', 50)}{trim(t.get('title', ''), 70)}" for i, t in enumerate(items[(page - 1) * PAGE : page * PAGE], (page - 1) * PAGE + 1)]
+        e = emb(key, "\n".join(lines) or i18n.say(ctx.bot, ctx.guild, "The playlist is empty."))
+        e.set_footer(text=f"{page}/{pages} | {len(items)}")
+        await ctx.send(embed=e, ephemeral=True)
+
+    @playlist.command(name="remove", description="Remove a track from a playlist by its number")
+    @app_commands.describe(name="Name of the playlist", number="Number of the track")
+    @app_commands.autocomplete(name=list_complete)
+    async def pl_remove(self, ctx, name: str, number: int):
+        """Remove a track from a playlist by its number."""
+        if not self.may_edit_lists(ctx.author):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Only members with the DJ role can do this."), ephemeral=True)
+        key, data = self.find_list(ctx.guild.id, name)
+        if data is None or not 1 <= number <= len(data.get("tracks", [])):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "No track with this number."), ephemeral=True)
+        gone = data["tracks"].pop(number - 1)
+        data["updated"] = int(time.time())
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Removed {title}.", title=trim(gone.get("title", ""), 100)), ephemeral=True)
+
+    @playlist.command(name="delete", description="Delete a playlist")
+    @app_commands.describe(name="Name of the playlist")
+    @app_commands.autocomplete(name=list_complete)
+    async def pl_delete(self, ctx, *, name: str):
+        """Delete a playlist."""
+        if not self.may_edit_lists(ctx.author):
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "Only members with the DJ role can do this."), ephemeral=True)
+        key, data = self.find_list(ctx.guild.id, name)
+        if data is None:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "No playlist with this name."), ephemeral=True)
+        del self.playlists(ctx.guild.id)[key]
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Playlist {name} deleted.", name=key), ephemeral=True)
+
+    @music.command(name="sources", description="Switch music sources on or off (Manage Server)")
+    @app_commands.describe(youtube="YouTube and YouTube Music", soundcloud="SoundCloud", spotify="Spotify links", apple_music="Apple Music links", tidal="Tidal links", search="Where searches and songs from Spotify, Apple Music and Tidal are looked up")
+    async def sources(self, ctx, youtube: Optional[bool] = None, soundcloud: Optional[bool] = None, spotify: Optional[bool] = None, apple_music: Optional[bool] = None, tidal: Optional[bool] = None, search: Optional[Literal["youtube", "soundcloud"]] = None):
+        """Switch music sources on or off."""
+        if not ctx.author.guild_permissions.manage_guild:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "You need the Manage Server permission."), ephemeral=True)
+        c = self.conf(ctx.guild.id)
+        for key, value in (("youtube", youtube), ("soundcloud", soundcloud), ("spotify", spotify), ("apple_music", apple_music), ("tidal", tidal), ("search_source", search)):
+            if value is not None:
+                c[key] = value
+        state = ", ".join(f"{ms.NAMES[k]} {'on' if c[k] else 'off'}" for k in ms.NAMES)
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "Sources: {state}. Search: {search}.", state=state, search=ms.NAMES[c["search_source"]]), ephemeral=True)
+
+    @music.command(name="stay", description="24/7: stay in a voice channel and play a playlist on repeat (Manage Server)")
+    @app_commands.describe(enabled="Stay in the channel even when nobody listens", channel="Voice channel to join by itself", playlist="Saved playlist that plays when the queue is empty")
+    @app_commands.autocomplete(playlist=list_complete)
+    async def stay(self, ctx, enabled: bool, channel: Optional[discord.VoiceChannel] = None, playlist: Optional[str] = None):
+        """Switch 24/7 mode on or off."""
+        if not ctx.author.guild_permissions.manage_guild:
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "You need the Manage Server permission."), ephemeral=True)
+        c = self.conf(ctx.guild.id)
+        if playlist is not None:
+            key, data = self.find_list(ctx.guild.id, playlist)
+            if playlist and data is None:
+                return await ctx.send(i18n.say(ctx.bot, ctx.guild, "No playlist with this name."), ephemeral=True)
+            c["autoplay"] = key or ""
+        if channel is not None:
+            c["home_channel"] = channel.id
+        c["stay"] = enabled
+        player = self.players.get(ctx.guild.id)
+        if not enabled:
+            if player:
+                player.schedule_idle()
+            return await ctx.send(i18n.say(ctx.bot, ctx.guild, "24/7 mode is off."), ephemeral=True)
+        await ctx.defer(ephemeral=True)
+        if player:
+            player.cancel_idle()
+        await self.ensure_home(ctx.guild)
+        player = self.players.get(ctx.guild.id)
+        if player and not player.playing:
+            await player.next()
+        home = f"<#{c['home_channel']}>" if c["home_channel"] else "-"
+        await ctx.send(i18n.say(ctx.bot, ctx.guild, "24/7 mode is on. Channel: {channel}, playlist: {playlist}.", channel=home, playlist=c["autoplay"] or "-"), ephemeral=True)
+
     @music.command(name="settings", description="Change the music settings (Manage Server)")
     @app_commands.describe(dj_role="Role that controls playback (leave empty for everyone)", volume="Default volume", max_queue="Tracks in the queue", per_user="Tracks per member", max_minutes="Longest track in minutes", idle_leave="Seconds until the bot leaves when idle (0 = never)", allow_links="Play links", allow_search="Search the web for text", allow_playlists="Allow playlists", library="Play from the local library", allow_download="Allow saving links in the library", download_format="Format of downloads", announce="Post the new track in the channel")
     async def settings(self, ctx, dj_role: Optional[discord.Role] = None, volume: Optional[app_commands.Range[int, 1, 150]] = None, max_queue: Optional[app_commands.Range[int, 1, 500]] = None, per_user: Optional[app_commands.Range[int, 1, 500]] = None, max_minutes: Optional[app_commands.Range[int, 1, 600]] = None, idle_leave: Optional[app_commands.Range[int, 0, 3600]] = None, allow_links: Optional[bool] = None, allow_search: Optional[bool] = None, allow_playlists: Optional[bool] = None, library: Optional[bool] = None, allow_download: Optional[bool] = None, download_format: Optional[Literal[FORMATS]] = None, announce: Optional[bool] = None):
@@ -610,6 +964,114 @@ class Music(BaseCog):
         ]
         await ctx.send("\n".join(lines), ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
 
+    def snapshot(self, guild):
+        """State of the music on a server for the dashboard."""
+        player = self.players.get(guild.id)
+        conf = self.conf(guild.id)
+
+        def track(t):
+            return {"title": t.title, "artist": t.artist, "length": t.length, "kind": t.kind, "ref": t.ref, "detail": t.detail, "requester": str(t.requester)} if t else None
+
+        lists = [{"name": k, "count": len(v.get("tracks", [])), "updated": v.get("updated", 0)} for k, v in sorted(self.playlists(guild.id).items(), key=lambda kv: kv[0].casefold())]
+        vc = player.vc if player else None
+        return {
+            "ready": self.not_ready(), "ytdlp": yt_dlp is not None, "library": len(self.entries), "library_dir": str(self.root),
+            "channel": str(vc.channel.id) if vc and vc.channel else None, "channel_name": vc.channel.name if vc and vc.channel else None,
+            "current": track(player.queue.current) if player else None, "position": int(player.position()) if player and player.queue.current else 0,
+            "paused": bool(vc and vc.is_paused()), "volume": player.volume if player else conf["volume"], "loop": player.queue.loop if player else "off",
+            "queue": [track(t) for t in list(player.queue.items)[:100]] if player else [], "waiting": len(player.queue) if player else 0,
+            "playlists": lists, "stay": conf["stay"], "home_channel": str(conf["home_channel"]) if conf["home_channel"] else None, "autoplay": conf["autoplay"],
+        }
+
+    async def remote(self, guild, uid, action, value=None):
+        """Carry out a control action from the dashboard. Returns (ok, message)."""
+        player = self.players.get(guild.id)
+
+        def say(text, **values):
+            return i18n.say(self.bot, guild, text, **values)
+
+        if action == "join":
+            channel = guild.get_channel(int(value)) if str(value or "").isdigit() else None
+            if not isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
+                return False, say("Choose a voice channel.")
+            player, problem = await self.connect_to(guild, channel)
+            if problem:
+                return False, problem
+            if not player.playing:
+                await player.next()
+            return True, say("Joined {mention}.", mention=channel.name)
+        if action in ("add", "playlist", "folder"):
+            if action == "add":
+                tracks, error = await self.find_tracks(guild.id, uid, str(value or "")[:500])
+                if error:
+                    return False, error
+            elif action == "playlist":
+                _, data = self.find_list(guild.id, str(value or ""))
+                if data is None:
+                    return False, say("No playlist with this name.")
+                tracks = self.list_tracks(data, uid)
+            else:
+                if not self.conf(guild.id)["library"]:
+                    return False, say("The music folder is turned off on this server.")
+                tracks = self.folder_tracks(await self.index(), str(value or ""), uid)
+            if not tracks:
+                return False, say("Nothing found.")
+            if player is None or not player.vc or not player.vc.is_connected():
+                return False, say("The bot is not in a voice channel. Let it join first.")
+            added = await self.add_tracks(player, tracks, uid)
+            return (True, say("Added {count} tracks.", count=added)) if added else (False, say("The queue is full for you or for the server."))
+        if player is None or not player.vc:
+            return False, say("Nothing is playing.")
+        if action == "pause" and player.vc.is_playing():
+            player.vc.pause()
+            player.paused_at = time.monotonic()
+        elif action == "resume" and player.vc.is_paused():
+            player.vc.resume()
+            player.since += time.monotonic() - player.paused_at
+            player.paused_at = None
+        elif action == "skip":
+            player.halt()
+            await player.next(skipped=True)
+        elif action == "stop":
+            player.queue.clear()
+            player.queue.current = None
+            player.halt()
+            player.schedule_idle()
+        elif action == "leave":
+            await self.destroy(guild.id)
+        elif action == "shuffle":
+            player.queue.shuffle()
+        elif action == "clear":
+            player.queue.clear()
+        elif action == "loop" and value in ("off", "track", "queue"):
+            player.queue.loop = value
+        elif action == "volume" and isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 150:
+            player.volume = value
+            if player.vc.source:
+                player.vc.source.volume = value / 100
+        elif action == "remove" and isinstance(value, int) and not isinstance(value, bool):
+            if player.queue.remove(value) is None:
+                return False, say("No track with this number.")
+        elif action not in ("pause", "resume"):
+            return False, say("Unknown action.")
+        return True, say("Done.")
+
+    def save_playlist(self, guild, uid, name, tracks):
+        """Replace or create a playlist from the dashboard with tracks given as dicts. Returns (name, problem)."""
+        clean = []
+        for t in tracks if isinstance(tracks, list) else []:
+            if isinstance(t, dict) and t.get("kind") in ("local", "web", "search") and isinstance(t.get("ref"), str) and isinstance(t.get("title"), str):
+                if t["kind"] == "web" and url_problem(t["ref"]):
+                    continue
+                if t["kind"] == "local" and ml.resolve(self.root, t["ref"]) is None:
+                    continue
+                if t["kind"] == "search" and not t["ref"].startswith(tuple(ms.SEARCH.values())):
+                    continue
+                length = t.get("length")
+                clean.append(ml.Track(title=t["title"][:200], artist=str(t.get("artist") or "")[:200], kind=t["kind"], ref=t["ref"][:500], length=float(length) if isinstance(length, (int, float)) and not isinstance(length, bool) else 0.0, requester=uid))
+        key, _, problem = self.store_list(guild.id, name, clean, uid, append=False)
+        return key, problem
+
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Leave when the bot is disconnected, and when nobody listens any more."""
@@ -617,9 +1079,12 @@ class Music(BaseCog):
         if player is None or player.vc is None:
             return
         if member.id == self.bot.user.id and after.channel is None:
-            return await self.destroy(member.guild.id)
+            await self.destroy(member.guild.id)
+            if self.conf(member.guild.id)["stay"] and not self.bot.is_closed():
+                self.schedule_rejoin(member.guild)
+            return
         channel = player.vc.channel
-        if channel is None:
+        if channel is None or player.conf["stay"]:
             return
         listeners = [m for m in channel.members if not m.bot]
         if not listeners:
